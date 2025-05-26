@@ -4,7 +4,7 @@ use std::{
     ops::Deref,
 };
 
-use oxc_allocator::{Allocator, CloneIn, Dummy, FromIn};
+use oxc_allocator::{Allocator, CloneIn, Dummy, FromIn, StringBuilder as ArenaStringBuilder};
 #[cfg(feature = "serialize")]
 use oxc_estree::{ESTree, Serializer as ESTreeSerializer};
 #[cfg(feature = "serialize")]
@@ -61,6 +61,33 @@ impl<'a> Atom<'a> {
     pub fn to_compact_str(self) -> CompactStr {
         CompactStr::new(self.as_str())
     }
+
+    /// Create new [`Atom`] from a fixed-size array of `&str`s concatenated together,
+    /// allocated in the given `allocator`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the sum of length of all strings exceeds `isize::MAX`.
+    ///
+    /// # Example
+    /// ```
+    /// use oxc_allocator::Allocator;
+    /// use oxc_span::Atom;
+    ///
+    /// let allocator = Allocator::new();
+    /// let s = Atom::from_strs_array_in(["hello", " ", "world", "!"], &allocator);
+    /// assert_eq!(s.as_str(), "hello world!");
+    /// ```
+    // `#[inline(always)]` because want compiler to be able to optimize where some of `strings`
+    // are statically known. See `Allocator::alloc_concat_strs_array`.
+    #[expect(clippy::inline_always)]
+    #[inline(always)]
+    pub fn from_strs_array_in<const N: usize>(
+        strings: [&str; N],
+        allocator: &'a Allocator,
+    ) -> Atom<'a> {
+        Self::from(allocator.alloc_concat_strs_array(strings))
+    }
 }
 
 impl<'new_alloc> CloneIn<'new_alloc> for Atom<'_> {
@@ -116,9 +143,9 @@ impl<'a> From<&'a str> for Atom<'a> {
     }
 }
 
-impl<'alloc> From<oxc_allocator::String<'alloc>> for Atom<'alloc> {
-    fn from(s: oxc_allocator::String<'alloc>) -> Self {
-        Self::from(s.into_bump_str())
+impl<'alloc> From<ArenaStringBuilder<'alloc>> for Atom<'alloc> {
+    fn from(s: ArenaStringBuilder<'alloc>) -> Self {
+        Self::from(s.into_str())
     }
 }
 
@@ -260,9 +287,9 @@ impl ESTree for Atom<'_> {
 macro_rules! format_atom {
     ($alloc:expr, $($arg:tt)*) => {{
         use ::std::{write, fmt::Write};
-        use $crate::{Atom, __internal::ArenaString};
+        use $crate::{Atom, __internal::ArenaStringBuilder};
 
-        let mut s = ArenaString::new_in($alloc);
+        let mut s = ArenaStringBuilder::new_in($alloc);
         write!(s, $($arg)*).unwrap();
         Atom::from(s)
     }}

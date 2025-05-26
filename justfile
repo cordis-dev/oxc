@@ -83,7 +83,7 @@ lint:
 
 # Format all files
 fmt:
-  cargo shear --fix # remove all unused dependencies
+  -cargo shear --fix # remove all unused dependencies
   cargo fmt --all
   dprint fmt
 
@@ -159,10 +159,6 @@ watch-playground:
 
 build-playground mode="release":
   pnpm --filter oxc-playground build
-
-# Generate the JavaScript global variables. See `tasks/javascript_globals`
-javascript-globals:
-  cargo run -p javascript_globals
 
 # Create a new lint rule by providing the ESLint name. See `tasks/rulegen`
 new-rule name:
