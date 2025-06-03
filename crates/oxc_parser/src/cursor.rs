@@ -1,7 +1,8 @@
 //! Code related to navigating `Token`s from the lexer
 
 use oxc_allocator::{TakeIn, Vec};
-use oxc_ast::ast::{Decorator, RegExpFlags};
+use oxc_ast::ast::{BindingRestElement, Decorator, RegExpFlags};
+use oxc_diagnostics::OxcDiagnostic;
 use oxc_span::{GetSpan, Span};
 
 use crate::{
@@ -61,45 +62,6 @@ impl<'a> ParserImpl<'a> {
         self.lexer.get_template_string(self.token.start())
     }
 
-    /// Peek next token, returns EOF for final peek
-    #[inline]
-    pub(crate) fn peek_token(&mut self) -> Token {
-        self.lexer.lookahead(1)
-    }
-
-    /// Peek next kind, returns EOF for final peek
-    #[inline]
-    pub(crate) fn peek_kind(&mut self) -> Kind {
-        self.peek_token().kind()
-    }
-
-    /// Peek at kind
-    #[inline]
-    pub(crate) fn peek_at(&mut self, kind: Kind) -> bool {
-        self.peek_token().kind() == kind
-    }
-
-    /// Peek nth token
-    #[inline]
-    pub(crate) fn nth(&mut self, n: u8) -> Token {
-        if n == 0 {
-            return self.cur_token();
-        }
-        self.lexer.lookahead(n)
-    }
-
-    /// Peek at nth kind
-    #[inline]
-    pub(crate) fn nth_at(&mut self, n: u8, kind: Kind) -> bool {
-        self.nth(n).kind() == kind
-    }
-
-    /// Peek nth kind
-    #[inline]
-    pub(crate) fn nth_kind(&mut self, n: u8) -> Kind {
-        self.nth(n).kind()
-    }
-
     /// Checks if the current index has token `Kind`
     #[inline]
     pub(crate) fn at(&self, kind: Kind) -> bool {
@@ -128,8 +90,7 @@ impl<'a> ParserImpl<'a> {
 
     /// Move to the next `JSXChild`
     /// Checks if the current token is escaped if it is a keyword
-    fn advance_for_jsx_child(&mut self, kind: Kind) {
-        self.test_escaped_keyword(kind);
+    pub(crate) fn advance_for_jsx_child(&mut self) {
         self.prev_token_end = self.token.end();
         self.token = self.lexer.next_jsx_child();
     }
@@ -205,7 +166,7 @@ impl<'a> ParserImpl<'a> {
     /// # Errors
     pub(crate) fn expect_jsx_child(&mut self, kind: Kind) {
         self.expect_without_advance(kind);
-        self.advance_for_jsx_child(kind);
+        self.advance_for_jsx_child();
     }
 
     /// Expect the next next token to be a `JsxString` or any other token
@@ -366,14 +327,14 @@ impl<'a> ParserImpl<'a> {
         &mut self,
         close: Kind,
         separator: Kind,
-        trailing_separator: bool,
         f: F,
-    ) -> Vec<'a, T>
+    ) -> (Vec<'a, T>, Option<u32>)
     where
         F: Fn(&mut Self) -> T,
     {
         let mut list = self.ast.vec();
         let mut first = true;
+        let mut trailing_separator = None;
         loop {
             if self.cur_kind() == close || self.has_fatal_error() {
                 break;
@@ -381,38 +342,41 @@ impl<'a> ParserImpl<'a> {
             if first {
                 first = false;
             } else {
-                if !trailing_separator && self.at(separator) && self.peek_at(close) {
-                    break;
-                }
+                let separator_span = self.start_span();
                 self.expect(separator);
                 if self.at(close) {
+                    trailing_separator = Some(separator_span);
                     break;
                 }
             }
             list.push(f(self));
         }
-        list
+        (list, trailing_separator)
     }
 
-    pub(crate) fn parse_delimited_list_with_rest<E, R, A, B>(
+    pub(crate) fn parse_delimited_list_with_rest<E, A, D>(
         &mut self,
         close: Kind,
         parse_element: E,
-        parse_rest: R,
-    ) -> (Vec<'a, A>, Option<B>)
+        rest_last_diagnostic: D,
+    ) -> (Vec<'a, A>, Option<BindingRestElement<'a>>)
     where
         E: Fn(&mut Self) -> A,
-        R: Fn(&mut Self) -> B,
-        B: GetSpan,
+        D: Fn(Span) -> OxcDiagnostic,
     {
         let mut list = self.ast.vec();
         let mut rest = None;
         let mut first = true;
+        let mut rest_comma_span: Option<Span> = None;
         loop {
             let kind = self.cur_kind();
-            if kind == close || self.has_fatal_error() {
+            if self.has_fatal_error() {
                 break;
             }
+            if kind == close {
+                break;
+            }
+
             if first {
                 first = false;
             } else {
@@ -423,13 +387,28 @@ impl<'a> ParserImpl<'a> {
             }
 
             if self.at(Kind::Dot3) {
-                if let Some(r) = rest.replace(parse_rest(self)) {
-                    self.error(diagnostics::binding_rest_element_last(r.span()));
+                let r = self.parse_rest_element();
+                if self.at(Kind::Comma) {
+                    rest_comma_span.replace(self.cur_token().span());
+                    if !self.ctx.has_ambient() {
+                        self.error(rest_last_diagnostic(r.span()));
+                    }
+                } else {
+                    rest_comma_span = None;
                 }
+                rest.replace(r);
             } else {
+                rest_comma_span = None;
                 list.push(parse_element(self));
             }
         }
+
+        if !self.ctx.has_ambient() {
+            if let Some(span) = rest_comma_span {
+                self.error(diagnostics::rest_element_trailing_comma(span));
+            }
+        }
+
         (list, rest)
     }
 }

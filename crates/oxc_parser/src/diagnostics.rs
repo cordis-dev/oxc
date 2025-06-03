@@ -217,8 +217,9 @@ pub fn spread_last_element(span: Span) -> OxcDiagnostic {
 }
 
 #[cold]
-pub fn binding_rest_element_trailing_comma(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error("Unexpected trailing comma after rest element").with_label(span)
+pub fn rest_element_trailing_comma(span: Span) -> OxcDiagnostic {
+    OxcDiagnostic::error("A rest parameter or binding pattern may not have a trailing comma.")
+        .with_label(span)
 }
 
 #[cold]
@@ -323,6 +324,11 @@ pub fn identifier_async(x0: &str, span1: Span) -> OxcDiagnostic {
 pub fn identifier_generator(x0: &str, span1: Span) -> OxcDiagnostic {
     OxcDiagnostic::error(format!("Cannot use `{x0}` as an identifier in a generator context"))
         .with_label(span1)
+}
+
+#[cold]
+pub fn identifier_expected(span: Span) -> OxcDiagnostic {
+    OxcDiagnostic::error("Identifier expected.").with_label(span)
 }
 
 #[cold]
@@ -614,4 +620,19 @@ pub fn unexpected_exponential(x0: &str, span1: Span) -> OxcDiagnostic {
     OxcDiagnostic::error("Unexpected exponentiation expression")
         .with_help(format!("Wrap {x0} expression in parentheses to enforce operator precedence"))
         .with_label(span1)
+}
+
+#[cold]
+pub fn import_equals_can_only_be_used_in_typescript_files(span: Span) -> OxcDiagnostic {
+    ts_error("8002", "'import ... =' can only be used in TypeScript files.").with_label(span)
+}
+
+#[cold]
+pub fn index_signature_question_mark(span: Span) -> OxcDiagnostic {
+    ts_error("1019", "An index signature parameter cannot have a question mark.").with_label(span)
+}
+
+#[cold]
+pub fn index_signature_type_annotation(span: Span) -> OxcDiagnostic {
+    ts_error("1021", "An index signature must have a type annotation.").with_label(span)
 }

@@ -178,12 +178,12 @@ impl<'a> ParserImpl<'a> {
     fn parse_class_body(&mut self) -> Box<'a, ClassBody<'a>> {
         let span = self.start_span();
         let class_elements = self.parse_normal_list(Kind::LCurly, Kind::RCurly, |p| {
-            // skip empty class element `;`
-            while p.at(Kind::Semicolon) {
-                p.bump_any();
-            }
-            if p.at(Kind::RCurly) {
-                return None;
+            // Skip empty class element `;`
+            if p.eat(Kind::Semicolon) {
+                while p.eat(Kind::Semicolon) {}
+                if p.at(Kind::RCurly) {
+                    return None;
+                }
             }
             Some(Self::parse_class_element(p))
         });
@@ -194,7 +194,7 @@ impl<'a> ParserImpl<'a> {
         let span = self.start_span();
 
         let modifiers = self.parse_modifiers(
-            /* alloc_class_body */ true, /* permit_const_as_modifier */ true,
+            /* allow_decorators */ true, /* permit_const_as_modifier */ true,
             /* stop_on_start_of_class_static_block */ true,
         );
 
@@ -211,19 +211,25 @@ impl<'a> ParserImpl<'a> {
             MethodDefinitionType::MethodDefinition
         };
 
-        let cur_kind = self.cur_kind();
-        if matches!(cur_kind, Kind::Get | Kind::Set)
-            && self.try_parse(Self::next_token_can_follow_modifier).is_some()
-        {
-            let kind = match cur_kind {
-                Kind::Get => MethodDefinitionKind::Get,
-                Kind::Set => MethodDefinitionKind::Set,
-                _ => unreachable!(),
-            };
-            return self.parse_accessor_declaration(span, r#type, kind, &modifiers);
+        if self.parse_contextual_modifier(Kind::Get) {
+            return self.parse_accessor_declaration(
+                span,
+                r#type,
+                MethodDefinitionKind::Get,
+                &modifiers,
+            );
         }
 
-        if matches!(cur_kind, Kind::Constructor | Kind::Str)
+        if self.parse_contextual_modifier(Kind::Set) {
+            return self.parse_accessor_declaration(
+                span,
+                r#type,
+                MethodDefinitionKind::Set,
+                &modifiers,
+            );
+        }
+
+        if matches!(self.cur_kind(), Kind::Constructor | Kind::Str)
             && !modifiers.contains(ModifierKind::Static)
         {
             let constructor_declaration =
@@ -234,8 +240,9 @@ impl<'a> ParserImpl<'a> {
         }
 
         if self.is_index_signature() {
-            let decl = self.parse_index_signature_declaration(span, &modifiers);
-            return ClassElement::TSIndexSignature(self.alloc(decl));
+            return ClassElement::TSIndexSignature(
+                self.parse_index_signature_declaration(span, &modifiers),
+            );
         }
 
         let kind = self.cur_kind();
@@ -407,35 +414,6 @@ impl<'a> ParserImpl<'a> {
         None
     }
 
-    fn is_index_signature(&mut self) -> bool {
-        self.at(Kind::LBrack) && self.lookahead(Self::is_unambiguously_index_signature)
-    }
-
-    fn is_unambiguously_index_signature(&mut self) -> bool {
-        self.bump_any();
-        if matches!(self.cur_kind(), Kind::Dot3 | Kind::LBrack) {
-            return true;
-        }
-        if self.cur_kind().is_modifier_kind() {
-            self.bump_any();
-            if self.cur_kind().is_identifier() {
-                return true;
-            }
-        } else if !self.cur_kind().is_identifier() {
-            return false;
-        } else {
-            self.bump_any();
-        }
-        if matches!(self.cur_kind(), Kind::Colon | Kind::Comma) {
-            return true;
-        }
-        if self.cur_kind() != Kind::Question {
-            return false;
-        }
-        self.bump_any();
-        matches!(self.cur_kind(), Kind::Colon | Kind::Comma | Kind::RBrack)
-    }
-
     fn parse_property_or_method_declaration(
         &mut self,
         span: u32,
@@ -516,8 +494,8 @@ impl<'a> ParserImpl<'a> {
         definite: bool,
         modifiers: &Modifiers,
     ) -> ClassElement<'a> {
-        let type_annotation = if self.is_ts { self.parse_ts_type_annotation() } else { None };
         let decorators = self.consume_decorators();
+        let type_annotation = if self.is_ts { self.parse_ts_type_annotation() } else { None };
         // Initializer[+In, ?Yield, ?Await]opt
         let initializer = self
             .eat(Kind::Eq)

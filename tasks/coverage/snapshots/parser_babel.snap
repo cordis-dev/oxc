@@ -976,11 +976,12 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·  ─────
    ╰────
 
-  × Unexpected token
+  × Expected `:` but found `}`
    ╭─[babel/packages/babel-parser/test/fixtures/core/escape-keyword/invalid/input.js:3:1]
  2 │   br\u{65}ak
  3 │ };
-   · ─
+   · ┬
+   · ╰── `:` expected
    ╰────
 
   × '0'-prefixed octal literals and octal escape sequences are deprecated
@@ -2783,19 +2784,19 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  4 │     third,
    ╰────
 
-  × Unexpected trailing comma after rest element
+  × A rest parameter or binding pattern may not have a trailing comma.
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/array-rest-spread/comma-after-rest/input.js:1:6]
  1 │ [...a,] = [];
    ·      ─
    ╰────
 
-  × Unexpected trailing comma after rest element
+  × A rest parameter or binding pattern may not have a trailing comma.
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/array-rest-spread/comma-after-spread-for-in/input.js:1:11]
  1 │ for ([...a,] in []);
    ·           ─
    ╰────
 
-  × Unexpected trailing comma after rest element
+  × A rest parameter or binding pattern may not have a trailing comma.
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/array-rest-spread/comma-after-spread-nested/input.js:1:7]
  1 │ [[...a,]] = [];
    ·       ─
@@ -2811,6 +2812,12 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/arrow-functions/comma-after-rest-param/input.js:1:2]
  1 │ (...rest,) => {}
    ·  ───────
+   ╰────
+
+  × A rest parameter or binding pattern may not have a trailing comma.
+   ╭─[babel/packages/babel-parser/test/fixtures/es2015/arrow-functions/comma-after-rest-param/input.js:1:9]
+ 1 │ (...rest,) => {}
+   ·         ─
    ╰────
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
@@ -3961,10 +3968,11 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    · ──────
    ╰────
 
-  × Unexpected token
+  × Expected `:` but found `,`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/shorthand/reserved-word/input.js:1:17]
  1 │ var x = ({ const, if, this });
-   ·                 ─
+   ·                 ┬
+   ·                 ╰── `:` expected
    ╰────
 
   × The keyword 'implements' is reserved
@@ -4069,10 +4077,11 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·            ───────────
    ╰────
 
-  × Unexpected token
+  × Expected `:` but found `}`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/151/input.js:1:6]
  1 │ ({[x]})
-   ·      ─
+   ·      ┬
+   ·      ╰── `:` expected
    ╰────
 
   × Identifier `a` has already been declared
@@ -4470,16 +4479,18 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·          ──
    ╰────
 
-  × Unexpected token
+  × Expected `:` but found `}`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/275/input.js:1:13]
  1 │ ({ "chance" }) = obj
-   ·             ─
+   ·             ┬
+   ·             ╰── `:` expected
    ╰────
 
-  × Unexpected token
+  × Expected `:` but found `}`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/276/input.js:1:7]
  1 │ ({ 42 }) = obj
-   ·       ─
+   ·       ┬
+   ·       ╰── `:` expected
    ╰────
 
   × A rest parameter must be last in a parameter list
@@ -4528,10 +4539,11 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ╰────
   help: Try insert a semicolon here
 
-  × Unexpected token
+  × Expected `:` but found `}`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/285/input.js:1:6]
  1 │ ({ 5 }) => {}
-   ·      ─
+   ·      ┬
+   ·      ╰── `:` expected
    ╰────
 
   × Unexpected token
@@ -5078,11 +5090,11 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  3 │ }
    ╰────
 
-  × Cannot use `yield` as an identifier in a generator context
-   ╭─[babel/packages/babel-parser/test/fixtures/es2015/yield/parameter-name-arrow-no-parens-inside-generator/input.js:2:3]
+  × Unexpected token
+   ╭─[babel/packages/babel-parser/test/fixtures/es2015/yield/parameter-name-arrow-no-parens-inside-generator/input.js:2:9]
  1 │ function* fn() {
  2 │   yield => {};
-   ·   ─────
+   ·         ──
  3 │ }
    ╰────
 
@@ -5404,18 +5416,16 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ╰────
   help: Did you mean to use a ':'? An '=' can only follow a property name when the containing object literal is part of a destructuring pattern.
 
-  × Expected `(` but found `}`
-   ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/4/input.js:1:12]
+  × 'async' modifier cannot be used here.
+   ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/4/input.js:1:4]
  1 │ ({ async a });
-   ·            ┬
-   ·            ╰── `(` expected
+   ·    ─────
    ╰────
 
-  × Expected `(` but found `:`
-   ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/5/input.js:1:11]
+  × 'async' modifier cannot be used here.
+   ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/5/input.js:1:4]
  1 │ ({ async a: function () {} });
-   ·           ┬
-   ·           ╰── `(` expected
+   ·    ─────
    ╰────
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
@@ -5721,6 +5731,12 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·        ────
    ╰────
 
+  × A rest parameter or binding pattern may not have a trailing comma.
+   ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/params-invalid-rest-trailing-comma/input.js:1:12]
+ 1 │ async (...a,) => {};
+   ·            ─
+   ╰────
+
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/trailing-function-commas/5/input.js:1:5]
  1 │ log(,);
@@ -5976,22 +5992,16 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·       ────
    ╰────
 
-  × Unexpected trailing comma after rest element
-   ╭─[babel/packages/babel-parser/test/fixtures/es2018/object-rest-spread/8/input.js:1:17]
- 1 │ let { x, y, ...z, } = obj;
-   ·                 ─
-   ╰────
-
   × A rest element must be last in a destructuring pattern
    ╭─[babel/packages/babel-parser/test/fixtures/es2018/object-rest-spread/8/input.js:1:13]
  1 │ let { x, y, ...z, } = obj;
    ·             ────
    ╰────
 
-  × A rest element must be last in a destructuring pattern
-   ╭─[babel/packages/babel-parser/test/fixtures/es2018/object-rest-spread/9/input.js:1:10]
- 1 │ let { x, ...y, ...z } = obj;
-   ·          ────
+  × A rest parameter or binding pattern may not have a trailing comma.
+   ╭─[babel/packages/babel-parser/test/fixtures/es2018/object-rest-spread/8/input.js:1:17]
+ 1 │ let { x, y, ...z, } = obj;
+   ·                 ─
    ╰────
 
   × A rest element must be last in a destructuring pattern
@@ -8515,7 +8525,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  3 │ export { bar as "\udbff\udfff" } // should not throw
    ╰────
 
-  × Unexpected token
+  × Identifier expected.
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/module-string-names/import-local-is-string/input.js:1:10]
  1 │ import { "foo" } from "foo";
    ·          ─────
@@ -8771,16 +8781,16 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·      ╰── `b` has already been declared here
    ╰────
 
-  × Unexpected trailing comma after rest element
-   ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-array-binding-pattern/invalid-elision-after-rest/input.js:1:9]
- 1 │ ([a,...b,])=>0;
-   ·         ─
-   ╰────
-
   × A rest element must be last in a destructuring pattern
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-array-binding-pattern/invalid-elision-after-rest/input.js:1:5]
  1 │ ([a,...b,])=>0;
    ·     ────
+   ╰────
+
+  × A rest parameter or binding pattern may not have a trailing comma.
+   ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-array-binding-pattern/invalid-elision-after-rest/input.js:1:9]
+ 1 │ ([a,...b,])=>0;
+   ·         ─
    ╰────
 
   × Identifier `a` has already been declared
@@ -8825,12 +8835,6 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ╰────
 
   × A rest parameter must be last in a parameter list
-   ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-arrow-function/arrow-with-multiple-rest/input.js:1:2]
- 1 │ (...a, ...b) => 0
-   ·  ────
-   ╰────
-
-  × A rest element must be last in a destructuring pattern
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-arrow-function/arrow-with-multiple-rest/input.js:1:2]
  1 │ (...a, ...b) => 0
    ·  ────
@@ -9184,9 +9188,9 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ╰────
 
   × Unexpected token
-   ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-generator/malformed-generator-method/input.js:1:4]
+   ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-generator/malformed-generator-method/input.js:1:6]
  1 │ ({ * })
-   ·    ─
+   ·      ─
    ╰────
 
   × Unexpected token
@@ -10461,10 +10465,11 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·        ╰── `,` expected
    ╰────
 
-  × Unexpected token
+  × Expected `:` but found `/`
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0103/input.js:1:10]
  1 │ p = { "q"/ }
-   ·          ─
+   ·          ┬
+   ·          ╰── `:` expected
    ╰────
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
@@ -13268,7 +13273,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                     ──
    ╰────
 
-  × Unexpected token
+  × Identifier expected.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/type-only-import-export-specifiers/import-invalid-type-only-as-string/input.ts:1:22]
  1 │ import { type foo as "bar" } from "mod";
    ·                      ─────

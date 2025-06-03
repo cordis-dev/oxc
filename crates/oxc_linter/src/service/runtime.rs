@@ -22,21 +22,17 @@ use oxc_resolver::Resolver;
 use oxc_semantic::{Semantic, SemanticBuilder};
 use oxc_span::{CompactStr, SourceType, VALID_EXTENSIONS};
 
-#[cfg(feature = "language_server")]
-use oxc_allocator::CloneIn;
-
 use super::LintServiceOptions;
 use crate::{
     Fixer, Linter, Message,
+    fixer::PossibleFixes,
     loader::{JavaScriptSource, LINT_PARTIAL_LOADER_EXTENSIONS, PartialLoader},
     module_record::ModuleRecord,
     utils::read_to_string,
 };
 
 #[cfg(feature = "language_server")]
-use crate::fixer::{FixWithPosition, MessageWithPosition};
-#[cfg(feature = "language_server")]
-use crate::service::offset_to_position::{SpanPositionMessage, offset_to_position};
+use crate::fixer::MessageWithPosition;
 
 pub struct Runtime<'l> {
     cwd: Box<Path>,
@@ -253,7 +249,7 @@ impl<'l> Runtime<'l> {
     ) {
         if self.resolver.is_none() {
             self.paths.par_iter().for_each(|path| {
-                let output = self.process_path(Arc::clone(path), check_syntax_errors, tx_error);
+                let output = self.process_path(path, check_syntax_errors, tx_error);
                 let Some(entry) =
                     ModuleToLint::from_processed_module(output.path, output.processed_module)
                 else {
@@ -352,7 +348,7 @@ impl<'l> Runtime<'l> {
                     let tx_process_output = tx_process_output.clone();
                     scope.spawn(move |_| {
                         tx_process_output
-                            .send(me.process_path(path, check_syntax_errors, tx_error))
+                            .send(me.process_path(&path, check_syntax_errors, tx_error))
                             .unwrap();
                     });
                 }
@@ -387,7 +383,7 @@ impl<'l> Runtime<'l> {
                                 move |_| {
                                     tx_resolve_output
                                         .send(me.process_path(
-                                            dep_path,
+                                            &dep_path,
                                             check_syntax_errors,
                                             tx_error,
                                         ))
@@ -499,9 +495,10 @@ impl<'l> Runtime<'l> {
                                 Rc::new(section.semantic.unwrap()),
                                 Arc::clone(&module_record),
                             ),
-                            Err(errors) => {
-                                errors.into_iter().map(|err| Message::new(err, None)).collect()
-                            }
+                            Err(errors) => errors
+                                .into_iter()
+                                .map(|err| Message::new(err, PossibleFixes::None))
+                                .collect(),
                         };
 
                         let source_text = section.source.source_text;
@@ -556,7 +553,28 @@ impl<'l> Runtime<'l> {
         &mut self,
         allocator: &'a oxc_allocator::Allocator,
     ) -> Vec<MessageWithPosition<'a>> {
+        use oxc_allocator::CloneIn;
         use std::sync::Mutex;
+
+        use crate::{
+            FixWithPosition,
+            fixer::{Fix, PossibleFixesWithPosition},
+            service::offset_to_position::{SpanPositionMessage, offset_to_position},
+        };
+
+        fn fix_to_fix_with_position<'a>(
+            fix: &Fix<'a>,
+            offset: u32,
+            source_text: &str,
+        ) -> FixWithPosition<'a> {
+            let start_position = offset_to_position(offset + fix.span.start, source_text);
+            let end_position = offset_to_position(offset + fix.span.end, source_text);
+            FixWithPosition {
+                content: fix.content.clone(),
+                span: SpanPositionMessage::new(start_position, end_position)
+                    .with_message(fix.message.as_ref().map(|label| Cow::Owned(label.to_string()))),
+            }
+        }
 
         let messages = Mutex::new(Vec::<MessageWithPosition<'a>>::new());
         let (sender, _receiver) = mpsc::channel();
@@ -621,24 +639,34 @@ impl<'l> Runtime<'l> {
                                             url: message.error.url.clone(),
                                             code: message.error.code.clone(),
                                             labels: labels.clone(),
-                                            fix: message.fix.map(|fix| FixWithPosition {
-                                                content: fix.content,
-                                                span: SpanPositionMessage::new(
-                                                    offset_to_position(
-                                                        section.source.start + fix.span.start,
-                                                        &owner.source_text,
-                                                    ),
-                                                    offset_to_position(
-                                                        section.source.start + fix.span.end,
-                                                        &owner.source_text,
-                                                    ),
-                                                )
-                                                .with_message(
-                                                    fix.message
-                                                        .as_ref()
-                                                        .map(|label| Cow::Owned(label.to_string())),
-                                                ),
-                                            }),
+                                            fixes: match &message.fixes {
+                                                PossibleFixes::None => {
+                                                    PossibleFixesWithPosition::None
+                                                }
+                                                PossibleFixes::Single(fix) => {
+                                                    PossibleFixesWithPosition::Single(
+                                                        fix_to_fix_with_position(
+                                                            fix,
+                                                            section.source.start,
+                                                            &owner.source_text,
+                                                        ),
+                                                    )
+                                                }
+                                                PossibleFixes::Multiple(fixes) => {
+                                                    PossibleFixesWithPosition::Multiple(
+                                                        fixes
+                                                            .iter()
+                                                            .map(|fix| {
+                                                                fix_to_fix_with_position(
+                                                                    fix,
+                                                                    section.source.start,
+                                                                    &owner.source_text,
+                                                                )
+                                                            })
+                                                            .collect(),
+                                                    )
+                                                }
+                                            },
                                         }
                                     },
                                 ));
@@ -689,9 +717,10 @@ impl<'l> Runtime<'l> {
                                     Rc::new(section.semantic.unwrap()),
                                     Arc::clone(&module_record),
                                 ),
-                                Err(errors) => {
-                                    errors.into_iter().map(|err| Message::new(err, None)).collect()
-                                }
+                                Err(errors) => errors
+                                    .into_iter()
+                                    .map(|err| Message::new(err, PossibleFixes::None))
+                                    .collect(),
                             }
                             .into_iter()
                             .map(|message| message.clone_in(allocator)),
@@ -705,34 +734,42 @@ impl<'l> Runtime<'l> {
 
     fn process_path(
         &self,
-        path: Arc<OsStr>,
+        path: &Arc<OsStr>,
         check_syntax_errors: bool,
         tx_error: &DiagnosticSender,
     ) -> ModuleProcessOutput {
-        let Some(ext) = Path::new(&path).extension().and_then(OsStr::to_str) else {
-            return ModuleProcessOutput { path, processed_module: ProcessedModule::default() };
+        let Some(ext) = Path::new(path).extension().and_then(OsStr::to_str) else {
+            return ModuleProcessOutput {
+                path: Arc::clone(path),
+                processed_module: ProcessedModule::default(),
+            };
         };
-        let Some(source_type_and_text) = self.get_source_type_and_text(Path::new(&path), ext)
-        else {
-            return ModuleProcessOutput { path, processed_module: ProcessedModule::default() };
+        let Some(source_type_and_text) = self.get_source_type_and_text(Path::new(path), ext) else {
+            return ModuleProcessOutput {
+                path: Arc::clone(path),
+                processed_module: ProcessedModule::default(),
+            };
         };
 
         let (source_type, source_text) = match source_type_and_text {
             Ok(source_text) => source_text,
             Err(e) => {
-                tx_error.send(Some((Path::new(&path).to_path_buf(), vec![e]))).unwrap();
-                return ModuleProcessOutput { path, processed_module: ProcessedModule::default() };
+                tx_error.send(Some((Path::new(path).to_path_buf(), vec![e]))).unwrap();
+                return ModuleProcessOutput {
+                    path: Arc::clone(path),
+                    processed_module: ProcessedModule::default(),
+                };
             }
         };
         let mut records = SmallVec::<[Result<ResolvedModuleRecord, Vec<OxcDiagnostic>>; 1]>::new();
         let mut module_content: Option<ModuleContent> = None;
         let allocator = Allocator::default();
-        if self.paths.contains(&path) {
+        if self.paths.contains(path) {
             module_content =
                 Some(ModuleContent::new(ModuleContentOwner { source_text, allocator }, |owner| {
                     let mut section_contents = SmallVec::new();
                     records = self.process_source(
-                        Path::new(&path),
+                        Path::new(path),
                         ext,
                         check_syntax_errors,
                         source_type,
@@ -744,7 +781,7 @@ impl<'l> Runtime<'l> {
                 }));
         } else {
             records = self.process_source(
-                Path::new(&path),
+                Path::new(path),
                 ext,
                 check_syntax_errors,
                 source_type,
@@ -755,7 +792,7 @@ impl<'l> Runtime<'l> {
         }
 
         ModuleProcessOutput {
-            path,
+            path: Arc::clone(path),
             processed_module: ProcessedModule {
                 section_module_records: records,
                 content: module_content,

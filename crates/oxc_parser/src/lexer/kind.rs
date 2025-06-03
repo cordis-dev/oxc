@@ -278,7 +278,8 @@ impl Kind {
     /// ```
     #[inline]
     pub fn is_after_let(self) -> bool {
-        self != Self::In && (matches!(self, LCurly | LBrack | Ident) || self.is_any_keyword())
+        !matches!(self, In | Instanceof)
+            && (matches!(self, LCurly | LBrack | Ident) || self.is_any_keyword())
     }
 
     /// Section 13.2.4 Literals
@@ -315,18 +316,6 @@ impl Kind {
     #[inline]
     pub fn is_variable_declaration(self) -> bool {
         matches!(self, Var | Let | Const)
-    }
-
-    /// Section 15.4 Method Definitions
-    /// `ClassElementName`[Yield, Await] :
-    ///   `PropertyName`[?Yield, ?Await]
-    ///   `PrivateIdentifier`
-    /// `PropertyName`[Yield, Await] :
-    ///   `LiteralPropertyName`
-    ///   `ComputedPropertyName`[?Yield, ?Await]
-    #[inline]
-    pub fn is_class_element_name_start(self) -> bool {
-        self.is_literal_property_name() || matches!(self, LBrack | PrivateIdentifier)
     }
 
     #[rustfmt::skip]

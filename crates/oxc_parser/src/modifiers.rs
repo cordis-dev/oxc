@@ -104,6 +104,10 @@ pub struct Modifier {
 }
 
 impl Modifier {
+    pub fn new(span: Span, kind: ModifierKind) -> Self {
+        Self { span, kind }
+    }
+
     #[inline]
     pub fn is_static(&self) -> bool {
         matches!(self.kind, ModifierKind::Static)
@@ -363,14 +367,13 @@ impl<'a> ParserImpl<'a> {
     ) -> Modifiers<'a> {
         let mut has_seen_static_modifier = false;
         let mut has_leading_modifier = false;
-        let mut has_trailing_decorator = false;
 
         let mut modifiers = self.ast.vec();
         let mut modifier_flags = ModifierFlags::empty();
 
         // parse leading decorators
-        if allow_decorators && matches!(self.cur_kind(), Kind::At) {
-            self.try_parse(Self::eat_decorators);
+        if allow_decorators && self.at(Kind::At) {
+            self.eat_decorators();
         }
 
         // parse leading modifiers
@@ -389,12 +392,12 @@ impl<'a> ParserImpl<'a> {
         }
 
         // parse trailing decorators, but only if we parsed any leading modifiers
-        if allow_decorators && has_leading_modifier && matches!(self.cur_kind(), Kind::At) {
-            has_trailing_decorator = self.try_parse(Self::eat_decorators).is_some();
+        if allow_decorators && has_leading_modifier && self.at(Kind::At) {
+            self.eat_decorators();
         }
 
         // parse trailing modifiers, but only if we parsed any trailing decorators
-        if has_trailing_decorator {
+        if !self.state.decorators.is_empty() {
             while let Some(modifier) = self.try_parse_modifier(
                 has_seen_static_modifier,
                 permit_const_as_modifier,
@@ -448,6 +451,10 @@ impl<'a> ParserImpl<'a> {
     pub(crate) fn next_token_is_open_brace(&mut self) -> bool {
         self.bump_any();
         self.at(Kind::LCurly)
+    }
+
+    pub(crate) fn parse_contextual_modifier(&mut self, kind: Kind) -> bool {
+        self.at(kind) && self.try_parse(Self::next_token_can_follow_modifier).is_some()
     }
 
     fn parse_any_contextual_modifier(&mut self) -> bool {

@@ -60,11 +60,12 @@ impl<'a> ParserImpl<'a> {
 
     pub(crate) fn parse_identifier_reference(&mut self) -> IdentifierReference<'a> {
         // allow `await` and `yield`, let semantic analysis report error
-        if !self.cur_kind().is_identifier_reference(false, false) {
+        let kind = self.cur_kind();
+        if !kind.is_identifier_reference(false, false) {
             return self.unexpected();
         }
+        self.check_identifier(kind, self.ctx);
         let (span, name) = self.parse_identifier_kind(Kind::Ident);
-        self.check_identifier(span, &name);
         self.ast.identifier_reference(span, name)
     }
 
@@ -80,17 +81,18 @@ impl<'a> ParserImpl<'a> {
                 self.unexpected()
             };
         }
+        self.check_identifier(cur, self.ctx);
         let (span, name) = self.parse_identifier_kind(Kind::Ident);
-        self.check_identifier(span, &name);
         self.ast.binding_identifier(span, name)
     }
 
     pub(crate) fn parse_label_identifier(&mut self) -> LabelIdentifier<'a> {
-        if !self.cur_kind().is_label_identifier(self.ctx.has_yield(), self.ctx.has_await()) {
+        let kind = self.cur_kind();
+        if !kind.is_label_identifier(self.ctx.has_yield(), self.ctx.has_await()) {
             return self.unexpected();
         }
+        self.check_identifier(kind, self.ctx);
         let (span, name) = self.parse_identifier_kind(Kind::Ident);
-        self.check_identifier(span, &name);
         self.ast.label_identifier(span, name)
     }
 
@@ -110,20 +112,20 @@ impl<'a> ParserImpl<'a> {
 
     #[inline]
     pub(crate) fn parse_identifier_kind(&mut self, kind: Kind) -> (Span, Atom<'a>) {
-        let span = self.start_span();
+        let span = self.cur_token().span();
         let name = self.cur_string();
         self.bump_remap(kind);
-        (self.end_span(span), Atom::from(name))
+        (span, Atom::from(name))
     }
 
-    pub(crate) fn check_identifier(&mut self, span: Span, name: &str) {
+    pub(crate) fn check_identifier(&mut self, kind: Kind, ctx: Context) {
         // It is a Syntax Error if this production has an [Await] parameter.
-        if self.ctx.has_await() && name == "await" {
-            self.error(diagnostics::identifier_async("await", span));
+        if ctx.has_await() && kind == Kind::Await {
+            self.error(diagnostics::identifier_async("await", self.cur_token().span()));
         }
         // It is a Syntax Error if this production has a [Yield] parameter.
-        if self.ctx.has_yield() && name == "yield" {
-            self.error(diagnostics::identifier_generator("yield", span));
+        if ctx.has_yield() && kind == Kind::Yield {
+            self.error(diagnostics::identifier_generator("yield", self.cur_token().span()));
         }
     }
 
@@ -132,10 +134,10 @@ impl<'a> ParserImpl<'a> {
     ///     # `IdentifierName`
     /// # Panics
     pub(crate) fn parse_private_identifier(&mut self) -> PrivateIdentifier<'a> {
-        let span = self.start_span();
+        let span = self.cur_token().span();
         let name = Atom::from(self.cur_string());
         self.bump_any();
-        self.ast.private_identifier(self.end_span(span), name)
+        self.ast.private_identifier(span, name)
     }
 
     /// Section [Primary Expression](https://tc39.es/ecma262/#sec-primary-expression)
@@ -192,8 +194,6 @@ impl<'a> ParserImpl<'a> {
             }
             // Literal, RegularExpressionLiteral
             kind if kind.is_literal() => self.parse_literal_expression(),
-            // JSXElement, JSXFragment
-            Kind::LAngle if self.source_type.is_jsx() => self.parse_jsx_expression(),
             _ => self.parse_identifier_expression(),
         }
     }
@@ -201,14 +201,18 @@ impl<'a> ParserImpl<'a> {
     fn parse_parenthesized_expression(&mut self, span: u32) -> Expression<'a> {
         self.expect(Kind::LParen);
         let expr_span = self.start_span();
-        let mut expressions = self.context(Context::In, Context::Decorator, |p| {
+        let (mut expressions, comma_span) = self.context(Context::In, Context::Decorator, |p| {
             p.parse_delimited_list(
                 Kind::RParen,
                 Kind::Comma,
-                /* trailing_separator */ false,
                 Self::parse_assignment_expression_or_higher,
             )
         });
+
+        if let Some(comma_span) = comma_span {
+            let error = diagnostics::expect_token(")", ",", self.end_span(comma_span));
+            return self.fatal_error(error);
+        }
 
         if expressions.is_empty() {
             self.expect(Kind::RParen);
@@ -281,14 +285,14 @@ impl<'a> ParserImpl<'a> {
     }
 
     pub(crate) fn parse_literal_null(&mut self) -> NullLiteral {
-        let span = self.start_span();
+        let span = self.cur_token().span();
         self.bump_any(); // bump `null`
-        self.ast.null_literal(self.end_span(span))
+        self.ast.null_literal(span)
     }
 
     pub(crate) fn parse_literal_number(&mut self) -> NumericLiteral<'a> {
-        let span = self.start_span();
         let token = self.cur_token();
+        let span = token.span();
         let src = self.cur_src();
         let value = match token.kind() {
             Kind::Decimal | Kind::Binary | Kind::Octal | Kind::Hex => {
@@ -300,7 +304,7 @@ impl<'a> ParserImpl<'a> {
             _ => unreachable!(),
         };
         let value = value.unwrap_or_else(|err| {
-            self.set_fatal_error(diagnostics::invalid_number(err, token.span()));
+            self.set_fatal_error(diagnostics::invalid_number(err, span));
             0.0 // Dummy value
         });
         let base = match token.kind() {
@@ -319,11 +323,10 @@ impl<'a> ParserImpl<'a> {
             _ => return self.unexpected(),
         };
         self.bump_any();
-        self.ast.numeric_literal(self.end_span(span), value, Some(Atom::from(src)), base)
+        self.ast.numeric_literal(span, value, Some(Atom::from(src)), base)
     }
 
     pub(crate) fn parse_literal_bigint(&mut self) -> BigIntLiteral<'a> {
-        let span = self.start_span();
         let base = match self.cur_kind() {
             Kind::Decimal => BigintBase::Decimal,
             Kind::Binary => BigintBase::Binary,
@@ -332,24 +335,25 @@ impl<'a> ParserImpl<'a> {
             _ => return self.unexpected(),
         };
         let token = self.cur_token();
+        let span = token.span();
         let raw = self.cur_src();
         let src = raw.strip_suffix('n').unwrap();
         let _value = parse_big_int(src, token.kind(), token.has_separator())
-            .map_err(|err| diagnostics::invalid_number(err, token.span()));
+            .map_err(|err| diagnostics::invalid_number(err, span));
         self.bump_any();
-        self.ast.big_int_literal(self.end_span(span), raw, base)
+        self.ast.big_int_literal(span, raw, base)
     }
 
     pub(crate) fn parse_literal_regexp(&mut self) -> RegExpLiteral<'a> {
-        let span = self.start_span();
         let (pattern_end, flags, flags_error) = self.read_regex();
         if !self.lexer.errors.is_empty() {
             return self.unexpected();
         }
-        let pattern_start = self.cur_token().start() + 1; // +1 to exclude left `/`
+        let span = self.cur_token().span();
+        let pattern_start = span.start + 1; // +1 to exclude left `/`
         let pattern_text = &self.source_text[pattern_start as usize..pattern_end as usize];
         let flags_start = pattern_end + 1; // +1 to include right `/`
-        let flags_text = &self.source_text[flags_start as usize..self.cur_token().end() as usize];
+        let flags_text = &self.source_text[flags_start as usize..span.end as usize];
         let raw = self.cur_src();
         self.bump_any();
 
@@ -368,11 +372,7 @@ impl<'a> ParserImpl<'a> {
 
         let pattern = RegExpPattern { text: Atom::from(pattern_text), pattern };
 
-        self.ast.reg_exp_literal(
-            self.end_span(span),
-            RegExp { pattern, flags },
-            Some(Atom::from(raw)),
-        )
+        self.ast.reg_exp_literal(span, RegExp { pattern, flags }, Some(Atom::from(raw)))
     }
 
     #[cfg(feature = "regular_expression")]
@@ -404,16 +404,11 @@ impl<'a> ParserImpl<'a> {
         if !self.at(Kind::Str) {
             return self.unexpected();
         }
+        let span = self.cur_token().span();
+        let raw = Atom::from(self.cur_src());
         let value = self.cur_string();
-        let span = self.start_span();
         let lone_surrogates = self.cur_token().lone_surrogates();
         self.bump_any();
-        let span = self.end_span(span);
-        // SAFETY:
-        // range comes from the lexer, which are ensured to meeting the criteria of `get_unchecked`.
-        let raw = Atom::from(unsafe {
-            self.source_text.get_unchecked(span.start as usize..span.end as usize)
-        });
         self.ast.string_literal_with_lone_surrogates(span, value, Some(raw), lone_surrogates)
     }
 
@@ -425,17 +420,10 @@ impl<'a> ParserImpl<'a> {
     pub(crate) fn parse_array_expression(&mut self) -> Expression<'a> {
         let span = self.start_span();
         self.expect(Kind::LBrack);
-        let elements = self.context(Context::In, Context::empty(), |p| {
-            p.parse_delimited_list(
-                Kind::RBrack,
-                Kind::Comma,
-                /* trailing_separator */ false,
-                Self::parse_array_expression_element,
-            )
+        let (elements, comma_span) = self.context(Context::In, Context::empty(), |p| {
+            p.parse_delimited_list(Kind::RBrack, Kind::Comma, Self::parse_array_expression_element)
         });
-        if self.at(Kind::Comma) {
-            let comma_span = self.start_span();
-            self.bump_any();
+        if let Some(comma_span) = comma_span {
             self.state.trailing_commas.insert(span, self.end_span(comma_span));
         }
         self.expect(Kind::RBrack);
@@ -625,13 +613,8 @@ impl<'a> ParserImpl<'a> {
         let name = self.parse_identifier_name();
 
         self.expect(Kind::LParen);
-        let arguments = self.context(Context::In, Context::Decorator, |p| {
-            p.parse_delimited_list(
-                Kind::RParen,
-                Kind::Comma,
-                /* trailing_separator */ true,
-                Self::parse_v8_intrinsic_argument,
-            )
+        let (arguments, _) = self.context(Context::In, Context::Decorator, |p| {
+            p.parse_delimited_list(Kind::RParen, Kind::Comma, Self::parse_v8_intrinsic_argument)
         });
         self.expect(Kind::RParen);
         self.ast.expression_v_8_intrinsic(self.end_span(span), name, arguments)
@@ -734,12 +717,15 @@ impl<'a> ParserImpl<'a> {
             }
 
             let mut question_dot = false;
-            let is_property_access = if allow_optional_chain && self.at(Kind::QuestionDot) && {
-                let peek_kind = self.peek_kind();
-                peek_kind == Kind::LBrack
-                    || peek_kind.is_identifier_or_keyword()
-                    || peek_kind.is_template_start_of_tagged_template()
-            } {
+            let is_property_access = if allow_optional_chain
+                && self.at(Kind::QuestionDot)
+                && self.lookahead(|p| {
+                    p.bump_any();
+                    let kind = p.cur_kind();
+                    kind == Kind::LBrack
+                        || kind.is_identifier_or_keyword()
+                        || kind.is_template_start_of_tagged_template()
+                }) {
                 self.bump_any();
                 *in_optional_chain = true;
                 question_dot = true;
@@ -771,15 +757,14 @@ impl<'a> ParserImpl<'a> {
                 continue;
             }
 
-            if !question_dot {
-                if self.at(Kind::Bang) && !self.cur_token().is_on_new_line() && self.is_ts {
-                    self.bump_any();
+            if !question_dot && self.is_ts {
+                if !self.cur_token().is_on_new_line() && self.eat(Kind::Bang) {
                     lhs = self.ast.expression_ts_non_null(self.end_span(lhs_span), lhs);
                     continue;
                 }
 
                 if matches!(self.cur_kind(), Kind::LAngle | Kind::ShiftLeft) {
-                    if let Some(Some(arguments)) =
+                    if let Some(arguments) =
                         self.try_parse(Self::parse_type_arguments_in_expression)
                     {
                         lhs = self.ast.expression_ts_instantiation(
@@ -877,13 +862,8 @@ impl<'a> ParserImpl<'a> {
         let arguments = if self.eat(Kind::LParen) {
             // ArgumentList[Yield, Await] :
             //   AssignmentExpression[+In, ?Yield, ?Await]
-            let call_arguments = self.context(Context::In, Context::empty(), |p| {
-                p.parse_delimited_list(
-                    Kind::RParen,
-                    Kind::Comma,
-                    /* trailing_separator */ true,
-                    Self::parse_call_argument,
-                )
+            let (call_arguments, _) = self.context(Context::In, Context::empty(), |p| {
+                p.parse_delimited_list(Kind::RParen, Kind::Comma, Self::parse_call_argument)
             });
             self.expect(Kind::RParen);
             call_arguments
@@ -928,8 +908,10 @@ impl<'a> ParserImpl<'a> {
 
             let mut type_arguments = None;
             if question_dot {
-                if let Some(Some(args)) = self.try_parse(Self::parse_type_arguments_in_expression) {
-                    type_arguments = Some(args);
+                if self.is_ts {
+                    if let Some(args) = self.try_parse(Self::parse_type_arguments_in_expression) {
+                        type_arguments = Some(args);
+                    }
                 }
                 if self.cur_kind().is_template_start_of_tagged_template() {
                     lhs = self.parse_tagged_template(lhs_span, lhs, question_dot, type_arguments);
@@ -972,13 +954,8 @@ impl<'a> ParserImpl<'a> {
         // ArgumentList[Yield, Await] :
         //   AssignmentExpression[+In, ?Yield, ?Await]
         self.expect(Kind::LParen);
-        let call_arguments = self.context(Context::In, Context::Decorator, |p| {
-            p.parse_delimited_list(
-                Kind::RParen,
-                Kind::Comma,
-                /* trailing_separator */ true,
-                Self::parse_call_argument,
-            )
+        let (call_arguments, _) = self.context(Context::In, Context::Decorator, |p| {
+            p.parse_delimited_list(Kind::RParen, Kind::Comma, Self::parse_call_argument)
         });
         self.expect(Kind::RParen);
         self.ast.expression_call(
@@ -1010,10 +987,7 @@ impl<'a> ParserImpl<'a> {
             return self.ast.expression_update(self.end_span(lhs_span), operator, true, argument);
         }
 
-        if self.source_type.is_jsx()
-            && kind == Kind::LAngle
-            && self.peek_kind().is_identifier_name()
-        {
+        if self.source_type.is_jsx() && self.at(Kind::LAngle) {
             return self.parse_jsx_expression();
         }
 
@@ -1427,40 +1401,44 @@ impl<'a> ParserImpl<'a> {
 
     fn is_await_expression(&mut self) -> bool {
         if self.at(Kind::Await) {
-            let peek_token = self.peek_token();
-            // Allow arrow expression `await => {}`
-            if peek_token.kind() == Kind::Arrow {
-                return false;
-            }
             if self.ctx.has_await() {
                 return true;
             }
-            // The following expressions are ambiguous
-            // await + 0, await - 0, await ( 0 ), await [ 0 ], await / 0 /u, await ``, await of []
-            if matches!(
-                peek_token.kind(),
-                Kind::Of | Kind::LParen | Kind::LBrack | Kind::Slash | Kind::RegExp
-            ) {
-                return false;
-            }
-
-            return !peek_token.is_on_new_line() && peek_token.kind().is_after_await_or_yield();
+            return self.lookahead(|p| {
+                Self::next_token_is_identifier_or_keyword_or_literal_on_same_line(p, true)
+            });
         }
         false
     }
 
     fn is_yield_expression(&mut self) -> bool {
         if self.at(Kind::Yield) {
-            let peek_token = self.peek_token();
-            // Allow arrow expression `yield => {}`
-            if peek_token.kind() == Kind::Arrow {
-                return false;
-            }
             if self.ctx.has_yield() {
                 return true;
             }
-            return !peek_token.is_on_new_line() && peek_token.kind().is_after_await_or_yield();
+            return self.lookahead(|p| {
+                Self::next_token_is_identifier_or_keyword_or_literal_on_same_line(p, false)
+            });
         }
         false
+    }
+
+    fn next_token_is_identifier_or_keyword_or_literal_on_same_line(
+        &mut self,
+        is_await: bool,
+    ) -> bool {
+        self.bump_any();
+
+        // NOTE: This check implementation is based on TypeScript parser.
+        // But TS does not have this exception.
+        // This is needed to pass parser_babel test to parse:
+        // `for (await of [])` with `sourceType: script`
+        if !self.is_ts && is_await && self.at(Kind::Of) {
+            return false;
+        }
+
+        let token = self.cur_token();
+        let kind = token.kind();
+        !token.is_on_new_line() && kind.is_after_await_or_yield()
     }
 }
