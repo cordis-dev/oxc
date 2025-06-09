@@ -682,9 +682,7 @@ function deserializeCatchClause(pos) {
 }
 
 function deserializeCatchParameter(pos) {
-  return {
-    ...deserializeBindingPatternKind(pos + 8),
-  };
+  return deserializeBindingPattern(pos + 8);
 }
 
 function deserializeDebuggerStatement(pos) {
@@ -696,9 +694,8 @@ function deserializeDebuggerStatement(pos) {
 }
 
 function deserializeBindingPattern(pos) {
-  return {
-    ...deserializeBindingPatternKind(pos),
-  };
+  const pattern = deserializeBindingPatternKind(pos);
+  return pattern;
 }
 
 function deserializeAssignmentPattern(pos) {
@@ -1081,14 +1078,13 @@ function deserializeStringLiteral(pos) {
 }
 
 function deserializeBigIntLiteral(pos) {
-  const raw = deserializeStr(pos + 8),
-    bigint = raw.slice(0, -1).replace(/_/g, '');
+  const bigint = deserializeStr(pos + 8);
   return {
     type: 'Literal',
     start: deserializeU32(pos),
     end: deserializeU32(pos + 4),
     value: BigInt(bigint),
-    raw,
+    raw: deserializeOptionStr(pos + 24),
     bigint,
   };
 }
@@ -2140,10 +2136,11 @@ function deserializeRawTransferData(pos) {
 
 function deserializeError(pos) {
   return {
-    severity: deserializeErrorSeverity(pos + 56),
+    severity: deserializeErrorSeverity(pos + 72),
     message: deserializeStr(pos),
     labels: deserializeVecErrorLabel(pos + 16),
     helpMessage: deserializeOptionStr(pos + 40),
+    codeframe: deserializeStr(pos + 56),
   };
 }
 
@@ -5405,7 +5402,7 @@ function deserializeVecError(pos) {
   pos = uint32[pos32];
   for (let i = 0; i < len; i++) {
     arr.push(deserializeError(pos));
-    pos += 64;
+    pos += 80;
   }
   return arr;
 }

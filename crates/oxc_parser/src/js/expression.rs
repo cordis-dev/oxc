@@ -159,7 +159,7 @@ impl<'a> ParserImpl<'a> {
         let span = self.start_span();
 
         if self.at(Kind::At) {
-            self.eat_decorators();
+            self.parse_and_save_decorators();
         }
 
         // FunctionExpression, GeneratorExpression
@@ -338,10 +338,10 @@ impl<'a> ParserImpl<'a> {
         let span = token.span();
         let raw = self.cur_src();
         let src = raw.strip_suffix('n').unwrap();
-        let _value = parse_big_int(src, token.kind(), token.has_separator())
-            .map_err(|err| diagnostics::invalid_number(err, span));
+        let value = parse_big_int(src, token.kind(), token.has_separator(), self.ast.allocator);
+
         self.bump_any();
-        self.ast.big_int_literal(span, raw, base)
+        self.ast.big_int_literal(span, value, Some(Atom::from(raw)), base)
     }
 
     pub(crate) fn parse_literal_regexp(&mut self) -> RegExpLiteral<'a> {
@@ -471,17 +471,15 @@ impl<'a> ParserImpl<'a> {
                         }
                         Kind::TemplateMiddle => {
                             quasis.push(self.parse_template_element(tagged));
-                        }
-                        Kind::Eof => {
-                            self.expect(Kind::TemplateTail);
-                            break;
-                        }
-                        _ => {
                             // TemplateMiddle Expression[+In, ?Yield, ?Await]
                             let expr =
                                 self.context(Context::In, Context::empty(), Self::parse_expr);
                             expressions.push(expr);
                             self.re_lex_template_substitution_tail();
+                        }
+                        _ => {
+                            self.expect(Kind::TemplateTail);
+                            break;
                         }
                     }
                 }
@@ -1086,7 +1084,7 @@ impl<'a> ParserImpl<'a> {
             // This is need for jsx `<div>=</div>` case
             let kind = self.re_lex_right_angle();
 
-            let Some(left_precedence) = kind_to_precedence(kind, self.is_ts) else { break };
+            let Some(left_precedence) = kind_to_precedence(kind) else { break };
 
             let stop = if left_precedence.is_right_associative() {
                 left_precedence < min_precedence
@@ -1105,7 +1103,7 @@ impl<'a> ParserImpl<'a> {
                 break;
             }
 
-            if self.is_ts && matches!(kind, Kind::As | Kind::Satisfies) {
+            if matches!(kind, Kind::As | Kind::Satisfies) {
                 if self.cur_token().is_on_new_line() {
                     break;
                 }
@@ -1113,8 +1111,14 @@ impl<'a> ParserImpl<'a> {
                 let type_annotation = self.parse_ts_type();
                 let span = self.end_span(lhs_span);
                 lhs = if kind == Kind::As {
+                    if !self.is_ts {
+                        self.error(diagnostics::as_in_ts(span));
+                    }
                     self.ast.expression_ts_as(span, lhs, type_annotation)
                 } else {
+                    if !self.is_ts {
+                        self.error(diagnostics::satisfies_in_ts(span));
+                    }
                     self.ast.expression_ts_satisfies(span, lhs, type_annotation)
                 };
                 continue;

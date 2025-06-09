@@ -3,7 +3,7 @@ commit: 1d4546bc
 parser_babel Summary:
 AST Parsed     : 2351/2362 (99.53%)
 Positive Passed: 2330/2362 (98.65%)
-Negative Passed: 1585/1698 (93.35%)
+Negative Passed: 1586/1698 (93.40%)
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/categorized/invalid-startindex-and-startline-specified-without-startcolumn/input.js
 
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/categorized/startline-and-startcolumn-specified/input.js
@@ -33,8 +33,6 @@ Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2018/object-rest-spread/no-pattern-in-rest/input.js
 
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2018/object-rest-spread/no-pattern-in-rest-with-ts/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2022/class-static-block/invalid-decorators/input.js
 
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2022/private-in/invalid-private-followed-by-in-2/input.js
 
@@ -4456,15 +4454,16 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·           ╰── `(` expected
    ╰────
 
-  × Expected `$}` but found `EOF`
+  × Expected `}` but found `EOF`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/266/input.js:1:19]
  1 │ `hello ${10 `test`
    ╰────
 
-  × Unexpected token
+  × Expected `}` but found `;`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/267/input.js:1:12]
  1 │ `hello ${10;test`
-   ·            ─
+   ·            ┬
+   ·            ╰── `}` expected
    ╰────
 
   × Unexpected token
@@ -8475,6 +8474,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ╰────
   help: A `continue` statement can only be used within an enclosing `for`, `while` or `do while`
 
+  × Decorators are not valid here.
+   ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-static-block/invalid-decorators/input.js:3:3]
+ 2 │   static foo() {}
+ 3 │   @dec
+   ·   ────
+ 4 │   static {
+   ╰────
+
   × '0'-prefixed octal literals and octal escape sequences are deprecated
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-static-block/invalid-legacy-octal/input.js:4:5]
  3 │   static {
@@ -9510,13 +9517,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    · ──────
    ╰────
 
-  × Unexpected token
+  × Expected `}` but found `;`
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-template-literals/unclosed-interpolation/input.js:1:12]
  1 │ `hello ${10;test`
-   ·            ─
+   ·            ┬
+   ·            ╰── `}` expected
    ╰────
 
-  × Expected `$}` but found `EOF`
+  × Expected `}` but found `EOF`
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-template-literals/unclosed-nested/input.js:2:1]
  1 │ `hello ${10 `test`
    ╰────

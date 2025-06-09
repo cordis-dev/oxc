@@ -735,11 +735,7 @@ function deserializeCatchClause(pos) {
 }
 
 function deserializeCatchParameter(pos) {
-  return {
-    ...deserializeBindingPatternKind(pos + 8),
-    typeAnnotation: deserializeOptionBoxTSTypeAnnotation(pos + 24),
-    optional: deserializeBool(pos + 32),
-  };
+  return deserializeBindingPattern(pos + 8);
 }
 
 function deserializeDebuggerStatement(pos) {
@@ -751,11 +747,10 @@ function deserializeDebuggerStatement(pos) {
 }
 
 function deserializeBindingPattern(pos) {
-  return {
-    ...deserializeBindingPatternKind(pos),
-    typeAnnotation: deserializeOptionBoxTSTypeAnnotation(pos + 16),
-    optional: deserializeBool(pos + 24),
-  };
+  const pattern = deserializeBindingPatternKind(pos);
+  pattern.optional = deserializeBool(pos + 24);
+  pattern.typeAnnotation = deserializeOptionBoxTSTypeAnnotation(pos + 16);
+  return pattern;
 }
 
 function deserializeAssignmentPattern(pos) {
@@ -875,12 +870,10 @@ function deserializeFormalParameter(pos) {
     override = deserializeBool(pos + 66);
   let param;
   if (accessibility === null && !readonly && !override) {
-    param = {
-      ...deserializeBindingPatternKind(pos + 32),
-      decorators: deserializeVecDecorator(pos + 8),
-      optional: deserializeBool(pos + 56),
-      typeAnnotation: deserializeOptionBoxTSTypeAnnotation(pos + 48),
-    };
+    param = deserializeBindingPatternKind(pos + 32);
+    param.decorators = deserializeVecDecorator(pos + 8);
+    param.optional = deserializeBool(pos + 56);
+    param.typeAnnotation = deserializeOptionBoxTSTypeAnnotation(pos + 48);
   } else {
     param = {
       type: 'TSParameterProperty',
@@ -970,8 +963,8 @@ function deserializeMethodDefinition(pos) {
       type: 'Identifier',
       start: key.start,
       end: key.end,
-      name: 'constructor',
       decorators: [],
+      name: 'constructor',
       optional: false,
       typeAnnotation: null,
     };
@@ -1230,14 +1223,13 @@ function deserializeStringLiteral(pos) {
 }
 
 function deserializeBigIntLiteral(pos) {
-  const raw = deserializeStr(pos + 8),
-    bigint = raw.slice(0, -1).replace(/_/g, '');
+  const bigint = deserializeStr(pos + 8);
   return {
     type: 'Literal',
     start: deserializeU32(pos),
     end: deserializeU32(pos + 4),
     value: BigInt(bigint),
-    raw,
+    raw: deserializeOptionStr(pos + 24),
     bigint,
   };
 }
@@ -2288,10 +2280,11 @@ function deserializeRawTransferData(pos) {
 
 function deserializeError(pos) {
   return {
-    severity: deserializeErrorSeverity(pos + 56),
+    severity: deserializeErrorSeverity(pos + 72),
     message: deserializeStr(pos),
     labels: deserializeVecErrorLabel(pos + 16),
     helpMessage: deserializeOptionStr(pos + 40),
+    codeframe: deserializeStr(pos + 56),
   };
 }
 
@@ -5553,7 +5546,7 @@ function deserializeVecError(pos) {
   pos = uint32[pos32];
   for (let i = 0; i < len; i++) {
     arr.push(deserializeError(pos));
-    pos += 64;
+    pos += 80;
   }
   return arr;
 }
