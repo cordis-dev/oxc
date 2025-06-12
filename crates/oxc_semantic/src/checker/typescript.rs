@@ -227,29 +227,6 @@ pub fn check_array_pattern<'a>(pattern: &ArrayPattern<'a>, ctx: &SemanticBuilder
     }
 }
 
-/// An interface can only extend an identifier/qualified-name with optional type arguments.(2499)
-fn invalid_interface_extend(span: Span) -> OxcDiagnostic {
-    ts_error(
-        "2499",
-        "An interface can only extend an identifier/qualified-name with optional type arguments.",
-    )
-    .with_label(span)
-}
-
-pub fn check_ts_interface_declaration<'a>(
-    decl: &TSInterfaceDeclaration<'a>,
-    ctx: &SemanticBuilder<'a>,
-) {
-    for extend in &decl.extends {
-        if !matches!(
-            &extend.expression,
-            Expression::Identifier(_) | Expression::StaticMemberExpression(_),
-        ) {
-            ctx.error(invalid_interface_extend(extend.span));
-        }
-    }
-}
-
 fn not_allowed_namespace_declaration(span: Span) -> OxcDiagnostic {
     OxcDiagnostic::error(
         "A namespace declaration is only allowed at the top level of a namespace or module.",
@@ -556,7 +533,7 @@ pub fn check_jsx_expression_container(
     ctx: &SemanticBuilder<'_>,
 ) {
     if matches!(container.expression, JSXExpression::EmptyExpression(_))
-        && matches!(ctx.nodes.parent_kind(ctx.current_node_id), Some(AstKind::JSXAttributeItem(_)))
+        && matches!(ctx.nodes.parent_kind(ctx.current_node_id), Some(AstKind::JSXAttribute(_)))
     {
         ctx.error(invalid_jsx_attribute_value(container.span()));
     }
