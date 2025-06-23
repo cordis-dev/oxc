@@ -2,6 +2,43 @@
 
 All notable changes to this package will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
+
+## [0.74.0] - 2025-06-23
+
+### 💥 BREAKING CHANGES
+
+- e81be6e semantic: [**BREAKING**] Rename `symbol_is_used` to `symbol_is_unused` (#11802) (Boshen)
+- 7a05e71 minifier: [**BREAKING**] Add `Treeshake` options (#11786) (Boshen)
+- 8ef1be2 traverse: [**BREAKING**] Introduce `TraverseCtx<'a, State>` (#11770) (Boshen)
+
+### 🚀 Features
+
+- d462ead minifier: Remove dead code that evaluates to a constant value (#11788) (Boshen)
+
+### 🚜 Refactor
+
+- 5a46641 ecmascript: Move `get_constant_value_for_reference_id` to `IsGlobalReference` trait (#11810) (Boshen)
+- d5a8f18 minifier: Make `Ctx` take `&mut TraverseCtx` (#11771) (Boshen)
+
+
+
+
+## [0.73.0] - 2025-06-13
+
+### 💥 BREAKING CHANGES
+
+- f3eaefb ast: [**BREAKING**] Add `value` field to `BigIntLiteral` (#11564) (overlookmotel)
+
+### 🚀 Features
+
+- 40ac186 minifier: Annotate more pure constructors (#11555) (Boshen)
+
+
+# Changelog
+
+All notable changes to this package will be documented in this file.
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project does not adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) until v1.0.0.
 
 ## [0.72.3] - 2025-06-06

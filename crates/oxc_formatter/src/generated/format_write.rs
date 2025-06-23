@@ -152,7 +152,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ArrayExpressionElement<'a>> {
     #[inline]
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
         let allocator = self.allocator;
-        let parent = allocator.alloc(AstNodes::ArrayExpressionElement(transmute_self(self)));
+        let parent = self.parent;
         match self.inner {
             ArrayExpressionElement::SpreadElement(inner) => {
                 allocator.alloc(AstNode::<SpreadElement> { inner, parent, allocator }).fmt(f)
@@ -472,7 +472,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ForStatementInit<'a>> {
     #[inline]
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
         let allocator = self.allocator;
-        let parent = allocator.alloc(AstNodes::ForStatementInit(transmute_self(self)));
+        let parent = self.parent;
         match self.inner {
             ForStatementInit::VariableDeclaration(inner) => {
                 allocator.alloc(AstNode::<VariableDeclaration> { inner, parent, allocator }).fmt(f)
@@ -1095,7 +1095,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSModuleReference<'a>> {
     #[inline]
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
         let allocator = self.allocator;
-        let parent = allocator.alloc(AstNodes::TSModuleReference(transmute_self(self)));
+        let parent = self.parent;
         match self.inner {
             TSModuleReference::ExternalModuleReference(inner) => allocator
                 .alloc(AstNode::<TSExternalModuleReference> { inner, parent, allocator })

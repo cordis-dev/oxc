@@ -2,6 +2,44 @@
 
 All notable changes to this package will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
+
+## [0.74.0] - 2025-06-23
+
+### 💥 BREAKING CHANGES
+
+- 7a05e71 minifier: [**BREAKING**] Add `Treeshake` options (#11786) (Boshen)
+
+### 🚀 Features
+
+- d462ead minifier: Remove dead code that evaluates to a constant value (#11788) (Boshen)
+
+### 🚜 Refactor
+
+- 5a46641 ecmascript: Move `get_constant_value_for_reference_id` to `IsGlobalReference` trait (#11810) (Boshen)
+
+
+
+
+## [0.73.0] - 2025-06-13
+
+### 💥 BREAKING CHANGES
+
+- f3eaefb ast: [**BREAKING**] Add `value` field to `BigIntLiteral` (#11564) (overlookmotel)
+
+### 🚀 Features
+
+- 40ac186 minifier: Annotate more pure constructors (#11555) (Boshen)
+
+### ⚡ Performance
+
+- 365d8e5 ecmascript: Faster parsing integers (#11565) (overlookmotel)
+
+
+# Changelog
+
+All notable changes to this package will be documented in this file.
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project does not adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) until v1.0.0.
 
 ## [0.69.0] - 2025-05-09

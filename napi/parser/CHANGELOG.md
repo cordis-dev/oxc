@@ -2,6 +2,214 @@
 
 All notable changes to this package will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
+
+## [0.74.0] - 2025-06-23
+
+### 🚀 Features
+
+- 93069a5 napi/parser: Add experimental lazy visitor (#11837) (overlookmotel)
+
+### 🚜 Refactor
+
+- 0260308 ast_tools: Prepare lazy deserializer codegen for visitor (#11836) (overlookmotel)
+- b544be8 napi/parser: Remove options amendment from `prepareRaw` (#11828) (overlookmotel)
+- 9c960cd napi/parser: Re-order code (#11813) (overlookmotel)
+- bfed7f2 napi/parser: Rename file (#11808) (overlookmotel)
+- 08e666f ast/estree: Add `#[estree]` attrs to `RegExpFlagsAlias` (#11794) (overlookmotel)
+
+### 📚 Documentation
+
+- 4dc8a4e napi/parser: Add JSDoc comments to all functions (#11814) (overlookmotel)
+
+### ⚡ Performance
+
+- 6bbe048 napi/parser: Do not lazily create `TextEncoder` (#11817) (overlookmotel)
+- aef1770 napi/parser: Destructure `bindings` on import (#11811) (overlookmotel)
+- 3a0a673 napi/parser: Lazy-load raw transfer and lazy deser code (#11807) (overlookmotel)
+
+
+## [0.74.0] - 2025-06-23
+
+### 🚀 Features
+
+- 93069a5 napi/parser: Add experimental lazy visitor (#11837) (overlookmotel)
+
+### 🚜 Refactor
+
+- 0260308 ast_tools: Prepare lazy deserializer codegen for visitor (#11836) (overlookmotel)
+- b544be8 napi/parser: Remove options amendment from `prepareRaw` (#11828) (overlookmotel)
+- 9c960cd napi/parser: Re-order code (#11813) (overlookmotel)
+- bfed7f2 napi/parser: Rename file (#11808) (overlookmotel)
+- 08e666f ast/estree: Add `#[estree]` attrs to `RegExpFlagsAlias` (#11794) (overlookmotel)
+
+### 📚 Documentation
+
+- 4dc8a4e napi/parser: Add JSDoc comments to all functions (#11814) (overlookmotel)
+
+### ⚡ Performance
+
+- 6bbe048 napi/parser: Do not lazily create `TextEncoder` (#11817) (overlookmotel)
+- aef1770 napi/parser: Destructure `bindings` on import (#11811) (overlookmotel)
+- 3a0a673 napi/parser: Lazy-load raw transfer and lazy deser code (#11807) (overlookmotel)
+
+
+## [0.73.2] - 2025-06-18
+
+### 🐛 Bug Fixes
+
+- a47a6de napi/parser: Lazy deser: do not expose `getElement` method from `NodeArray` (#11777) (overlookmotel)
+
+### ⚡ Performance
+
+- 21c8852 napi/parser: Faster deserialization of `Vec`s in raw transfer (#11776) (overlookmotel)
+
+
+## [0.73.2] - 2025-06-18
+
+### 🐛 Bug Fixes
+
+- a47a6de napi/parser: Lazy deser: do not expose `getElement` method from `NodeArray` (#11777) (overlookmotel)
+
+### ⚡ Performance
+
+- 21c8852 napi/parser: Faster deserialization of `Vec`s in raw transfer (#11776) (overlookmotel)
+
+
+## [0.73.1] - 2025-06-17
+
+### 🚀 Features
+
+- 81ef443 napi: Add `aarch64-linux-android` target (#11769) (LongYinan)
+- dfdebc2 napi/parser: Lazy deserializer `NodeArray` `slice` method (#11680) (overlookmotel)
+
+### 🐛 Bug Fixes
+
+- 6feab7e ast/estree: Remove custom serializer for `MethodDefinition` `key` field (#11763) (overlookmotel)
+- fcb3084 napi/parser: Lazy deser: remove outdated comments (#11699) (overlookmotel)
+- 2749931 napi/parser: Lazy deserializer block class constructors correctly (#11679) (overlookmotel)
+- e523d86 napi/parser: Lazy deserializer locally cache all `Vec`s and strings (#11667) (overlookmotel)
+
+### 🚜 Refactor
+
+- d057652 regular-expression: Shorten Span construction (#11689) (Ulrich Stark)
+- f1f3c30 napi/parser: Lazy deserializer: prefix local cache property keys with `$` (#11673) (overlookmotel)
+
+### ⚡ Performance
+
+- d136acd napi/parser: Lazy deser: remove `getInternal` function in `NodeArray` (#11698) (overlookmotel)
+- a6a82f9 napi/parser: Lazy deser: avoid changing shape of `NodeArray` prototype (#11697) (overlookmotel)
+- 60f754e napi/parser: Lazily deserialize `Vec`s (#11678) (overlookmotel)
+
+### 🧪 Testing
+
+- 20efcd4 napi/parser: Remove unnecessary `RUN_SIMPLE_LAZY_TESTS` env var (#11703) (overlookmotel)
+- 6848b24 napi/parser: Lazy deser: tests for introspection of `NodeArray`s (#11702) (overlookmotel)
+
+
+## [0.73.1] - 2025-06-17
+
+### 🚀 Features
+
+- 81ef443 napi: Add `aarch64-linux-android` target (#11769) (LongYinan)
+- dfdebc2 napi/parser: Lazy deserializer `NodeArray` `slice` method (#11680) (overlookmotel)
+
+### 🐛 Bug Fixes
+
+- 6feab7e ast/estree: Remove custom serializer for `MethodDefinition` `key` field (#11763) (overlookmotel)
+- fcb3084 napi/parser: Lazy deser: remove outdated comments (#11699) (overlookmotel)
+- 2749931 napi/parser: Lazy deserializer block class constructors correctly (#11679) (overlookmotel)
+- e523d86 napi/parser: Lazy deserializer locally cache all `Vec`s and strings (#11667) (overlookmotel)
+
+### 🚜 Refactor
+
+- d057652 regular-expression: Shorten Span construction (#11689) (Ulrich Stark)
+- f1f3c30 napi/parser: Lazy deserializer: prefix local cache property keys with `$` (#11673) (overlookmotel)
+
+### ⚡ Performance
+
+- d136acd napi/parser: Lazy deser: remove `getInternal` function in `NodeArray` (#11698) (overlookmotel)
+- a6a82f9 napi/parser: Lazy deser: avoid changing shape of `NodeArray` prototype (#11697) (overlookmotel)
+- 60f754e napi/parser: Lazily deserialize `Vec`s (#11678) (overlookmotel)
+
+### 🧪 Testing
+
+- 20efcd4 napi/parser: Remove unnecessary `RUN_SIMPLE_LAZY_TESTS` env var (#11703) (overlookmotel)
+- 6848b24 napi/parser: Lazy deser: tests for introspection of `NodeArray`s (#11702) (overlookmotel)
+
+
+## [0.73.0] - 2025-06-13
+
+### 💥 BREAKING CHANGES
+
+- f3eaefb ast: [**BREAKING**] Add `value` field to `BigIntLiteral` (#11564) (overlookmotel)
+
+### 🚀 Features
+
+- 5860195 napi/parser: Improved `console.log` output for lazy deserialized AST (#11642) (overlookmotel)
+- 5a55a58 napi/parser: Add lazy deserialization (#11595) (overlookmotel)
+- 120b00f napi/parser: Support old versions of NodeJS (#11596) (overlookmotel)
+
+### 🐛 Bug Fixes
+
+- 931fc73 napi/parser: Cache nodes in lazy deserialization (#11637) (overlookmotel)
+
+### 🚜 Refactor
+
+- ff7111c napi/parser: Use "construct" instead of "deserialize" in lazy deserializer (#11616) (overlookmotel)
+- 95ee174 napi/parser: Move raw transfer code into separate directory (#11583) (overlookmotel)
+- 8e74e05 ast/estree: Remove dead code from generated raw transfer deserializer (#11579) (overlookmotel)
+
+### ⚡ Performance
+
+- 5271951 napi/parser: Remove function calls from lazy deserialization (#11615) (overlookmotel)
+- 7c66637 napi/parser: Re-use `TypedArray` objects in raw transfer (#11585) (overlookmotel)
+
+### 🧪 Testing
+
+- 8cab72f napi/parser: Env var to run lazy deserialization tests (#11636) (overlookmotel)
+- 8ad3061 napi/parser: Run raw transfer tests on multiple threads (#11611) (overlookmotel)
+- c0027e0 ast/estree: Benchmark raw transfer deserialization in isolation (#11584) (overlookmotel)
+
+
+## [0.73.0] - 2025-06-13
+
+### 💥 BREAKING CHANGES
+
+- f3eaefb ast: [**BREAKING**] Add `value` field to `BigIntLiteral` (#11564) (overlookmotel)
+
+### 🚀 Features
+
+- 5860195 napi/parser: Improved `console.log` output for lazy deserialized AST (#11642) (overlookmotel)
+- 5a55a58 napi/parser: Add lazy deserialization (#11595) (overlookmotel)
+- 120b00f napi/parser: Support old versions of NodeJS (#11596) (overlookmotel)
+
+### 🐛 Bug Fixes
+
+- 931fc73 napi/parser: Cache nodes in lazy deserialization (#11637) (overlookmotel)
+
+### 🚜 Refactor
+
+- ff7111c napi/parser: Use "construct" instead of "deserialize" in lazy deserializer (#11616) (overlookmotel)
+- 95ee174 napi/parser: Move raw transfer code into separate directory (#11583) (overlookmotel)
+- 8e74e05 ast/estree: Remove dead code from generated raw transfer deserializer (#11579) (overlookmotel)
+
+### ⚡ Performance
+
+- 5271951 napi/parser: Remove function calls from lazy deserialization (#11615) (overlookmotel)
+- 7c66637 napi/parser: Re-use `TypedArray` objects in raw transfer (#11585) (overlookmotel)
+
+### 🧪 Testing
+
+- 8cab72f napi/parser: Env var to run lazy deserialization tests (#11636) (overlookmotel)
+- 8ad3061 napi/parser: Run raw transfer tests on multiple threads (#11611) (overlookmotel)
+- c0027e0 ast/estree: Benchmark raw transfer deserialization in isolation (#11584) (overlookmotel)
+
+
+# Changelog
+
+All notable changes to this package will be documented in this file.
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project does not adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) until v1.0.0.
 
 ## [0.72.3] - 2025-06-06

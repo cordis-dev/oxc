@@ -1,4 +1,4 @@
-js compatibility: 294/699 (42.06%)
+js compatibility: 295/699 (42.20%)
 
 # Failed
 
@@ -47,7 +47,6 @@ js compatibility: 294/699 (42.06%)
 | js/assignment/issue-7961.js | 💥 | 50.00% |
 | js/assignment/issue-8218.js | 💥 | 25.00% |
 | js/assignment/lone-arg.js | 💥 | 73.17% |
-| js/assignment/sequence.js | 💥 | 71.43% |
 | js/assignment/unary.js | 💥 | 0.00% |
 | js/assignment-comments/call.js | 💥 | 85.71% |
 | js/assignment-comments/call2.js | 💥 | 50.00% |
@@ -226,8 +225,8 @@ js compatibility: 294/699 (42.06%)
 | js/if/trailing_comment.js | 💥 | 58.06% |
 | js/import/comments.js | 💥💥 | 57.14% |
 | js/import/empty-import.js | 💥💥 | 45.45% |
-| js/import-assertions/keyword-detect.js | 💥 | 33.33% |
-| js/import-attributes/keyword-detect.js | 💥 | 33.33% |
+| js/import-assertions/keyword-detect.js | 💥 | 25.00% |
+| js/import-attributes/keyword-detect.js | 💥 | 28.57% |
 | js/import-attributes/long-sources.js | 💥 | 48.48% |
 | js/label/comment.js | 💥 | 66.67% |
 | js/last-argument-expansion/arrow.js | 💥 | 20.51% |

@@ -170,7 +170,11 @@ impl<'a> ParserImpl<'a> {
         let (params, _) =
             self.parse_delimited_list(Kind::RAngle, Kind::Comma, Self::parse_ts_type_parameter);
         self.expect(Kind::RAngle);
-        Some(self.ast.alloc_ts_type_parameter_declaration(self.end_span(span), params))
+        let span = self.end_span(span);
+        if params.is_empty() {
+            self.error(diagnostics::ts_empty_type_parameter_list(span));
+        }
+        Some(self.ast.alloc_ts_type_parameter_declaration(span, params))
     }
 
     pub(crate) fn parse_ts_implements_clause(&mut self) -> Vec<'a, TSClassImplements<'a>> {
@@ -408,14 +412,8 @@ impl<'a> ParserImpl<'a> {
                 let span = self.start_span();
                 self.bump_any(); // bump `this`
                 let this_type = self.ast.ts_this_type(self.end_span(span));
-                // TODO: rewind should not be necessary here, but it causes a regression in the
-                // conformance test suite otherwise
-                let checkpoint = self.checkpoint();
-                self.bump_any();
-                let kind = self.cur_kind();
-                self.rewind(checkpoint);
-                if kind == Kind::Is && !self.cur_token().is_on_new_line() {
-                    self.parse_this_type_predicate(this_type)
+                if self.at(Kind::Is) && !self.cur_token().is_on_new_line() {
+                    self.parse_this_type_predicate(span, this_type)
                 } else {
                     TSType::TSThisType(self.alloc(this_type))
                 }
@@ -686,14 +684,16 @@ impl<'a> ParserImpl<'a> {
         self.ast.ts_type_type_query(self.end_span(span), entity_name, type_arguments)
     }
 
-    fn parse_this_type_predicate(&mut self, this_ty: TSThisType) -> TSType<'a> {
-        let span = this_ty.span.start;
+    fn parse_this_type_predicate(&mut self, span: u32, this_ty: TSThisType) -> TSType<'a> {
         self.bump_any(); // bump `is`
-        // TODO: this should go through the ast builder.
-        let parameter_name = TSTypePredicateName::This(this_ty);
         let ty = self.parse_ts_type();
         let type_annotation = Some(self.ast.ts_type_annotation(ty.span(), ty));
-        self.ast.ts_type_type_predicate(self.end_span(span), parameter_name, false, type_annotation)
+        self.ast.ts_type_type_predicate(
+            self.end_span(span),
+            TSTypePredicateName::This(this_ty),
+            false,
+            type_annotation,
+        )
     }
 
     fn parse_this_type_node(&mut self) -> TSThisType {

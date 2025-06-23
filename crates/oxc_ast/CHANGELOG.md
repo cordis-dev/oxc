@@ -2,6 +2,73 @@
 
 All notable changes to this package will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
+
+## [0.74.0] - 2025-06-23
+
+### 🐛 Bug Fixes
+
+- 8627ced ast: `ComputedMemberExpression::static_property_name` use `cooked` for `TemplateElement`s (#11829) (overlookmotel)
+
+### 🚜 Refactor
+
+- 08e666f ast/estree: Add `#[estree]` attrs to `RegExpFlagsAlias` (#11794) (overlookmotel)
+
+
+
+## [0.73.1] - 2025-06-17
+
+### 🚀 Features
+
+- 371473c ast, semantic: Implement `GetAddress` for `AstKind` and `AstNode` (#11758) (overlookmotel)
+- 17f5dbe ast: Add AstKind to ImportAttribute node (#11765) (therewillbecode)
+- eb9db97 ast: Add AstKind to AccessorProperty node (#11764) (therewillbecode)
+- 584844c ast: Add AstKind to TSNamespaceExportDeclaration node (#11754) (therewillbecode)
+- 6095438 ast: Add AstKind to TSRestType node (#11752) (therewillbecode)
+- b8237b8 ast: Add AstKind to TSOptionalType node (#11751) (therewillbecode)
+- b949ece ast: Add AstKind to TSTupleType node (#11749) (therewillbecode)
+- d74c4af ast: Add AstKind to `TSTypePredicate` node (#11726) (therewillbecode)
+- c25b153 ast: Add AstKind to ` TSCallSignatureDeclaration` node (#11725) (therewillbecode)
+- 866470a ast: Add AstKind to `TSIndexSignature` node (#11724) (therewillbecode)
+- 37d4c9a ast: Add `AstKind` for `WithClause` (#11711) (camchenry)
+
+### 🐛 Bug Fixes
+
+- 6feab7e ast/estree: Remove custom serializer for `MethodDefinition` `key` field (#11763) (overlookmotel)
+
+### 🚜 Refactor
+
+- 3d89012 ast: Add `AstKind` for `TSTypeOperator` (#11747) (camchenry)
+- 5ca3d04 ast: Add `TSArrayType` as `AstKind` (#11745) (camchenry)
+- 4fbe4b1 ast: Remove AstKind from `TSModuleReference` node (#11732) (therewillbecode)
+- 219adcc ast: Don't generate AstKind for ArrayExpressionElement (#11684) (Ulrich Stark)
+
+
+## [0.73.0] - 2025-06-13
+
+### 💥 BREAKING CHANGES
+
+- f3eaefb ast: [**BREAKING**] Add `value` field to `BigIntLiteral` (#11564) (overlookmotel)
+
+### 🚀 Features
+
+- 3b03fd3 parser: Produce correct syntax error for `interface I extends (typeof T)` (#11610) (Boshen)
+
+### 🚜 Refactor
+
+- 8e30c5f ast: Don't generate AstKind for ForStatementInit (#11617) (Ulrich Stark)
+- 9136685 ast: Create AstKinds for jsdoc types (#11597) (Ulrich Stark)
+- d41fb13 ast: Get jsx types out of AstKind exceptions (#11535) (Ulrich Stark)
+
+### ⚡ Performance
+
+- d5866e8 ast/estree: Convert `NumericLiteral` `raw` field to JSON without escaping (#11562) (overlookmotel)
+
+
+# Changelog
+
+All notable changes to this package will be documented in this file.
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project does not adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) until v1.0.0.
 
 ## [0.72.3] - 2025-06-06

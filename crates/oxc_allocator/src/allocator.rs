@@ -1,4 +1,8 @@
-use std::{alloc::Layout, ptr, slice, str};
+use std::{
+    alloc::Layout,
+    ptr::{self, NonNull},
+    slice, str,
+};
 
 use bumpalo::Bump;
 
@@ -109,7 +113,7 @@ use oxc_data_structures::assert_unchecked;
 ///
 /// If workload is completely uniform, it reaches stable state on the 3rd round.
 ///
-/// ```ignore
+/// ```
 /// # use oxc_allocator::Allocator;
 /// let mut allocator = Allocator::new();
 ///
@@ -162,9 +166,8 @@ use oxc_data_structures::assert_unchecked;
 /// [`HashMap::new_in`], and all other methods which store data in the arena will refuse to compile
 /// if called with a [`Drop`] type.
 ///
-/// ```ignore
+/// ```compile_fail
 /// use oxc_allocator::{Allocator, Box};
-///
 /// let allocator = Allocator::new();
 ///
 /// struct Foo {
@@ -177,6 +180,11 @@ use oxc_data_structures::assert_unchecked;
 ///
 /// // This will fail to compile because `Foo` implements `Drop`
 /// let foo = Box::new_in(Foo { a: 0 }, &allocator);
+/// ```
+///
+/// ```compile_fail
+/// use oxc_allocator::{Allocator, Box};
+/// let allocator = Allocator::new();
 ///
 /// struct Bar {
 ///     v: std::vec::Vec<u8>,
@@ -290,6 +298,38 @@ impl Allocator {
     #[inline(always)]
     pub fn alloc_str<'alloc>(&'alloc self, src: &str) -> &'alloc str {
         self.bump.alloc_str(src)
+    }
+
+    /// `Copy` a slice into this `Bump` and return an exclusive reference to the copy.
+    ///
+    /// # Panics
+    /// Panics if reserving space for the slice fails.
+    ///
+    /// # Examples
+    /// ```
+    /// use oxc_allocator::Allocator;
+    /// let allocator = Allocator::default();
+    /// let x = allocator.alloc_slice_copy(&[1, 2, 3]);
+    /// assert_eq!(x, &[1, 2, 3]);
+    /// ```
+    // `#[inline(always)]` because this is a hot path and `Bump::alloc_slice_copy` is a very small function.
+    // We always want it to be inlined.
+    #[expect(clippy::inline_always)]
+    #[inline(always)]
+    pub fn alloc_slice_copy<T: Copy>(&self, src: &[T]) -> &mut [T] {
+        self.bump.alloc_slice_copy(src)
+    }
+
+    /// Allocate space for an object with the given [`Layout`].
+    ///
+    /// The returned pointer points at uninitialized memory, and should be initialized with
+    /// [`std::ptr::write`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if reserving space matching `layout` fails.
+    pub fn alloc_layout(&self, layout: Layout) -> NonNull<u8> {
+        self.bump.alloc_layout(layout)
     }
 
     /// Create new `&str` from a fixed-size array of `&str`s concatenated together,

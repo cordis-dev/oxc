@@ -26,7 +26,6 @@ impl<'a> ParserImpl<'a> {
                 Self::parse_object_expression_property,
             )
         });
-        self.bump(Kind::Comma); // Trailing Comma
         self.expect(Kind::RCurly);
         self.ast.alloc_object_expression(self.end_span(span), object_expression_properties)
     }
@@ -47,13 +46,12 @@ impl<'a> ParserImpl<'a> {
             /* stop_on_start_of_class_static_block */ false,
         );
 
-        let kind = self.cur_kind();
-        if self.parse_contextual_modifier(Kind::Get) || self.parse_contextual_modifier(Kind::Set) {
-            return match kind {
-                Kind::Get => self.parse_method_getter_setter(span, PropertyKind::Get, &modifiers),
-                Kind::Set => self.parse_method_getter_setter(span, PropertyKind::Set, &modifiers),
-                _ => unreachable!(),
-            };
+        if self.parse_contextual_modifier(Kind::Get) {
+            return self.parse_method_getter_setter(span, PropertyKind::Get, &modifiers);
+        }
+
+        if self.parse_contextual_modifier(Kind::Set) {
+            return self.parse_method_getter_setter(span, PropertyKind::Set, &modifiers);
         }
 
         let asterisk_token = self.eat(Kind::Star);
@@ -202,8 +200,12 @@ impl<'a> ParserImpl<'a> {
         modifiers: &Modifiers<'a>,
     ) -> Box<'a, ObjectProperty<'a>> {
         let (key, computed) = self.parse_property_name();
-        let method = self.parse_method(false, false, FunctionKind::ObjectMethod);
-        let value = Expression::FunctionExpression(method);
+        let function = self.parse_method(false, false, FunctionKind::ObjectMethod);
+        match kind {
+            PropertyKind::Get => self.check_getter(&function),
+            PropertyKind::Set => self.check_setter(&function),
+            PropertyKind::Init => {}
+        }
         self.verify_modifiers(
             modifiers,
             ModifierFlags::empty(),
@@ -213,7 +215,7 @@ impl<'a> ParserImpl<'a> {
             self.end_span(span),
             kind,
             key,
-            value,
+            Expression::FunctionExpression(function),
             /* method */ false,
             /* shorthand */ false,
             /* computed */ computed,

@@ -7,7 +7,7 @@ use std::{
 };
 
 use cow_utils::CowUtils;
-use oxc_allocator::Allocator;
+use oxc_allocator::{Allocator, AllocatorPool};
 use oxc_diagnostics::{GraphicalReportHandler, GraphicalTheme, NamedSource};
 use rustc_hash::FxHashMap;
 use serde::Deserialize;
@@ -18,9 +18,9 @@ use crate::{
     Linter, Oxlintrc, RuleEnum,
     fixer::{FixKind, Fixer},
     options::LintOptions,
-    read_to_string,
     rules::RULES,
     service::RuntimeFileSystem,
+    utils::read_to_arena_str,
 };
 
 #[derive(Eq, PartialEq)]
@@ -196,12 +196,15 @@ impl TesterFileSystem {
 }
 
 impl RuntimeFileSystem for TesterFileSystem {
-    fn read_to_string(&self, path: &Path) -> Result<String, std::io::Error> {
+    fn read_to_arena_str<'a>(
+        &self,
+        path: &Path,
+        allocator: &'a Allocator,
+    ) -> Result<&'a str, std::io::Error> {
         if path == self.path_to_lint {
-            return Ok(self.source_text.clone());
+            return Ok(allocator.alloc_str(&self.source_text));
         }
-
-        read_to_string(path)
+        read_to_arena_str(path, allocator)
     }
 
     fn write_file(&self, _path: &Path, _content: String) -> Result<(), std::io::Error> {
@@ -530,9 +533,10 @@ impl Tester {
         let paths = vec![Arc::<OsStr>::from(path_to_lint.as_os_str())];
         let options =
             LintServiceOptions::new(cwd, paths).with_cross_module(self.plugins.has_import());
-        let mut lint_service = LintService::new(&linter, options).with_file_system(Box::new(
-            TesterFileSystem::new(path_to_lint, source_text.to_string()),
-        ));
+        let mut lint_service =
+            LintService::new(&linter, AllocatorPool::default(), options).with_file_system(
+                Box::new(TesterFileSystem::new(path_to_lint, source_text.to_string())),
+            );
 
         let (sender, _receiver) = mpsc::channel();
         let result = lint_service.run_test_source(&allocator, false, &sender);

@@ -2,6 +2,98 @@
 
 All notable changes to this package will be documented in this file.
 
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
+
+## [0.74.0] - 2025-06-23
+
+### 🚜 Refactor
+
+- edb47e5 parser: Simplify `parse_import_or_export_specifier` (#11847) (Ulrich Stark)
+- 7d31600 parser: Avoid unnecessary referencing (#11846) (Ulrich Stark)
+
+### ⚡ Performance
+
+- a8e4f01 parser: Avoid redundant Kind checks when parsing for loops (#11799) (Ulrich Stark)
+
+
+## [0.73.2] - 2025-06-18
+
+### 🚀 Features
+
+- 8c341a2 sema/check: Ts setters cannot have initializers (#11695) (Don Isaac)
+
+
+## [0.73.1] - 2025-06-17
+
+### 🚀 Features
+
+- e05d9bb parser: Introduce `ParserImpl::token_source` method (#11737) (overlookmotel)
+- 563684a parser: Emit diagnostic for modifiers on static block (#11727) (Ulrich Stark)
+- 8fb53b6 parser: Forbid `declare` on class getter and setter (#11717) (Boshen)
+
+### 🐛 Bug Fixes
+
+- 854b0f1 parser: Allocate all strings in arena (#11738) (overlookmotel)
+
+### 🚜 Refactor
+
+- b0a1561 parser: Move empty ts type parameter checks to parser (#11696) (Don Isaac)
+- cf35cfd parser: Shorten Span construction (#11685) (Ulrich Stark)
+
+### ⚡ Performance
+
+- 2f25ca6 parser: Optimize code around parsing delimited list and object (#11755) (Ulrich Stark)
+
+
+## [0.73.0] - 2025-06-13
+
+### 💥 BREAKING CHANGES
+
+- f3eaefb ast: [**BREAKING**] Add `value` field to `BigIntLiteral` (#11564) (overlookmotel)
+
+### 🚀 Features
+
+- e0ae6b2 parser: Produce syntax error for decorator in class methods in js (#11624) (Boshen)
+- cdf7cdc parser: Produce syntax error for decorators in non-class methods (#11614) (Boshen)
+- 3b03fd3 parser: Produce correct syntax error for `interface I extends (typeof T)` (#11610) (Boshen)
+- ab3284a parser: Produce syntax error for `interface A implements B {}` (#11608) (Boshen)
+- 844a8a8 parser: Produce syntax error for `declare function foo() {}` (#11606) (Boshen)
+- 387c7f6 parser: Add better debug impl for `Token` (#11541) (camc314)
+
+### 🐛 Bug Fixes
+
+- 4e40089 parser: Parse `TSTypePredicate` correctly (#11666) (Boshen)
+- eb55d83 parser: Parse `using()` correctly (#11664) (Boshen)
+- 7266200 parser: Parse `@x() @y() export default abstract class {}` (#11630) (Boshen)
+- 40ca1ef parser: Don't parse a single "webpack" word as a webpack magic comment (#11626) (Boshen)
+- e4804ba parser: Parse decorator on `abstract class` (#11625) (Boshen)
+- cb17dae parser: Report error on malformed template expressions (#11540) (camc314)
+- 069c2b4 parser: Correct `TemplateTail::to_str` from `$}` to `}` (#11539) (camc314)
+- 551cd2a parser: Fix parsing of `import source` and `import defer` (#11537) (camchenry)
+
+### 🚜 Refactor
+
+- e519176 parser: Remove rewind in hot path for parsing `?.something` and `?.[` (#11643) (camchenry)
+- 4140bb8 parser: Remove rewind in hot path for parsing `for (let` (#11623) (camchenry)
+- 40b3a0e parser: Reduce rewind in checking if start of function type or constructor type (#11622) (camchenry)
+- 850543b parser: Remove lookahead in parsing intrinsic keyword (#11621) (camchenry)
+- b7b0dc3 parser: Improve `TSModuleDeclaration` parsing (#11605) (Boshen)
+- e9a8832 parser: Rewrite decorator parsing (#11604) (Boshen)
+- b2bd741 parser: Speed up and migrate ts errors for parsing ts tuple elements (#11580) (Ulrich Stark)
+- 4130b41 parser: Store export entries in arena (#11567) (camchenry)
+
+### ⚡ Performance
+
+- b34c6f6 parser,semantic: Improve handling of diagnostics (#11641) (Boshen)
+- 78f1336 parser: Remove lookahead for checking for-let-of and for-async-of (#11655) (camchenry)
+- e389748 parser: Add early returns when eating modifiers before decorators (#11653) (camchenry)
+- f224585 parser: Improve perf of parse_template_lit (#11542) (camc314)
+
+
+# Changelog
+
+All notable changes to this package will be documented in this file.
+
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project does not adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) until v1.0.0.
 
 ## [0.72.3] - 2025-06-06
