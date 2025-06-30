@@ -80,7 +80,7 @@ static CONSTRUCT_PRELUDE: &str = "
 struct State {
     /// Code for constructors
     constructors: String,
-    /// Code for visitors
+    /// Code for walkers
     walkers: String,
     /// Code for constructor class names
     constructor_names: String,
@@ -174,10 +174,10 @@ fn generate(
     }
 
     // Generate file containing walk functions
-    let visitors = &state.walkers;
+    let walkers = &state.walkers;
     let constructor_names = &state.constructor_names;
     #[rustfmt::skip]
-    let visitors = format!("
+    let walkers = format!("
         'use strict';
 
         const {{
@@ -186,12 +186,13 @@ fn generate(
 
         module.exports = walkProgram;
 
-        {visitors}
+        {walkers}
     ");
 
     // Generate file containing mapping from type names to node type IDs
     assert_eq!(state.next_leaf_node_type_id, leaf_nodes_count);
 
+    let nodes_count = state.next_non_leaf_node_type_id;
     let leaf_node_type_ids_map = &state.leaf_node_type_ids_map;
     let non_leaf_node_type_ids_map = &state.non_leaf_node_type_ids_map;
     #[rustfmt::skip]
@@ -205,13 +206,14 @@ fn generate(
             {non_leaf_node_type_ids_map}
         ]);
 
-        // Number of AST node types which are leaf nodes
-        const LEAF_NODES_COUNT = {leaf_nodes_count};
-
-        module.exports = {{ NODE_TYPE_IDS_MAP, LEAF_NODES_COUNT }};
+        module.exports = {{
+            NODE_TYPE_IDS_MAP,
+            NODE_TYPES_COUNT: {nodes_count},
+            LEAF_NODE_TYPES_COUNT: {leaf_nodes_count},
+        }};
     ");
 
-    (state.constructors, visitors, node_type_ids_map)
+    (state.constructors, walkers, node_type_ids_map)
 }
 
 /// Structure for calculating which types need walk functions.
@@ -661,8 +663,8 @@ fn generate_struct(
         let internal_pos = internal_pos_offset(field.offset_64());
 
         // TODO: Currently we store all internal data in an object, stored as `#internal` property.
-        // This is on assumption that private field access is relatively slow, so we only only want
-        // to incur a single private field fetch to get all the data.
+        // This is on assumption that private field access is relatively slow, so we only want to
+        // incur a single private field fetch to get all the data.
         // But maybe creating these extra objects is more costly, and we'd be better off having
         // separate `#pos` and `#ast` private properties.
         // Benchmark it and find out which is faster.

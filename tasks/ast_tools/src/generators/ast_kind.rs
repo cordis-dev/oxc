@@ -27,19 +27,11 @@ use super::define_generator;
 ///
 /// Apart from this list, every struct with `#[ast(visit)]` attr gets an `AstKind`.
 const STRUCTS_BLACK_LIST: &[&str] = &[
-    "TemplateElement",
-    "ComputedMemberExpression",
-    "StaticMemberExpression",
-    "PrivateFieldExpression",
     "AssignmentTargetRest",
     "AssignmentTargetPropertyIdentifier",
     "AssignmentTargetPropertyProperty",
     "BindingPattern",
-    "BindingProperty",
-    "TSInterfaceBody",
-    "TSIndexSignature",
     "TSFunctionType",
-    "TSConstructorType",
     "Span",
 ];
 
@@ -48,7 +40,6 @@ const STRUCTS_BLACK_LIST: &[&str] = &[
 /// Apart from this list, enums don't have `AstKind`s.
 const ENUMS_WHITE_LIST: &[&str] = &[
     "PropertyKey",
-    "MemberExpression",
     "Argument",
     "AssignmentTarget",
     "SimpleAssignmentTarget",

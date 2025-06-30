@@ -106,34 +106,50 @@ impl Rule for NoConsole {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let AstKind::MemberExpression(member_expr) = node.kind() else { return };
-        let Expression::Identifier(ident) = member_expr.object() else {
+        let object = match node.kind() {
+            AstKind::StaticMemberExpression(member_expr) => &member_expr.object,
+            AstKind::ComputedMemberExpression(member_expr) => &member_expr.object,
+            _ => return,
+        };
+
+        let Expression::Identifier(ident) = object else {
             return;
         };
 
-        if ident.name == "console"
-            && ctx.scoping().root_unresolved_references().contains_key(ident.name.as_str())
-            && !self
-                .allow
-                .iter()
-                .any(|s| member_expr.static_property_name().is_some_and(|f| f == s))
+        if ident.name != "console"
+            || !ctx.scoping().root_unresolved_references().contains_key("console")
         {
-            if let Some((mem_span, _)) = member_expr.static_property_info() {
-                let diagnostic_span = ident.span().merge(mem_span);
-
-                ctx.diagnostic_with_suggestion(
-                    no_console_diagnostic(diagnostic_span, &self.allow),
-                    |fixer| {
-                        if let Some(parent) = ctx.nodes().parent_node(node.id()) {
-                            if let AstKind::CallExpression(_) = parent.kind() {
-                                return remove_console(fixer, ctx, parent);
-                            }
-                        }
-                        fixer.noop()
-                    },
-                );
-            }
+            return;
         }
+
+        let (mem_span, prop_name) = match node.kind() {
+            AstKind::StaticMemberExpression(member_expr) => member_expr.static_property_info(),
+            AstKind::ComputedMemberExpression(member_expr) => {
+                match member_expr.static_property_info() {
+                    Some(info) => info,
+                    None => return,
+                }
+            }
+            _ => unreachable!(),
+        };
+
+        if self.allow.iter().any(|allowed_name| allowed_name == prop_name) {
+            return;
+        }
+
+        let diagnostic_span = ident.span().merge(mem_span);
+
+        ctx.diagnostic_with_suggestion(
+            no_console_diagnostic(diagnostic_span, &self.allow),
+            |fixer| {
+                if let Some(parent) = ctx.nodes().parent_node(node.id()) {
+                    if let AstKind::CallExpression(_) = parent.kind() {
+                        return remove_console(fixer, ctx, parent);
+                    }
+                }
+                fixer.noop()
+            },
+        );
     }
 }
 
@@ -213,6 +229,10 @@ fn test() {
         ("console.error(foo)", None, None),
         ("console.info(foo)", None, None),
         ("console.warn(foo)", None, None),
+        ("console['log'](foo)", None, None),
+        ("console[`log`](foo)", None, None),
+        ("console['lo\\x67'](foo)", Some(serde_json::json!([{ "allow": ["lo\\x67"] }])), None),
+        ("console[`lo\\x67`](foo)", Some(serde_json::json!([{ "allow": ["lo\\x67"] }])), None),
         ("console.log()", None, Some(serde_json::json!({ "env": { "browser": true}}))),
         ("console.log()", None, Some(serde_json::json!({ "globals": { "console": "off"}}))),
         ("console.log(foo)", Some(serde_json::json!([{ "allow": ["error"] }])), None),
