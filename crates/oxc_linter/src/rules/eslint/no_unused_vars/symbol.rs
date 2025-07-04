@@ -186,9 +186,6 @@ impl<'a> Symbol<'_, 'a> {
     fn in_export_node(&self) -> bool {
         for parent in self.nodes().ancestors(self.declaration_id()).skip(1) {
             match parent.kind() {
-                AstKind::ModuleDeclaration(module) => {
-                    return module.is_export();
-                }
                 AstKind::ExportNamedDeclaration(_) | AstKind::ExportDefaultDeclaration(_) => {
                     return true;
                 }

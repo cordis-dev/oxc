@@ -131,9 +131,44 @@ impl Case for TypeScriptCase {
     }
 }
 
+// spellchecker:off
 // TODO: Filter out more not-supported error codes here
 static NOT_SUPPORTED_ERROR_CODES: phf::Set<&'static str> = phf::phf_set![
     "2315",  // Type 'U' is not generic.
+    "8021", // JSDoc '@typedef' tag should either have a type annotation or be followed by '@property' or '@member' tags.
+    "8022", // JSDoc '@extends' is not attached to a class.
+    "8023", // JSDoc '@extends Mismatch' does not match the 'extends B' clause.
+    "8024", // JSDoc '@param' tag has name 's', but there is no parameter with that name.
+    "8026", // Expected A<T> type arguments; provide these with an '@extends' tag.
+    "8029", // JSDoc '@param' tag has name 'rest', but there is no parameter with that name. It would match 'arguments' if it had an array type.
+    "8030", // The type of a function declaration must match the function's signature.
+    "8032", // Qualified name 'xyz.p' is not allowed without a leading '@param {object} xyz'.
+    "8033", // A JSDoc '@typedef' comment may not contain multiple '@type' tags.
+    "8039", // A JSDoc '@template' tag may not follow a '@typedef', '@callback', or '@overload' tag
+    "9005", // Declaration emit for this file requires using private name 'Sub'. An explicit type annotation may unblock declaration emit.
+    "9006", // DeclaDeclaration emit for this file requires using private name 'Item' from module '"some-mod"'. An explicit type annotation may unblock declaration emit.
+    "9007", // FunctDeclaion must have an explicit return type annotation with --isolatedDeclarations.
+    "9008", // MethoDeclad must have an explicit return type annotation with --isolatedDeclarations.
+    "9009", // At leDeclaast one accessor must have an explicit type annotation with --isolatedDeclarations.
+    "9010", // VariaDeclable must have an explicit type annotation with --isolatedDeclarations.
+    "9011", // ParamDeclaeter must have an explicit type annotation with --isolatedDeclarations.
+    "9012", // PropeDeclarty must have an explicit type annotation with --isolatedDeclarations.
+    "9013", // ExpreDeclassion type can't be inferred with --isolatedDeclarations.
+    "9015", // ObjecDeclats that contain spread assignments can't be inferred with --isolatedDeclarations.
+    "9016", // ObjecDeclats that contain shorthand properties can't be inferred with --isolatedDeclarations.
+    "9017", // Only Declaconst arrays can be inferred with --isolatedDeclarations.
+    "9018", // ArrayDeclas with spread elements can't inferred with --isolatedDeclarations.
+    "9019", // BindiDeclang elements can't be exported directly with --isolatedDeclarations.
+    "9020", // Enum Declamember initializers must be computable without references to external symbols with --isolatedDeclarations.
+    "9021", // ExtenDeclads clause can't contain an expression with --isolatedDeclarations.
+    "9022", // InferDeclaence from class expressions is not supported with --isolatedDeclarations.
+    "9023", // AssigDeclaning properties to functions without declaring them is not supported with --isolatedDeclarations. Add an explicit declaration for the properties assigned to this function.
+    "9026", // DeclaDeclaration emit for this file requires preserving this import for augmentations. This is not supported with --isolatedDeclarations.
+    "9037", // DefauDeclalt exports can't be inferred with --isolatedDeclarations.
+    "9038", // CompuDeclated property names on class or object literals cannot be inferred with --isolatedDeclarations.
+    "17004", // Cannot use JSX unless the '--jsx' flag is provided.
+    "17016", // The 'jsxFragmentFactory' compiler option must be provided to use JSX fragments with the 'jsxFactory' compiler option.
+    "17017", // An @jsxFrag pragma is required when using an @jsx pragma with JSX fragments.
     "18028", // Private identifiers are only available when targeting ECMAScript 2015 and higher.
     "18033", // Type 'Number' is not assignable to type 'number' as required for computed enum member values.
     "18035", // Invalid value for 'jsxFragmentFactory'. '234' is not a valid identifier or qualified-name.
@@ -147,3 +182,4 @@ static NOT_SUPPORTED_ERROR_CODES: phf::Set<&'static str> = phf::phf_set![
     "18055", // 'A.a' has a string type, but must have syntactically recognizable string syntax when 'isolatedModules' is enabled.
     "18057", // String literal import and export names are not supported when the '--module' flag is set to 'es2015' or 'es2020'.
 ];
+// spellchecker:on

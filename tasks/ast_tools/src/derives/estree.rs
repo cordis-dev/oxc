@@ -263,9 +263,9 @@ fn prepare_field_orders(schema: &mut Schema, estree_derive_id: DeriveId) {
             // No field order specified with `#[estree(field_order(...))]`.
             // Default field order is:
             // 1. `type` field (if present)
-            // 2. `span` field (if present)
-            // 3. Struct fields, in definition order.
-            // 4. Extra fields (`#[estree(add_fields(...)]`), in order.
+            // 2. Struct fields, in definition order.
+            // 3. Extra fields (`#[estree(add_fields(...)]`), in order.
+            // 4. `span` field (if present)
             let mut field_indices = vec![];
             let mut type_field_index = None;
             let mut span_field_index = None;
@@ -280,9 +280,6 @@ fn prepare_field_orders(schema: &mut Schema, estree_derive_id: DeriveId) {
                 }
             }
 
-            if let Some(span_field_index) = span_field_index {
-                field_indices.insert(0, span_field_index);
-            }
             if let Some(type_field_index) = type_field_index {
                 field_indices.insert(0, type_field_index);
             }
@@ -293,6 +290,10 @@ fn prepare_field_orders(schema: &mut Schema, estree_derive_id: DeriveId) {
                     u8::try_from(struct_def.fields.len() + struct_def.estree.add_fields.len() - 1)
                         .unwrap();
                 field_indices.extend(first_index..=last_index);
+            }
+
+            if let Some(span_field_index) = span_field_index {
+                field_indices.push(span_field_index);
             }
 
             let struct_def = schema.struct_def_mut(type_id);
@@ -375,28 +376,11 @@ fn generate_body_for_struct(struct_def: &StructDef, schema: &Schema) -> TokenStr
         quote!()
     };
 
-    // Check if struct has a span field for range support
-    let has_span_field = struct_def.fields.iter().any(|field| field.name() == "span");
-    let (range_declaration, range_field) = if has_span_field {
-        (
-            quote!( let ranges = serializer.ranges(); ),
-            quote! {
-                if ranges {
-                    state.serialize_field("range", &[self.span.start, self.span.end]);
-                }
-            },
-        )
-    } else {
-        (quote!(), quote!())
-    };
-
     let stmts = g.stmts;
     quote! {
-        #range_declaration
         let mut state = serializer.serialize_struct();
         #type_field
         #stmts
-        #range_field
         state.end();
     }
 }
@@ -447,6 +431,13 @@ impl<'s> StructSerializerGenerator<'s> {
         self_path: &TokenStream,
     ) {
         if should_skip_field(field, self.schema) {
+            return;
+        }
+
+        if field.name() == "span" {
+            self.stmts.extend(quote! {
+                state.serialize_span(#self_path.span);
+            });
             return;
         }
 

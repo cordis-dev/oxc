@@ -163,8 +163,8 @@ impl<'a> Expression<'a> {
     /// Remove nested parentheses from this expression.
     pub fn without_parentheses(&self) -> &Self {
         let mut expr = self;
-        while let Expression::ParenthesizedExpression(paran_expr) = expr {
-            expr = &paran_expr.expression;
+        while let Expression::ParenthesizedExpression(paren_expr) = expr {
+            expr = &paren_expr.expression;
         }
         expr
     }
@@ -373,8 +373,11 @@ impl<'a> Expression<'a> {
 
     /// Is identifier or `a.b` expression where `a` is an identifier.
     pub fn is_entity_name_expression(&self) -> bool {
-        matches!(self.without_parentheses(), Expression::Identifier(_))
-            || self.is_property_access_entity_name_expression()
+        // Special case: treat `this.B` like `this` was an identifier
+        matches!(
+            self.without_parentheses(),
+            Expression::Identifier(_) | Expression::ThisExpression(_)
+        ) || self.is_property_access_entity_name_expression()
     }
 
     /// `a.b` expression where `a` is an identifier.

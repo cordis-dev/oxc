@@ -37,10 +37,16 @@ pub trait StructSerializer {
     /// `key` must not contain any characters which require escaping in JSON.
     fn serialize_ts_field<T: ESTree + ?Sized>(&mut self, key: &'static str, value: &T);
 
+    /// Serialize `Span`.
+    ///
+    /// * If `serializer.ranges() == true`, outputs `start`, `end`, and `range` fields.
+    /// * Otherwise, outputs only `start` and `end`.
+    fn serialize_span<S: ESTreeSpan>(&mut self, span: S);
+
     /// Finish serializing struct.
     fn end(self);
 
-    /// Whether to include range information in the serialized output
+    /// Get whether output should contain `range` fields.
     fn ranges(&self) -> bool;
 }
 
@@ -131,6 +137,19 @@ impl<C: Config, F: Formatter> StructSerializer for ESTreeStructSerializer<'_, C,
         }
     }
 
+    /// Serialize `Span`.
+    ///
+    /// * If `serializer.ranges() == true`, outputs `start`, `end`, and `range` fields.
+    /// * Otherwise, outputs only `start` and `end`.
+    fn serialize_span<S: ESTreeSpan>(&mut self, span: S) {
+        let range = span.range();
+        self.serialize_field("start", &range[0]);
+        self.serialize_field("end", &range[1]);
+        if self.serializer.ranges() {
+            self.serialize_field("range", &range);
+        }
+    }
+
     /// Finish serializing struct.
     fn end(self) {
         let mut serializer = self.serializer;
@@ -150,6 +169,8 @@ impl<C: Config, F: Formatter> StructSerializer for ESTreeStructSerializer<'_, C,
         buffer.print_ascii_byte(b'}');
     }
 
+    /// Get whether output should contain `range` fields.
+    #[inline(always)]
     fn ranges(&self) -> bool {
         self.serializer.ranges()
     }
@@ -223,6 +244,8 @@ impl<'p, P: StructSerializer> Serializer for FlatStructSerializer<'p, P> {
         }
     }
 
+    /// Get whether output should contain `range` fields.
+    #[inline(always)]
     fn ranges(&self) -> bool {
         self.0.ranges()
     }
@@ -287,14 +310,32 @@ impl<P: StructSerializer> StructSerializer for FlatStructSerializer<'_, P> {
         self.0.serialize_ts_field(key, value);
     }
 
+    /// Serialize `Span`.
+    ///
+    /// * If `serializer.ranges() == true`, outputs `start`, `end`, and `range` fields.
+    /// * Otherwise, outputs only `start` and `end`.
+    fn serialize_span<S: ESTreeSpan>(&mut self, span: S) {
+        self.0.serialize_span(span);
+    }
+
     /// Finish serializing struct.
     fn end(self) {
         // No-op - there may be more fields to be added to the struct in the parent
     }
 
+    /// Get whether output should contain `range` fields.
+    #[inline(always)]
     fn ranges(&self) -> bool {
         self.0.ranges()
     }
+}
+
+/// Trait for `Span` to implement.
+///
+/// This is a workaround to avoid circular dependency. `oxc_span` crate depends on `oxc_estree` crate,
+/// so we can't import `Span` directly from `oxc_span` here.
+pub trait ESTreeSpan: Copy {
+    fn range(self) -> [u32; 2];
 }
 
 #[cfg(test)]

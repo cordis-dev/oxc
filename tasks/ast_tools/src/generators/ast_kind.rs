@@ -26,14 +26,7 @@ use super::define_generator;
 /// Structs to omit creating an `AstKind` for.
 ///
 /// Apart from this list, every struct with `#[ast(visit)]` attr gets an `AstKind`.
-const STRUCTS_BLACK_LIST: &[&str] = &[
-    "AssignmentTargetRest",
-    "AssignmentTargetPropertyIdentifier",
-    "AssignmentTargetPropertyProperty",
-    "BindingPattern",
-    "TSFunctionType",
-    "Span",
-];
+const STRUCTS_BLACK_LIST: &[&str] = &["BindingPattern", "TSFunctionType", "Span"];
 
 /// Enums to create an `AstKind` for.
 ///
@@ -44,8 +37,6 @@ const ENUMS_WHITE_LIST: &[&str] = &[
     "AssignmentTarget",
     "SimpleAssignmentTarget",
     "AssignmentTargetPattern",
-    "ModuleDeclaration",
-    "TSTypeName",
 ];
 
 /// Generator for `AstKind`, `AstType`, and related code.

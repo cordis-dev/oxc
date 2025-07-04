@@ -1852,9 +1852,11 @@ pub mod walk {
         visitor: &mut V,
         it: &AssignmentTargetRest<'a>,
     ) {
-        // No `AstKind` for this type
+        let kind = AstKind::AssignmentTargetRest(visitor.alloc(it));
+        visitor.enter_node(kind);
         visitor.visit_span(&it.span);
         visitor.visit_assignment_target(&it.target);
+        visitor.leave_node(kind);
     }
 
     #[inline]
@@ -1907,12 +1909,14 @@ pub mod walk {
         visitor: &mut V,
         it: &AssignmentTargetPropertyIdentifier<'a>,
     ) {
-        // No `AstKind` for this type
+        let kind = AstKind::AssignmentTargetPropertyIdentifier(visitor.alloc(it));
+        visitor.enter_node(kind);
         visitor.visit_span(&it.span);
         visitor.visit_identifier_reference(&it.binding);
         if let Some(init) = &it.init {
             visitor.visit_expression(init);
         }
+        visitor.leave_node(kind);
     }
 
     #[inline]
@@ -1920,10 +1924,12 @@ pub mod walk {
         visitor: &mut V,
         it: &AssignmentTargetPropertyProperty<'a>,
     ) {
-        // No `AstKind` for this type
+        let kind = AstKind::AssignmentTargetPropertyProperty(visitor.alloc(it));
+        visitor.enter_node(kind);
         visitor.visit_span(&it.span);
         visitor.visit_property_key(&it.name);
         visitor.visit_assignment_target_maybe_default(&it.binding);
+        visitor.leave_node(kind);
     }
 
     #[inline]
@@ -2632,8 +2638,7 @@ pub mod walk {
     }
 
     pub fn walk_module_declaration<'a, V: Visit<'a>>(visitor: &mut V, it: &ModuleDeclaration<'a>) {
-        let kind = AstKind::ModuleDeclaration(visitor.alloc(it));
-        visitor.enter_node(kind);
+        // No `AstKind` for this type
         match it {
             ModuleDeclaration::ImportDeclaration(it) => visitor.visit_import_declaration(it),
             ModuleDeclaration::ExportAllDeclaration(it) => visitor.visit_export_all_declaration(it),
@@ -2648,7 +2653,6 @@ pub mod walk {
                 visitor.visit_ts_namespace_export_declaration(it)
             }
         }
-        visitor.leave_node(kind);
     }
 
     #[inline]
@@ -3549,13 +3553,11 @@ pub mod walk {
 
     #[inline]
     pub fn walk_ts_type_name<'a, V: Visit<'a>>(visitor: &mut V, it: &TSTypeName<'a>) {
-        let kind = AstKind::TSTypeName(visitor.alloc(it));
-        visitor.enter_node(kind);
+        // No `AstKind` for this type
         match it {
             TSTypeName::IdentifierReference(it) => visitor.visit_identifier_reference(it),
             TSTypeName::QualifiedName(it) => visitor.visit_ts_qualified_name(it),
         }
-        visitor.leave_node(kind);
     }
 
     #[inline]
