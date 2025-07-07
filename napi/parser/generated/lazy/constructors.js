@@ -6,16 +6,6 @@
 const { TOKEN, constructorError } = require('../../raw-transfer/lazy-common.js'),
   NodeArray = require('../../raw-transfer/node-array.js');
 
-const constructors = {};
-
-module.exports = { construct, constructors };
-
-function construct(ast) {
-  // (2 * 1024 * 1024 * 1024 - 16) >> 2
-  const metadataPos32 = 536870908;
-  return new RawTransferData(ast.buffer.uint32[metadataPos32], ast);
-}
-
 const textDecoder = new TextDecoder('utf-8', { ignoreBOM: true }),
   decodeStr = textDecoder.decode.bind(textDecoder),
   { fromCodePoint } = String,
@@ -80,8 +70,6 @@ class Program {
 }
 
 const DebugProgram = class Program {};
-
-constructors.Program = Program;
 
 function constructExpression(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -224,8 +212,6 @@ class IdentifierName {
 
 const DebugIdentifierName = class IdentifierName {};
 
-constructors.IdentifierName = IdentifierName;
-
 class IdentifierReference {
   type = 'IdentifierReference';
   #internal;
@@ -273,8 +259,6 @@ class IdentifierReference {
 }
 
 const DebugIdentifierReference = class IdentifierReference {};
-
-constructors.IdentifierReference = IdentifierReference;
 
 class BindingIdentifier {
   type = 'BindingIdentifier';
@@ -324,8 +308,6 @@ class BindingIdentifier {
 
 const DebugBindingIdentifier = class BindingIdentifier {};
 
-constructors.BindingIdentifier = BindingIdentifier;
-
 class LabelIdentifier {
   type = 'LabelIdentifier';
   #internal;
@@ -374,8 +356,6 @@ class LabelIdentifier {
 
 const DebugLabelIdentifier = class LabelIdentifier {};
 
-constructors.LabelIdentifier = LabelIdentifier;
-
 class ThisExpression {
   type = 'ThisExpression';
   #internal;
@@ -415,8 +395,6 @@ class ThisExpression {
 }
 
 const DebugThisExpression = class ThisExpression {};
-
-constructors.ThisExpression = ThisExpression;
 
 class ArrayExpression {
   type = 'ArrayExpression';
@@ -465,8 +443,6 @@ class ArrayExpression {
 }
 
 const DebugArrayExpression = class ArrayExpression {};
-
-constructors.ArrayExpression = ArrayExpression;
 
 function constructArrayExpressionElement(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -605,8 +581,6 @@ class Elision {
 
 const DebugElision = class Elision {};
 
-constructors.Elision = Elision;
-
 class ObjectExpression {
   type = 'ObjectExpression';
   #internal;
@@ -654,8 +628,6 @@ class ObjectExpression {
 }
 
 const DebugObjectExpression = class ObjectExpression {};
-
-constructors.ObjectExpression = ObjectExpression;
 
 function constructObjectPropertyKind(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -743,8 +715,6 @@ class ObjectProperty {
 }
 
 const DebugObjectProperty = class ObjectProperty {};
-
-constructors.ObjectProperty = ObjectProperty;
 
 function constructPropertyKey(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -912,8 +882,6 @@ class TemplateLiteral {
 
 const DebugTemplateLiteral = class TemplateLiteral {};
 
-constructors.TemplateLiteral = TemplateLiteral;
-
 class TaggedTemplateExpression {
   type = 'TaggedTemplateExpression';
   #internal;
@@ -972,8 +940,6 @@ class TaggedTemplateExpression {
 
 const DebugTaggedTemplateExpression = class TaggedTemplateExpression {};
 
-constructors.TaggedTemplateExpression = TaggedTemplateExpression;
-
 class TemplateElement {
   type = 'TemplateElement';
   #internal;
@@ -1026,8 +992,6 @@ class TemplateElement {
 
 const DebugTemplateElement = class TemplateElement {};
 
-constructors.TemplateElement = TemplateElement;
-
 class TemplateElementValue {
   #internal;
 
@@ -1069,8 +1033,6 @@ class TemplateElementValue {
 }
 
 const DebugTemplateElementValue = class TemplateElementValue {};
-
-constructors.TemplateElementValue = TemplateElementValue;
 
 function constructMemberExpression(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -1143,8 +1105,6 @@ class ComputedMemberExpression {
 
 const DebugComputedMemberExpression = class ComputedMemberExpression {};
 
-constructors.ComputedMemberExpression = ComputedMemberExpression;
-
 class StaticMemberExpression {
   type = 'StaticMemberExpression';
   #internal;
@@ -1203,8 +1163,6 @@ class StaticMemberExpression {
 
 const DebugStaticMemberExpression = class StaticMemberExpression {};
 
-constructors.StaticMemberExpression = StaticMemberExpression;
-
 class PrivateFieldExpression {
   type = 'PrivateFieldExpression';
   #internal;
@@ -1262,8 +1220,6 @@ class PrivateFieldExpression {
 }
 
 const DebugPrivateFieldExpression = class PrivateFieldExpression {};
-
-constructors.PrivateFieldExpression = PrivateFieldExpression;
 
 class CallExpression {
   type = 'CallExpression';
@@ -1331,8 +1287,6 @@ class CallExpression {
 
 const DebugCallExpression = class CallExpression {};
 
-constructors.CallExpression = CallExpression;
-
 class NewExpression {
   type = 'NewExpression';
   #internal;
@@ -1393,8 +1347,6 @@ class NewExpression {
 
 const DebugNewExpression = class NewExpression {};
 
-constructors.NewExpression = NewExpression;
-
 class MetaProperty {
   type = 'MetaProperty';
   #internal;
@@ -1447,8 +1399,6 @@ class MetaProperty {
 
 const DebugMetaProperty = class MetaProperty {};
 
-constructors.MetaProperty = MetaProperty;
-
 class SpreadElement {
   type = 'SpreadElement';
   #internal;
@@ -1494,8 +1444,6 @@ class SpreadElement {
 }
 
 const DebugSpreadElement = class SpreadElement {};
-
-constructors.SpreadElement = SpreadElement;
 
 function constructArgument(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -1650,8 +1598,6 @@ class UpdateExpression {
 
 const DebugUpdateExpression = class UpdateExpression {};
 
-constructors.UpdateExpression = UpdateExpression;
-
 class UnaryExpression {
   type = 'UnaryExpression';
   #internal;
@@ -1703,8 +1649,6 @@ class UnaryExpression {
 }
 
 const DebugUnaryExpression = class UnaryExpression {};
-
-constructors.UnaryExpression = UnaryExpression;
 
 class BinaryExpression {
   type = 'BinaryExpression';
@@ -1764,8 +1708,6 @@ class BinaryExpression {
 
 const DebugBinaryExpression = class BinaryExpression {};
 
-constructors.BinaryExpression = BinaryExpression;
-
 class PrivateInExpression {
   type = 'PrivateInExpression';
   #internal;
@@ -1817,8 +1759,6 @@ class PrivateInExpression {
 }
 
 const DebugPrivateInExpression = class PrivateInExpression {};
-
-constructors.PrivateInExpression = PrivateInExpression;
 
 class LogicalExpression {
   type = 'LogicalExpression';
@@ -1878,8 +1818,6 @@ class LogicalExpression {
 
 const DebugLogicalExpression = class LogicalExpression {};
 
-constructors.LogicalExpression = LogicalExpression;
-
 class ConditionalExpression {
   type = 'ConditionalExpression';
   #internal;
@@ -1938,8 +1876,6 @@ class ConditionalExpression {
 
 const DebugConditionalExpression = class ConditionalExpression {};
 
-constructors.ConditionalExpression = ConditionalExpression;
-
 class AssignmentExpression {
   type = 'AssignmentExpression';
   #internal;
@@ -1997,8 +1933,6 @@ class AssignmentExpression {
 }
 
 const DebugAssignmentExpression = class AssignmentExpression {};
-
-constructors.AssignmentExpression = AssignmentExpression;
 
 function constructAssignmentTarget(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -2109,8 +2043,6 @@ class ArrayAssignmentTarget {
 
 const DebugArrayAssignmentTarget = class ArrayAssignmentTarget {};
 
-constructors.ArrayAssignmentTarget = ArrayAssignmentTarget;
-
 class ObjectAssignmentTarget {
   type = 'ObjectAssignmentTarget';
   #internal;
@@ -2159,8 +2091,6 @@ class ObjectAssignmentTarget {
 
 const DebugObjectAssignmentTarget = class ObjectAssignmentTarget {};
 
-constructors.ObjectAssignmentTarget = ObjectAssignmentTarget;
-
 class AssignmentTargetRest {
   type = 'AssignmentTargetRest';
   #internal;
@@ -2206,8 +2136,6 @@ class AssignmentTargetRest {
 }
 
 const DebugAssignmentTargetRest = class AssignmentTargetRest {};
-
-constructors.AssignmentTargetRest = AssignmentTargetRest;
 
 function constructAssignmentTargetMaybeDefault(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -2290,8 +2218,6 @@ class AssignmentTargetWithDefault {
 
 const DebugAssignmentTargetWithDefault = class AssignmentTargetWithDefault {};
 
-constructors.AssignmentTargetWithDefault = AssignmentTargetWithDefault;
-
 function constructAssignmentTargetProperty(pos, ast) {
   switch (ast.buffer[pos]) {
     case 0:
@@ -2355,8 +2281,6 @@ class AssignmentTargetPropertyIdentifier {
 
 const DebugAssignmentTargetPropertyIdentifier = class AssignmentTargetPropertyIdentifier {};
 
-constructors.AssignmentTargetPropertyIdentifier = AssignmentTargetPropertyIdentifier;
-
 class AssignmentTargetPropertyProperty {
   type = 'AssignmentTargetPropertyProperty';
   #internal;
@@ -2415,8 +2339,6 @@ class AssignmentTargetPropertyProperty {
 
 const DebugAssignmentTargetPropertyProperty = class AssignmentTargetPropertyProperty {};
 
-constructors.AssignmentTargetPropertyProperty = AssignmentTargetPropertyProperty;
-
 class SequenceExpression {
   type = 'SequenceExpression';
   #internal;
@@ -2465,8 +2387,6 @@ class SequenceExpression {
 
 const DebugSequenceExpression = class SequenceExpression {};
 
-constructors.SequenceExpression = SequenceExpression;
-
 class Super {
   type = 'Super';
   #internal;
@@ -2506,8 +2426,6 @@ class Super {
 }
 
 const DebugSuper = class Super {};
-
-constructors.Super = Super;
 
 class AwaitExpression {
   type = 'AwaitExpression';
@@ -2555,8 +2473,6 @@ class AwaitExpression {
 
 const DebugAwaitExpression = class AwaitExpression {};
 
-constructors.AwaitExpression = AwaitExpression;
-
 class ChainExpression {
   type = 'ChainExpression';
   #internal;
@@ -2602,8 +2518,6 @@ class ChainExpression {
 }
 
 const DebugChainExpression = class ChainExpression {};
-
-constructors.ChainExpression = ChainExpression;
 
 function constructChainElement(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -2667,8 +2581,6 @@ class ParenthesizedExpression {
 }
 
 const DebugParenthesizedExpression = class ParenthesizedExpression {};
-
-constructors.ParenthesizedExpression = ParenthesizedExpression;
 
 function constructStatement(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -2795,8 +2707,6 @@ class Directive {
 
 const DebugDirective = class Directive {};
 
-constructors.Directive = Directive;
-
 class Hashbang {
   type = 'Hashbang';
   #internal;
@@ -2845,8 +2755,6 @@ class Hashbang {
 
 const DebugHashbang = class Hashbang {};
 
-constructors.Hashbang = Hashbang;
-
 class BlockStatement {
   type = 'BlockStatement';
   #internal;
@@ -2894,8 +2802,6 @@ class BlockStatement {
 }
 
 const DebugBlockStatement = class BlockStatement {};
-
-constructors.BlockStatement = BlockStatement;
 
 function constructDeclaration(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -2980,8 +2886,6 @@ class VariableDeclaration {
 
 const DebugVariableDeclaration = class VariableDeclaration {};
 
-constructors.VariableDeclaration = VariableDeclaration;
-
 function constructVariableDeclarationKind(pos, ast) {
   switch (ast.buffer[pos]) {
     case 0:
@@ -3057,8 +2961,6 @@ class VariableDeclarator {
 
 const DebugVariableDeclarator = class VariableDeclarator {};
 
-constructors.VariableDeclarator = VariableDeclarator;
-
 class EmptyStatement {
   type = 'EmptyStatement';
   #internal;
@@ -3098,8 +3000,6 @@ class EmptyStatement {
 }
 
 const DebugEmptyStatement = class EmptyStatement {};
-
-constructors.EmptyStatement = EmptyStatement;
 
 class ExpressionStatement {
   type = 'ExpressionStatement';
@@ -3146,8 +3046,6 @@ class ExpressionStatement {
 }
 
 const DebugExpressionStatement = class ExpressionStatement {};
-
-constructors.ExpressionStatement = ExpressionStatement;
 
 class IfStatement {
   type = 'IfStatement';
@@ -3207,8 +3105,6 @@ class IfStatement {
 
 const DebugIfStatement = class IfStatement {};
 
-constructors.IfStatement = IfStatement;
-
 class DoWhileStatement {
   type = 'DoWhileStatement';
   #internal;
@@ -3261,8 +3157,6 @@ class DoWhileStatement {
 
 const DebugDoWhileStatement = class DoWhileStatement {};
 
-constructors.DoWhileStatement = DoWhileStatement;
-
 class WhileStatement {
   type = 'WhileStatement';
   #internal;
@@ -3314,8 +3208,6 @@ class WhileStatement {
 }
 
 const DebugWhileStatement = class WhileStatement {};
-
-constructors.WhileStatement = WhileStatement;
 
 class ForStatement {
   type = 'ForStatement';
@@ -3380,8 +3272,6 @@ class ForStatement {
 }
 
 const DebugForStatement = class ForStatement {};
-
-constructors.ForStatement = ForStatement;
 
 function constructForStatementInit(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -3536,8 +3426,6 @@ class ForInStatement {
 
 const DebugForInStatement = class ForInStatement {};
 
-constructors.ForInStatement = ForInStatement;
-
 function constructForStatementLeft(pos, ast) {
   switch (ast.buffer[pos]) {
     case 0:
@@ -3631,8 +3519,6 @@ class ForOfStatement {
 
 const DebugForOfStatement = class ForOfStatement {};
 
-constructors.ForOfStatement = ForOfStatement;
-
 class ContinueStatement {
   type = 'ContinueStatement';
   #internal;
@@ -3678,8 +3564,6 @@ class ContinueStatement {
 }
 
 const DebugContinueStatement = class ContinueStatement {};
-
-constructors.ContinueStatement = ContinueStatement;
 
 class BreakStatement {
   type = 'BreakStatement';
@@ -3727,8 +3611,6 @@ class BreakStatement {
 
 const DebugBreakStatement = class BreakStatement {};
 
-constructors.BreakStatement = BreakStatement;
-
 class ReturnStatement {
   type = 'ReturnStatement';
   #internal;
@@ -3774,8 +3656,6 @@ class ReturnStatement {
 }
 
 const DebugReturnStatement = class ReturnStatement {};
-
-constructors.ReturnStatement = ReturnStatement;
 
 class WithStatement {
   type = 'WithStatement';
@@ -3828,8 +3708,6 @@ class WithStatement {
 }
 
 const DebugWithStatement = class WithStatement {};
-
-constructors.WithStatement = WithStatement;
 
 class SwitchStatement {
   type = 'SwitchStatement';
@@ -3885,8 +3763,6 @@ class SwitchStatement {
 
 const DebugSwitchStatement = class SwitchStatement {};
 
-constructors.SwitchStatement = SwitchStatement;
-
 class SwitchCase {
   type = 'SwitchCase';
   #internal;
@@ -3941,8 +3817,6 @@ class SwitchCase {
 
 const DebugSwitchCase = class SwitchCase {};
 
-constructors.SwitchCase = SwitchCase;
-
 class LabeledStatement {
   type = 'LabeledStatement';
   #internal;
@@ -3995,8 +3869,6 @@ class LabeledStatement {
 
 const DebugLabeledStatement = class LabeledStatement {};
 
-constructors.LabeledStatement = LabeledStatement;
-
 class ThrowStatement {
   type = 'ThrowStatement';
   #internal;
@@ -4042,8 +3914,6 @@ class ThrowStatement {
 }
 
 const DebugThrowStatement = class ThrowStatement {};
-
-constructors.ThrowStatement = ThrowStatement;
 
 class TryStatement {
   type = 'TryStatement';
@@ -4103,8 +3973,6 @@ class TryStatement {
 
 const DebugTryStatement = class TryStatement {};
 
-constructors.TryStatement = TryStatement;
-
 class CatchClause {
   type = 'CatchClause';
   #internal;
@@ -4157,8 +4025,6 @@ class CatchClause {
 
 const DebugCatchClause = class CatchClause {};
 
-constructors.CatchClause = CatchClause;
-
 class CatchParameter {
   #internal;
 
@@ -4190,8 +4056,6 @@ class CatchParameter {
 }
 
 const DebugCatchParameter = class CatchParameter {};
-
-constructors.CatchParameter = CatchParameter;
 
 class DebuggerStatement {
   type = 'DebuggerStatement';
@@ -4232,8 +4096,6 @@ class DebuggerStatement {
 }
 
 const DebugDebuggerStatement = class DebuggerStatement {};
-
-constructors.DebuggerStatement = DebuggerStatement;
 
 class BindingPattern {
   #internal;
@@ -4278,8 +4140,6 @@ class BindingPattern {
 }
 
 const DebugBindingPattern = class BindingPattern {};
-
-constructors.BindingPattern = BindingPattern;
 
 function constructBindingPatternKind(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -4348,8 +4208,6 @@ class AssignmentPattern {
 
 const DebugAssignmentPattern = class AssignmentPattern {};
 
-constructors.AssignmentPattern = AssignmentPattern;
-
 class ObjectPattern {
   type = 'ObjectPattern';
   #internal;
@@ -4397,8 +4255,6 @@ class ObjectPattern {
 }
 
 const DebugObjectPattern = class ObjectPattern {};
-
-constructors.ObjectPattern = ObjectPattern;
 
 class BindingProperty {
   type = 'BindingProperty';
@@ -4464,8 +4320,6 @@ class BindingProperty {
 
 const DebugBindingProperty = class BindingProperty {};
 
-constructors.BindingProperty = BindingProperty;
-
 class ArrayPattern {
   type = 'ArrayPattern';
   #internal;
@@ -4514,8 +4368,6 @@ class ArrayPattern {
 
 const DebugArrayPattern = class ArrayPattern {};
 
-constructors.ArrayPattern = ArrayPattern;
-
 class BindingRestElement {
   type = 'BindingRestElement';
   #internal;
@@ -4561,8 +4413,6 @@ class BindingRestElement {
 }
 
 const DebugBindingRestElement = class BindingRestElement {};
-
-constructors.BindingRestElement = BindingRestElement;
 
 class Function {
   #internal;
@@ -4656,8 +4506,6 @@ class Function {
 
 const DebugFunction = class Function {};
 
-constructors.Function = Function;
-
 function constructFunctionType(pos, ast) {
   switch (ast.buffer[pos]) {
     case 0:
@@ -4727,8 +4575,6 @@ class FormalParameters {
 
 const DebugFormalParameters = class FormalParameters {};
 
-constructors.FormalParameters = FormalParameters;
-
 class FormalParameter {
   #internal;
 
@@ -4768,8 +4614,6 @@ class FormalParameter {
 }
 
 const DebugFormalParameter = class FormalParameter {};
-
-constructors.FormalParameter = FormalParameter;
 
 function constructFormalParameterKind(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -4833,8 +4677,6 @@ class FunctionBody {
 }
 
 const DebugFunctionBody = class FunctionBody {};
-
-constructors.FunctionBody = FunctionBody;
 
 class ArrowFunctionExpression {
   type = 'ArrowFunctionExpression';
@@ -4912,8 +4754,6 @@ class ArrowFunctionExpression {
 
 const DebugArrowFunctionExpression = class ArrowFunctionExpression {};
 
-constructors.ArrowFunctionExpression = ArrowFunctionExpression;
-
 class YieldExpression {
   type = 'YieldExpression';
   #internal;
@@ -4965,8 +4805,6 @@ class YieldExpression {
 }
 
 const DebugYieldExpression = class YieldExpression {};
-
-constructors.YieldExpression = YieldExpression;
 
 class Class {
   #internal;
@@ -5070,8 +4908,6 @@ class Class {
 
 const DebugClass = class Class {};
 
-constructors.Class = Class;
-
 function constructClassType(pos, ast) {
   switch (ast.buffer[pos]) {
     case 0:
@@ -5130,8 +4966,6 @@ class ClassBody {
 }
 
 const DebugClassBody = class ClassBody {};
-
-constructors.ClassBody = ClassBody;
 
 function constructClassElement(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -5249,8 +5083,6 @@ class MethodDefinition {
 }
 
 const DebugMethodDefinition = class MethodDefinition {};
-
-constructors.MethodDefinition = MethodDefinition;
 
 function constructMethodDefinitionType(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -5381,8 +5213,6 @@ class PropertyDefinition {
 
 const DebugPropertyDefinition = class PropertyDefinition {};
 
-constructors.PropertyDefinition = PropertyDefinition;
-
 function constructPropertyDefinitionType(pos, ast) {
   switch (ast.buffer[pos]) {
     case 0:
@@ -5457,8 +5287,6 @@ class PrivateIdentifier {
 
 const DebugPrivateIdentifier = class PrivateIdentifier {};
 
-constructors.PrivateIdentifier = PrivateIdentifier;
-
 class StaticBlock {
   type = 'StaticBlock';
   #internal;
@@ -5506,8 +5334,6 @@ class StaticBlock {
 }
 
 const DebugStaticBlock = class StaticBlock {};
-
-constructors.StaticBlock = StaticBlock;
 
 function constructModuleDeclaration(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -5639,8 +5465,6 @@ class AccessorProperty {
 
 const DebugAccessorProperty = class AccessorProperty {};
 
-constructors.AccessorProperty = AccessorProperty;
-
 class ImportExpression {
   type = 'ImportExpression';
   #internal;
@@ -5698,8 +5522,6 @@ class ImportExpression {
 }
 
 const DebugImportExpression = class ImportExpression {};
-
-constructors.ImportExpression = ImportExpression;
 
 class ImportDeclaration {
   type = 'ImportDeclaration';
@@ -5772,8 +5594,6 @@ class ImportDeclaration {
 }
 
 const DebugImportDeclaration = class ImportDeclaration {};
-
-constructors.ImportDeclaration = ImportDeclaration;
 
 function constructImportPhase(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -5857,8 +5677,6 @@ class ImportSpecifier {
 
 const DebugImportSpecifier = class ImportSpecifier {};
 
-constructors.ImportSpecifier = ImportSpecifier;
-
 class ImportDefaultSpecifier {
   type = 'ImportDefaultSpecifier';
   #internal;
@@ -5904,8 +5722,6 @@ class ImportDefaultSpecifier {
 }
 
 const DebugImportDefaultSpecifier = class ImportDefaultSpecifier {};
-
-constructors.ImportDefaultSpecifier = ImportDefaultSpecifier;
 
 class ImportNamespaceSpecifier {
   type = 'ImportNamespaceSpecifier';
@@ -5953,8 +5769,6 @@ class ImportNamespaceSpecifier {
 
 const DebugImportNamespaceSpecifier = class ImportNamespaceSpecifier {};
 
-constructors.ImportNamespaceSpecifier = ImportNamespaceSpecifier;
-
 class WithClause {
   #internal;
 
@@ -5988,8 +5802,6 @@ class WithClause {
 }
 
 const DebugWithClause = class WithClause {};
-
-constructors.WithClause = WithClause;
 
 class ImportAttribute {
   type = 'ImportAttribute';
@@ -6042,8 +5854,6 @@ class ImportAttribute {
 }
 
 const DebugImportAttribute = class ImportAttribute {};
-
-constructors.ImportAttribute = ImportAttribute;
 
 function constructImportAttributeKey(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -6128,8 +5938,6 @@ class ExportNamedDeclaration {
 
 const DebugExportNamedDeclaration = class ExportNamedDeclaration {};
 
-constructors.ExportNamedDeclaration = ExportNamedDeclaration;
-
 class ExportDefaultDeclaration {
   type = 'ExportDefaultDeclaration';
   #internal;
@@ -6175,8 +5983,6 @@ class ExportDefaultDeclaration {
 }
 
 const DebugExportDefaultDeclaration = class ExportDefaultDeclaration {};
-
-constructors.ExportDefaultDeclaration = ExportDefaultDeclaration;
 
 class ExportAllDeclaration {
   type = 'ExportAllDeclaration';
@@ -6242,8 +6048,6 @@ class ExportAllDeclaration {
 
 const DebugExportAllDeclaration = class ExportAllDeclaration {};
 
-constructors.ExportAllDeclaration = ExportAllDeclaration;
-
 class ExportSpecifier {
   type = 'ExportSpecifier';
   #internal;
@@ -6301,8 +6105,6 @@ class ExportSpecifier {
 }
 
 const DebugExportSpecifier = class ExportSpecifier {};
-
-constructors.ExportSpecifier = ExportSpecifier;
 
 function constructExportDefaultDeclarationKind(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -6470,8 +6272,6 @@ class V8IntrinsicExpression {
 
 const DebugV8IntrinsicExpression = class V8IntrinsicExpression {};
 
-constructors.V8IntrinsicExpression = V8IntrinsicExpression;
-
 class BooleanLiteral {
   type = 'BooleanLiteral';
   #internal;
@@ -6518,8 +6318,6 @@ class BooleanLiteral {
 
 const DebugBooleanLiteral = class BooleanLiteral {};
 
-constructors.BooleanLiteral = BooleanLiteral;
-
 class NullLiteral {
   type = 'NullLiteral';
   #internal;
@@ -6559,8 +6357,6 @@ class NullLiteral {
 }
 
 const DebugNullLiteral = class NullLiteral {};
-
-constructors.NullLiteral = NullLiteral;
 
 class NumericLiteral {
   type = 'NumericLiteral';
@@ -6615,8 +6411,6 @@ class NumericLiteral {
 }
 
 const DebugNumericLiteral = class NumericLiteral {};
-
-constructors.NumericLiteral = NumericLiteral;
 
 class StringLiteral {
   type = 'StringLiteral';
@@ -6674,8 +6468,6 @@ class StringLiteral {
 
 const DebugStringLiteral = class StringLiteral {};
 
-constructors.StringLiteral = StringLiteral;
-
 class BigIntLiteral {
   type = 'BigIntLiteral';
   #internal;
@@ -6732,8 +6524,6 @@ class BigIntLiteral {
 
 const DebugBigIntLiteral = class BigIntLiteral {};
 
-constructors.BigIntLiteral = BigIntLiteral;
-
 class RegExpLiteral {
   type = 'RegExpLiteral';
   #internal;
@@ -6788,8 +6578,6 @@ class RegExpLiteral {
 
 const DebugRegExpLiteral = class RegExpLiteral {};
 
-constructors.RegExpLiteral = RegExpLiteral;
-
 class RegExp {
   #internal;
 
@@ -6829,8 +6617,6 @@ class RegExp {
 
 const DebugRegExp = class RegExp {};
 
-constructors.RegExp = RegExp;
-
 class RegExpPattern {
   #internal;
 
@@ -6865,8 +6651,6 @@ class RegExpPattern {
 
 const DebugRegExpPattern = class RegExpPattern {};
 
-constructors.RegExpPattern = RegExpPattern;
-
 class RegExpFlags {
   #internal;
 
@@ -6891,8 +6675,6 @@ class RegExpFlags {
 }
 
 const DebugRegExpFlags = class RegExpFlags {};
-
-constructors.RegExpFlags = RegExpFlags;
 
 class JSXElement {
   type = 'JSXElement';
@@ -6954,8 +6736,6 @@ class JSXElement {
 
 const DebugJSXElement = class JSXElement {};
 
-constructors.JSXElement = JSXElement;
-
 class JSXOpeningElement {
   type = 'JSXOpeningElement';
   #internal;
@@ -7016,8 +6796,6 @@ class JSXOpeningElement {
 
 const DebugJSXOpeningElement = class JSXOpeningElement {};
 
-constructors.JSXOpeningElement = JSXOpeningElement;
-
 class JSXClosingElement {
   type = 'JSXClosingElement';
   #internal;
@@ -7063,8 +6841,6 @@ class JSXClosingElement {
 }
 
 const DebugJSXClosingElement = class JSXClosingElement {};
-
-constructors.JSXClosingElement = JSXClosingElement;
 
 class JSXFragment {
   type = 'JSXFragment';
@@ -7126,8 +6902,6 @@ class JSXFragment {
 
 const DebugJSXFragment = class JSXFragment {};
 
-constructors.JSXFragment = JSXFragment;
-
 class JSXOpeningFragment {
   type = 'JSXOpeningFragment';
   #internal;
@@ -7168,8 +6942,6 @@ class JSXOpeningFragment {
 
 const DebugJSXOpeningFragment = class JSXOpeningFragment {};
 
-constructors.JSXOpeningFragment = JSXOpeningFragment;
-
 class JSXClosingFragment {
   type = 'JSXClosingFragment';
   #internal;
@@ -7209,8 +6981,6 @@ class JSXClosingFragment {
 }
 
 const DebugJSXClosingFragment = class JSXClosingFragment {};
-
-constructors.JSXClosingFragment = JSXClosingFragment;
 
 function constructJSXElementName(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -7281,8 +7051,6 @@ class JSXNamespacedName {
 
 const DebugJSXNamespacedName = class JSXNamespacedName {};
 
-constructors.JSXNamespacedName = JSXNamespacedName;
-
 class JSXMemberExpression {
   type = 'JSXMemberExpression';
   #internal;
@@ -7334,8 +7102,6 @@ class JSXMemberExpression {
 }
 
 const DebugJSXMemberExpression = class JSXMemberExpression {};
-
-constructors.JSXMemberExpression = JSXMemberExpression;
 
 function constructJSXMemberExpressionObject(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -7395,8 +7161,6 @@ class JSXExpressionContainer {
 }
 
 const DebugJSXExpressionContainer = class JSXExpressionContainer {};
-
-constructors.JSXExpressionContainer = JSXExpressionContainer;
 
 function constructJSXExpression(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -7533,8 +7297,6 @@ class JSXEmptyExpression {
 
 const DebugJSXEmptyExpression = class JSXEmptyExpression {};
 
-constructors.JSXEmptyExpression = JSXEmptyExpression;
-
 function constructJSXAttributeItem(pos, ast) {
   switch (ast.buffer[pos]) {
     case 0:
@@ -7598,8 +7360,6 @@ class JSXAttribute {
 
 const DebugJSXAttribute = class JSXAttribute {};
 
-constructors.JSXAttribute = JSXAttribute;
-
 class JSXSpreadAttribute {
   type = 'JSXSpreadAttribute';
   #internal;
@@ -7645,8 +7405,6 @@ class JSXSpreadAttribute {
 }
 
 const DebugJSXSpreadAttribute = class JSXSpreadAttribute {};
-
-constructors.JSXSpreadAttribute = JSXSpreadAttribute;
 
 function constructJSXAttributeName(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -7722,8 +7480,6 @@ class JSXIdentifier {
 
 const DebugJSXIdentifier = class JSXIdentifier {};
 
-constructors.JSXIdentifier = JSXIdentifier;
-
 function constructJSXChild(pos, ast) {
   switch (ast.buffer[pos]) {
     case 0:
@@ -7787,8 +7543,6 @@ class JSXSpreadChild {
 
 const DebugJSXSpreadChild = class JSXSpreadChild {};
 
-constructors.JSXSpreadChild = JSXSpreadChild;
-
 class JSXText {
   type = 'JSXText';
   #internal;
@@ -7845,8 +7599,6 @@ class JSXText {
 
 const DebugJSXText = class JSXText {};
 
-constructors.JSXText = JSXText;
-
 class TSThisParameter {
   type = 'TSThisParameter';
   #internal;
@@ -7892,8 +7644,6 @@ class TSThisParameter {
 }
 
 const DebugTSThisParameter = class TSThisParameter {};
-
-constructors.TSThisParameter = TSThisParameter;
 
 class TSEnumDeclaration {
   type = 'TSEnumDeclaration';
@@ -7959,8 +7709,6 @@ class TSEnumDeclaration {
 
 const DebugTSEnumDeclaration = class TSEnumDeclaration {};
 
-constructors.TSEnumDeclaration = TSEnumDeclaration;
-
 class TSEnumBody {
   type = 'TSEnumBody';
   #internal;
@@ -8008,8 +7756,6 @@ class TSEnumBody {
 }
 
 const DebugTSEnumBody = class TSEnumBody {};
-
-constructors.TSEnumBody = TSEnumBody;
 
 class TSEnumMember {
   type = 'TSEnumMember';
@@ -8062,8 +7808,6 @@ class TSEnumMember {
 }
 
 const DebugTSEnumMember = class TSEnumMember {};
-
-constructors.TSEnumMember = TSEnumMember;
 
 function constructTSEnumMemberName(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -8126,8 +7870,6 @@ class TSTypeAnnotation {
 
 const DebugTSTypeAnnotation = class TSTypeAnnotation {};
 
-constructors.TSTypeAnnotation = TSTypeAnnotation;
-
 class TSLiteralType {
   type = 'TSLiteralType';
   #internal;
@@ -8173,8 +7915,6 @@ class TSLiteralType {
 }
 
 const DebugTSLiteralType = class TSLiteralType {};
-
-constructors.TSLiteralType = TSLiteralType;
 
 function constructTSLiteral(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -8340,8 +8080,6 @@ class TSConditionalType {
 
 const DebugTSConditionalType = class TSConditionalType {};
 
-constructors.TSConditionalType = TSConditionalType;
-
 class TSUnionType {
   type = 'TSUnionType';
   #internal;
@@ -8389,8 +8127,6 @@ class TSUnionType {
 }
 
 const DebugTSUnionType = class TSUnionType {};
-
-constructors.TSUnionType = TSUnionType;
 
 class TSIntersectionType {
   type = 'TSIntersectionType';
@@ -8440,8 +8176,6 @@ class TSIntersectionType {
 
 const DebugTSIntersectionType = class TSIntersectionType {};
 
-constructors.TSIntersectionType = TSIntersectionType;
-
 class TSParenthesizedType {
   type = 'TSParenthesizedType';
   #internal;
@@ -8487,8 +8221,6 @@ class TSParenthesizedType {
 }
 
 const DebugTSParenthesizedType = class TSParenthesizedType {};
-
-constructors.TSParenthesizedType = TSParenthesizedType;
 
 class TSTypeOperator {
   type = 'TSTypeOperator';
@@ -8541,8 +8273,6 @@ class TSTypeOperator {
 }
 
 const DebugTSTypeOperator = class TSTypeOperator {};
-
-constructors.TSTypeOperator = TSTypeOperator;
 
 function constructTSTypeOperatorOperator(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -8603,8 +8333,6 @@ class TSArrayType {
 
 const DebugTSArrayType = class TSArrayType {};
 
-constructors.TSArrayType = TSArrayType;
-
 class TSIndexedAccessType {
   type = 'TSIndexedAccessType';
   #internal;
@@ -8657,8 +8385,6 @@ class TSIndexedAccessType {
 
 const DebugTSIndexedAccessType = class TSIndexedAccessType {};
 
-constructors.TSIndexedAccessType = TSIndexedAccessType;
-
 class TSTupleType {
   type = 'TSTupleType';
   #internal;
@@ -8706,8 +8432,6 @@ class TSTupleType {
 }
 
 const DebugTSTupleType = class TSTupleType {};
-
-constructors.TSTupleType = TSTupleType;
 
 class TSNamedTupleMember {
   type = 'TSNamedTupleMember';
@@ -8767,8 +8491,6 @@ class TSNamedTupleMember {
 
 const DebugTSNamedTupleMember = class TSNamedTupleMember {};
 
-constructors.TSNamedTupleMember = TSNamedTupleMember;
-
 class TSOptionalType {
   type = 'TSOptionalType';
   #internal;
@@ -8815,8 +8537,6 @@ class TSOptionalType {
 
 const DebugTSOptionalType = class TSOptionalType {};
 
-constructors.TSOptionalType = TSOptionalType;
-
 class TSRestType {
   type = 'TSRestType';
   #internal;
@@ -8862,8 +8582,6 @@ class TSRestType {
 }
 
 const DebugTSRestType = class TSRestType {};
-
-constructors.TSRestType = TSRestType;
 
 function constructTSTupleElement(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -8990,8 +8708,6 @@ class TSAnyKeyword {
 
 const DebugTSAnyKeyword = class TSAnyKeyword {};
 
-constructors.TSAnyKeyword = TSAnyKeyword;
-
 class TSStringKeyword {
   type = 'TSStringKeyword';
   #internal;
@@ -9031,8 +8747,6 @@ class TSStringKeyword {
 }
 
 const DebugTSStringKeyword = class TSStringKeyword {};
-
-constructors.TSStringKeyword = TSStringKeyword;
 
 class TSBooleanKeyword {
   type = 'TSBooleanKeyword';
@@ -9074,8 +8788,6 @@ class TSBooleanKeyword {
 
 const DebugTSBooleanKeyword = class TSBooleanKeyword {};
 
-constructors.TSBooleanKeyword = TSBooleanKeyword;
-
 class TSNumberKeyword {
   type = 'TSNumberKeyword';
   #internal;
@@ -9115,8 +8827,6 @@ class TSNumberKeyword {
 }
 
 const DebugTSNumberKeyword = class TSNumberKeyword {};
-
-constructors.TSNumberKeyword = TSNumberKeyword;
 
 class TSNeverKeyword {
   type = 'TSNeverKeyword';
@@ -9158,8 +8868,6 @@ class TSNeverKeyword {
 
 const DebugTSNeverKeyword = class TSNeverKeyword {};
 
-constructors.TSNeverKeyword = TSNeverKeyword;
-
 class TSIntrinsicKeyword {
   type = 'TSIntrinsicKeyword';
   #internal;
@@ -9199,8 +8907,6 @@ class TSIntrinsicKeyword {
 }
 
 const DebugTSIntrinsicKeyword = class TSIntrinsicKeyword {};
-
-constructors.TSIntrinsicKeyword = TSIntrinsicKeyword;
 
 class TSUnknownKeyword {
   type = 'TSUnknownKeyword';
@@ -9242,8 +8948,6 @@ class TSUnknownKeyword {
 
 const DebugTSUnknownKeyword = class TSUnknownKeyword {};
 
-constructors.TSUnknownKeyword = TSUnknownKeyword;
-
 class TSNullKeyword {
   type = 'TSNullKeyword';
   #internal;
@@ -9283,8 +8987,6 @@ class TSNullKeyword {
 }
 
 const DebugTSNullKeyword = class TSNullKeyword {};
-
-constructors.TSNullKeyword = TSNullKeyword;
 
 class TSUndefinedKeyword {
   type = 'TSUndefinedKeyword';
@@ -9326,8 +9028,6 @@ class TSUndefinedKeyword {
 
 const DebugTSUndefinedKeyword = class TSUndefinedKeyword {};
 
-constructors.TSUndefinedKeyword = TSUndefinedKeyword;
-
 class TSVoidKeyword {
   type = 'TSVoidKeyword';
   #internal;
@@ -9367,8 +9067,6 @@ class TSVoidKeyword {
 }
 
 const DebugTSVoidKeyword = class TSVoidKeyword {};
-
-constructors.TSVoidKeyword = TSVoidKeyword;
 
 class TSSymbolKeyword {
   type = 'TSSymbolKeyword';
@@ -9410,8 +9108,6 @@ class TSSymbolKeyword {
 
 const DebugTSSymbolKeyword = class TSSymbolKeyword {};
 
-constructors.TSSymbolKeyword = TSSymbolKeyword;
-
 class TSThisType {
   type = 'TSThisType';
   #internal;
@@ -9451,8 +9147,6 @@ class TSThisType {
 }
 
 const DebugTSThisType = class TSThisType {};
-
-constructors.TSThisType = TSThisType;
 
 class TSObjectKeyword {
   type = 'TSObjectKeyword';
@@ -9494,8 +9188,6 @@ class TSObjectKeyword {
 
 const DebugTSObjectKeyword = class TSObjectKeyword {};
 
-constructors.TSObjectKeyword = TSObjectKeyword;
-
 class TSBigIntKeyword {
   type = 'TSBigIntKeyword';
   #internal;
@@ -9535,8 +9227,6 @@ class TSBigIntKeyword {
 }
 
 const DebugTSBigIntKeyword = class TSBigIntKeyword {};
-
-constructors.TSBigIntKeyword = TSBigIntKeyword;
 
 class TSTypeReference {
   type = 'TSTypeReference';
@@ -9589,8 +9279,6 @@ class TSTypeReference {
 }
 
 const DebugTSTypeReference = class TSTypeReference {};
-
-constructors.TSTypeReference = TSTypeReference;
 
 function constructTSTypeName(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -9655,8 +9343,6 @@ class TSQualifiedName {
 
 const DebugTSQualifiedName = class TSQualifiedName {};
 
-constructors.TSQualifiedName = TSQualifiedName;
-
 class TSTypeParameterInstantiation {
   type = 'TSTypeParameterInstantiation';
   #internal;
@@ -9704,8 +9390,6 @@ class TSTypeParameterInstantiation {
 }
 
 const DebugTSTypeParameterInstantiation = class TSTypeParameterInstantiation {};
-
-constructors.TSTypeParameterInstantiation = TSTypeParameterInstantiation;
 
 class TSTypeParameter {
   type = 'TSTypeParameter';
@@ -9783,8 +9467,6 @@ class TSTypeParameter {
 
 const DebugTSTypeParameter = class TSTypeParameter {};
 
-constructors.TSTypeParameter = TSTypeParameter;
-
 class TSTypeParameterDeclaration {
   type = 'TSTypeParameterDeclaration';
   #internal;
@@ -9832,8 +9514,6 @@ class TSTypeParameterDeclaration {
 }
 
 const DebugTSTypeParameterDeclaration = class TSTypeParameterDeclaration {};
-
-constructors.TSTypeParameterDeclaration = TSTypeParameterDeclaration;
 
 class TSTypeAliasDeclaration {
   type = 'TSTypeAliasDeclaration';
@@ -9899,8 +9579,6 @@ class TSTypeAliasDeclaration {
 
 const DebugTSTypeAliasDeclaration = class TSTypeAliasDeclaration {};
 
-constructors.TSTypeAliasDeclaration = TSTypeAliasDeclaration;
-
 function constructTSAccessibility(pos, ast) {
   switch (ast.buffer[pos]) {
     case 0:
@@ -9965,8 +9643,6 @@ class TSClassImplements {
 }
 
 const DebugTSClassImplements = class TSClassImplements {};
-
-constructors.TSClassImplements = TSClassImplements;
 
 class TSInterfaceDeclaration {
   type = 'TSInterfaceDeclaration';
@@ -10040,8 +9716,6 @@ class TSInterfaceDeclaration {
 
 const DebugTSInterfaceDeclaration = class TSInterfaceDeclaration {};
 
-constructors.TSInterfaceDeclaration = TSInterfaceDeclaration;
-
 class TSInterfaceBody {
   type = 'TSInterfaceBody';
   #internal;
@@ -10089,8 +9763,6 @@ class TSInterfaceBody {
 }
 
 const DebugTSInterfaceBody = class TSInterfaceBody {};
-
-constructors.TSInterfaceBody = TSInterfaceBody;
 
 class TSPropertySignature {
   type = 'TSPropertySignature';
@@ -10161,8 +9833,6 @@ class TSPropertySignature {
 }
 
 const DebugTSPropertySignature = class TSPropertySignature {};
-
-constructors.TSPropertySignature = TSPropertySignature;
 
 function constructTSSignature(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -10247,8 +9917,6 @@ class TSIndexSignature {
 
 const DebugTSIndexSignature = class TSIndexSignature {};
 
-constructors.TSIndexSignature = TSIndexSignature;
-
 class TSCallSignatureDeclaration {
   type = 'TSCallSignatureDeclaration';
   #internal;
@@ -10306,8 +9974,6 @@ class TSCallSignatureDeclaration {
 }
 
 const DebugTSCallSignatureDeclaration = class TSCallSignatureDeclaration {};
-
-constructors.TSCallSignatureDeclaration = TSCallSignatureDeclaration;
 
 function constructTSMethodSignatureKind(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -10404,8 +10070,6 @@ class TSMethodSignature {
 
 const DebugTSMethodSignature = class TSMethodSignature {};
 
-constructors.TSMethodSignature = TSMethodSignature;
-
 class TSConstructSignatureDeclaration {
   type = 'TSConstructSignatureDeclaration';
   #internal;
@@ -10464,8 +10128,6 @@ class TSConstructSignatureDeclaration {
 
 const DebugTSConstructSignatureDeclaration = class TSConstructSignatureDeclaration {};
 
-constructors.TSConstructSignatureDeclaration = TSConstructSignatureDeclaration;
-
 class TSIndexSignatureName {
   type = 'TSIndexSignatureName';
   #internal;
@@ -10520,8 +10182,6 @@ class TSIndexSignatureName {
 
 const DebugTSIndexSignatureName = class TSIndexSignatureName {};
 
-constructors.TSIndexSignatureName = TSIndexSignatureName;
-
 class TSInterfaceHeritage {
   type = 'TSInterfaceHeritage';
   #internal;
@@ -10573,8 +10233,6 @@ class TSInterfaceHeritage {
 }
 
 const DebugTSInterfaceHeritage = class TSInterfaceHeritage {};
-
-constructors.TSInterfaceHeritage = TSInterfaceHeritage;
 
 class TSTypePredicate {
   type = 'TSTypePredicate';
@@ -10633,8 +10291,6 @@ class TSTypePredicate {
 }
 
 const DebugTSTypePredicate = class TSTypePredicate {};
-
-constructors.TSTypePredicate = TSTypePredicate;
 
 function constructTSTypePredicateName(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -10710,8 +10366,6 @@ class TSModuleDeclaration {
 }
 
 const DebugTSModuleDeclaration = class TSModuleDeclaration {};
-
-constructors.TSModuleDeclaration = TSModuleDeclaration;
 
 function constructTSModuleDeclarationKind(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -10796,8 +10450,6 @@ class TSModuleBlock {
 
 const DebugTSModuleBlock = class TSModuleBlock {};
 
-constructors.TSModuleBlock = TSModuleBlock;
-
 class TSTypeLiteral {
   type = 'TSTypeLiteral';
   #internal;
@@ -10846,8 +10498,6 @@ class TSTypeLiteral {
 
 const DebugTSTypeLiteral = class TSTypeLiteral {};
 
-constructors.TSTypeLiteral = TSTypeLiteral;
-
 class TSInferType {
   type = 'TSInferType';
   #internal;
@@ -10893,8 +10543,6 @@ class TSInferType {
 }
 
 const DebugTSInferType = class TSInferType {};
-
-constructors.TSInferType = TSInferType;
 
 class TSTypeQuery {
   type = 'TSTypeQuery';
@@ -10947,8 +10595,6 @@ class TSTypeQuery {
 }
 
 const DebugTSTypeQuery = class TSTypeQuery {};
-
-constructors.TSTypeQuery = TSTypeQuery;
 
 function constructTSTypeQueryExprName(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -11027,8 +10673,6 @@ class TSImportType {
 
 const DebugTSImportType = class TSImportType {};
 
-constructors.TSImportType = TSImportType;
-
 class TSFunctionType {
   type = 'TSFunctionType';
   #internal;
@@ -11086,8 +10730,6 @@ class TSFunctionType {
 }
 
 const DebugTSFunctionType = class TSFunctionType {};
-
-constructors.TSFunctionType = TSFunctionType;
 
 class TSConstructorType {
   type = 'TSConstructorType';
@@ -11153,8 +10795,6 @@ class TSConstructorType {
 
 const DebugTSConstructorType = class TSConstructorType {};
 
-constructors.TSConstructorType = TSConstructorType;
-
 class TSMappedType {
   type = 'TSMappedType';
   #internal;
@@ -11218,8 +10858,6 @@ class TSMappedType {
 }
 
 const DebugTSMappedType = class TSMappedType {};
-
-constructors.TSMappedType = TSMappedType;
 
 function constructTSMappedTypeModifierOperator(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -11290,8 +10928,6 @@ class TSTemplateLiteralType {
 
 const DebugTSTemplateLiteralType = class TSTemplateLiteralType {};
 
-constructors.TSTemplateLiteralType = TSTemplateLiteralType;
-
 class TSAsExpression {
   type = 'TSAsExpression';
   #internal;
@@ -11343,8 +10979,6 @@ class TSAsExpression {
 }
 
 const DebugTSAsExpression = class TSAsExpression {};
-
-constructors.TSAsExpression = TSAsExpression;
 
 class TSSatisfiesExpression {
   type = 'TSSatisfiesExpression';
@@ -11398,8 +11032,6 @@ class TSSatisfiesExpression {
 
 const DebugTSSatisfiesExpression = class TSSatisfiesExpression {};
 
-constructors.TSSatisfiesExpression = TSSatisfiesExpression;
-
 class TSTypeAssertion {
   type = 'TSTypeAssertion';
   #internal;
@@ -11451,8 +11083,6 @@ class TSTypeAssertion {
 }
 
 const DebugTSTypeAssertion = class TSTypeAssertion {};
-
-constructors.TSTypeAssertion = TSTypeAssertion;
 
 class TSImportEqualsDeclaration {
   type = 'TSImportEqualsDeclaration';
@@ -11511,8 +11141,6 @@ class TSImportEqualsDeclaration {
 }
 
 const DebugTSImportEqualsDeclaration = class TSImportEqualsDeclaration {};
-
-constructors.TSImportEqualsDeclaration = TSImportEqualsDeclaration;
 
 function constructTSModuleReference(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -11573,8 +11201,6 @@ class TSExternalModuleReference {
 
 const DebugTSExternalModuleReference = class TSExternalModuleReference {};
 
-constructors.TSExternalModuleReference = TSExternalModuleReference;
-
 class TSNonNullExpression {
   type = 'TSNonNullExpression';
   #internal;
@@ -11620,8 +11246,6 @@ class TSNonNullExpression {
 }
 
 const DebugTSNonNullExpression = class TSNonNullExpression {};
-
-constructors.TSNonNullExpression = TSNonNullExpression;
 
 class Decorator {
   type = 'Decorator';
@@ -11669,8 +11293,6 @@ class Decorator {
 
 const DebugDecorator = class Decorator {};
 
-constructors.Decorator = Decorator;
-
 class TSExportAssignment {
   type = 'TSExportAssignment';
   #internal;
@@ -11717,8 +11339,6 @@ class TSExportAssignment {
 
 const DebugTSExportAssignment = class TSExportAssignment {};
 
-constructors.TSExportAssignment = TSExportAssignment;
-
 class TSNamespaceExportDeclaration {
   type = 'TSNamespaceExportDeclaration';
   #internal;
@@ -11764,8 +11384,6 @@ class TSNamespaceExportDeclaration {
 }
 
 const DebugTSNamespaceExportDeclaration = class TSNamespaceExportDeclaration {};
-
-constructors.TSNamespaceExportDeclaration = TSNamespaceExportDeclaration;
 
 class TSInstantiationExpression {
   type = 'TSInstantiationExpression';
@@ -11818,8 +11436,6 @@ class TSInstantiationExpression {
 }
 
 const DebugTSInstantiationExpression = class TSInstantiationExpression {};
-
-constructors.TSInstantiationExpression = TSInstantiationExpression;
 
 function constructImportOrExportKind(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -11884,8 +11500,6 @@ class JSDocNullableType {
 
 const DebugJSDocNullableType = class JSDocNullableType {};
 
-constructors.JSDocNullableType = JSDocNullableType;
-
 class JSDocNonNullableType {
   type = 'JSDocNonNullableType';
   #internal;
@@ -11938,8 +11552,6 @@ class JSDocNonNullableType {
 
 const DebugJSDocNonNullableType = class JSDocNonNullableType {};
 
-constructors.JSDocNonNullableType = JSDocNonNullableType;
-
 class JSDocUnknownType {
   type = 'JSDocUnknownType';
   #internal;
@@ -11979,8 +11591,6 @@ class JSDocUnknownType {
 }
 
 const DebugJSDocUnknownType = class JSDocUnknownType {};
-
-constructors.JSDocUnknownType = JSDocUnknownType;
 
 function constructCommentKind(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -12037,8 +11647,6 @@ class Comment {
 
 const DebugComment = class Comment {};
 
-constructors.Comment = Comment;
-
 class NameSpan {
   #internal;
 
@@ -12085,8 +11693,6 @@ class NameSpan {
 
 const DebugNameSpan = class NameSpan {};
 
-constructors.NameSpan = NameSpan;
-
 class ImportEntry {
   #internal;
 
@@ -12130,8 +11736,6 @@ class ImportEntry {
 }
 
 const DebugImportEntry = class ImportEntry {};
-
-constructors.ImportEntry = ImportEntry;
 
 function constructImportImportName(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -12213,8 +11817,6 @@ class ExportEntry {
 }
 
 const DebugExportEntry = class ExportEntry {};
-
-constructors.ExportEntry = ExportEntry;
 
 function constructExportImportName(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -12300,8 +11902,6 @@ class DynamicImport {
 }
 
 const DebugDynamicImport = class DynamicImport {};
-
-constructors.DynamicImport = DynamicImport;
 
 function constructAssignmentOperator(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -12476,8 +12076,6 @@ class Span {
 
 const DebugSpan = class Span {};
 
-constructors.Span = Span;
-
 class SourceType {
   #internal;
 
@@ -12509,8 +12107,6 @@ class SourceType {
 }
 
 const DebugSourceType = class SourceType {};
-
-constructors.SourceType = SourceType;
 
 function constructModuleKind(pos, ast) {
   switch (ast.buffer[pos]) {
@@ -12578,8 +12174,6 @@ class RawTransferData {
 
 const DebugRawTransferData = class RawTransferData {};
 
-constructors.RawTransferData = RawTransferData;
-
 class Error {
   #internal;
 
@@ -12644,8 +12238,6 @@ class Error {
 
 const DebugError = class Error {};
 
-constructors.Error = Error;
-
 function constructErrorSeverity(pos, ast) {
   switch (ast.buffer[pos]) {
     case 0:
@@ -12704,8 +12296,6 @@ class ErrorLabel {
 }
 
 const DebugErrorLabel = class ErrorLabel {};
-
-constructors.ErrorLabel = ErrorLabel;
 
 class EcmaScriptModule {
   #internal;
@@ -12778,8 +12368,6 @@ class EcmaScriptModule {
 
 const DebugEcmaScriptModule = class EcmaScriptModule {};
 
-constructors.EcmaScriptModule = EcmaScriptModule;
-
 class StaticImport {
   #internal;
 
@@ -12832,8 +12420,6 @@ class StaticImport {
 
 const DebugStaticImport = class StaticImport {};
 
-constructors.StaticImport = StaticImport;
-
 class StaticExport {
   #internal;
 
@@ -12879,8 +12465,6 @@ class StaticExport {
 }
 
 const DebugStaticExport = class StaticExport {};
-
-constructors.StaticExport = StaticExport;
 
 function constructStr(pos, ast) {
   const pos32 = pos >> 2,
@@ -14305,3 +13889,209 @@ function constructVecExportEntry(pos, ast) {
 function constructExportEntry(pos, ast) {
   return new ExportEntry(pos, ast);
 }
+
+module.exports = {
+  Program,
+  IdentifierName,
+  IdentifierReference,
+  BindingIdentifier,
+  LabelIdentifier,
+  ThisExpression,
+  ArrayExpression,
+  Elision,
+  ObjectExpression,
+  ObjectProperty,
+  TemplateLiteral,
+  TaggedTemplateExpression,
+  TemplateElement,
+  TemplateElementValue,
+  ComputedMemberExpression,
+  StaticMemberExpression,
+  PrivateFieldExpression,
+  CallExpression,
+  NewExpression,
+  MetaProperty,
+  SpreadElement,
+  UpdateExpression,
+  UnaryExpression,
+  BinaryExpression,
+  PrivateInExpression,
+  LogicalExpression,
+  ConditionalExpression,
+  AssignmentExpression,
+  ArrayAssignmentTarget,
+  ObjectAssignmentTarget,
+  AssignmentTargetRest,
+  AssignmentTargetWithDefault,
+  AssignmentTargetPropertyIdentifier,
+  AssignmentTargetPropertyProperty,
+  SequenceExpression,
+  Super,
+  AwaitExpression,
+  ChainExpression,
+  ParenthesizedExpression,
+  Directive,
+  Hashbang,
+  BlockStatement,
+  VariableDeclaration,
+  VariableDeclarator,
+  EmptyStatement,
+  ExpressionStatement,
+  IfStatement,
+  DoWhileStatement,
+  WhileStatement,
+  ForStatement,
+  ForInStatement,
+  ForOfStatement,
+  ContinueStatement,
+  BreakStatement,
+  ReturnStatement,
+  WithStatement,
+  SwitchStatement,
+  SwitchCase,
+  LabeledStatement,
+  ThrowStatement,
+  TryStatement,
+  CatchClause,
+  CatchParameter,
+  DebuggerStatement,
+  BindingPattern,
+  AssignmentPattern,
+  ObjectPattern,
+  BindingProperty,
+  ArrayPattern,
+  BindingRestElement,
+  Function,
+  FormalParameters,
+  FormalParameter,
+  FunctionBody,
+  ArrowFunctionExpression,
+  YieldExpression,
+  Class,
+  ClassBody,
+  MethodDefinition,
+  PropertyDefinition,
+  PrivateIdentifier,
+  StaticBlock,
+  AccessorProperty,
+  ImportExpression,
+  ImportDeclaration,
+  ImportSpecifier,
+  ImportDefaultSpecifier,
+  ImportNamespaceSpecifier,
+  WithClause,
+  ImportAttribute,
+  ExportNamedDeclaration,
+  ExportDefaultDeclaration,
+  ExportAllDeclaration,
+  ExportSpecifier,
+  V8IntrinsicExpression,
+  BooleanLiteral,
+  NullLiteral,
+  NumericLiteral,
+  StringLiteral,
+  BigIntLiteral,
+  RegExpLiteral,
+  RegExp,
+  RegExpPattern,
+  RegExpFlags,
+  JSXElement,
+  JSXOpeningElement,
+  JSXClosingElement,
+  JSXFragment,
+  JSXOpeningFragment,
+  JSXClosingFragment,
+  JSXNamespacedName,
+  JSXMemberExpression,
+  JSXExpressionContainer,
+  JSXEmptyExpression,
+  JSXAttribute,
+  JSXSpreadAttribute,
+  JSXIdentifier,
+  JSXSpreadChild,
+  JSXText,
+  TSThisParameter,
+  TSEnumDeclaration,
+  TSEnumBody,
+  TSEnumMember,
+  TSTypeAnnotation,
+  TSLiteralType,
+  TSConditionalType,
+  TSUnionType,
+  TSIntersectionType,
+  TSParenthesizedType,
+  TSTypeOperator,
+  TSArrayType,
+  TSIndexedAccessType,
+  TSTupleType,
+  TSNamedTupleMember,
+  TSOptionalType,
+  TSRestType,
+  TSAnyKeyword,
+  TSStringKeyword,
+  TSBooleanKeyword,
+  TSNumberKeyword,
+  TSNeverKeyword,
+  TSIntrinsicKeyword,
+  TSUnknownKeyword,
+  TSNullKeyword,
+  TSUndefinedKeyword,
+  TSVoidKeyword,
+  TSSymbolKeyword,
+  TSThisType,
+  TSObjectKeyword,
+  TSBigIntKeyword,
+  TSTypeReference,
+  TSQualifiedName,
+  TSTypeParameterInstantiation,
+  TSTypeParameter,
+  TSTypeParameterDeclaration,
+  TSTypeAliasDeclaration,
+  TSClassImplements,
+  TSInterfaceDeclaration,
+  TSInterfaceBody,
+  TSPropertySignature,
+  TSIndexSignature,
+  TSCallSignatureDeclaration,
+  TSMethodSignature,
+  TSConstructSignatureDeclaration,
+  TSIndexSignatureName,
+  TSInterfaceHeritage,
+  TSTypePredicate,
+  TSModuleDeclaration,
+  TSModuleBlock,
+  TSTypeLiteral,
+  TSInferType,
+  TSTypeQuery,
+  TSImportType,
+  TSFunctionType,
+  TSConstructorType,
+  TSMappedType,
+  TSTemplateLiteralType,
+  TSAsExpression,
+  TSSatisfiesExpression,
+  TSTypeAssertion,
+  TSImportEqualsDeclaration,
+  TSExternalModuleReference,
+  TSNonNullExpression,
+  Decorator,
+  TSExportAssignment,
+  TSNamespaceExportDeclaration,
+  TSInstantiationExpression,
+  JSDocNullableType,
+  JSDocNonNullableType,
+  JSDocUnknownType,
+  Comment,
+  NameSpan,
+  ImportEntry,
+  ExportEntry,
+  DynamicImport,
+  Span,
+  SourceType,
+  RawTransferData,
+  Error,
+  ErrorLabel,
+  EcmaScriptModule,
+  StaticImport,
+  StaticExport,
+};

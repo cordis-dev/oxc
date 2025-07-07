@@ -20,18 +20,45 @@ pub struct NoScriptComponentInHead;
 declare_oxc_lint!(
     /// ### What it does
     ///
+    /// Prevent usage of `next/script` in `next/head` component.
     ///
     /// ### Why is this bad?
     ///
+    /// The `next/script` component should not be used in a `next/head component.
+    /// Instead move the `<Script />` component outside of `<Head>` instead.
     ///
     /// ### Examples
     ///
     /// Examples of **incorrect** code for this rule:
-    /// ```javascript
+    /// ```jsx
+    /// import Script from 'next/script'
+    /// import Head from 'next/head'
+    ///
+    /// export default function Index() {
+    ///   return (
+    ///     <Head>
+    ///       <title>Next.js</title>
+    ///       <Script src="/my-script.js" />
+    ///     </Head>
+    ///   )
+    /// }
     /// ```
     ///
     /// Examples of **correct** code for this rule:
-    /// ```javascript
+    /// ```jsx
+    /// import Script from 'next/script'
+    /// import Head from 'next/head'
+    ///
+    /// export default function Index() {
+    ///   return (
+    ///     <>
+    ///       <Head>
+    ///         <title>Next.js</title>
+    ///       </Head>
+    ///       <Script src="/my-script.js" />
+    ///     </>
+    ///   )
+    /// }
     /// ```
     NoScriptComponentInHead,
     nextjs,
@@ -65,12 +92,11 @@ impl Rule for NoScriptComponentInHead {
         };
 
         for reference in ctx.semantic().symbol_references(default_import.local.symbol_id()) {
-            let parent_node = ctx.nodes().parent_node(reference.node_id()).unwrap();
+            let parent_node = ctx.nodes().parent_node(reference.node_id());
             let AstKind::JSXOpeningElement(jsx_opening_element) = parent_node.kind() else {
                 continue;
             };
-            let Some(AstKind::JSXElement(jsx_element)) = ctx.nodes().parent_kind(parent_node.id())
-            else {
+            let AstKind::JSXElement(jsx_element) = ctx.nodes().parent_kind(parent_node.id()) else {
                 continue;
             };
 

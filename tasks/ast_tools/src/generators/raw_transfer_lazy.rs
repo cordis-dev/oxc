@@ -37,44 +37,20 @@ impl Generator for RawTransferLazyGenerator {
 
         vec![
             Output::Javascript {
-                path: format!("{NAPI_PARSER_PACKAGE_PATH}/generated/deserialize/lazy.js"),
+                path: format!("{NAPI_PARSER_PACKAGE_PATH}/generated/lazy/constructors.js"),
                 code: constructors,
             },
             Output::Javascript {
-                path: format!("{NAPI_PARSER_PACKAGE_PATH}/generated/deserialize/lazy-visit.js"),
+                path: format!("{NAPI_PARSER_PACKAGE_PATH}/generated/lazy/walk.js"),
                 code: walkers,
             },
             Output::Javascript {
-                path: format!("{NAPI_PARSER_PACKAGE_PATH}/generated/deserialize/lazy-types.js"),
+                path: format!("{NAPI_PARSER_PACKAGE_PATH}/generated/lazy/types.js"),
                 code: node_type_ids_map,
             },
         ]
     }
 }
-
-/// Prelude to generated constructors.
-/// Defines the main `construct` function.
-static CONSTRUCT_PRELUDE: &str = "
-    'use strict';
-
-    const { TOKEN, constructorError } = require('../../raw-transfer/lazy-common.js'),
-        NodeArray = require('../../raw-transfer/node-array.js');
-
-    const constructors = {};
-
-    module.exports = { construct, constructors };
-
-    function construct(ast) {
-        // (2 * 1024 * 1024 * 1024 - 16) >> 2
-        const metadataPos32 = 536870908;
-        return new RawTransferData(ast.buffer.uint32[metadataPos32], ast);
-    }
-
-    const textDecoder = new TextDecoder('utf-8', { ignoreBOM: true }),
-        decodeStr = textDecoder.decode.bind(textDecoder),
-        { fromCodePoint } = String,
-        inspectSymbol = Symbol.for('nodejs.util.inspect.custom');
-";
 
 /// Generated code and other state.
 struct State {
@@ -84,6 +60,8 @@ struct State {
     walkers: String,
     /// Code for constructor class names
     constructor_names: String,
+    /// Code for constructor class names which are used in walkers
+    walked_constructor_names: String,
     /// Code for mapping from struct name to ID
     leaf_node_type_ids_map: String,
     /// Code for mapping from struct name to ID
@@ -117,9 +95,10 @@ fn generate(
 
     // Generate code
     let mut state = State {
-        constructors: CONSTRUCT_PRELUDE.to_string(),
+        constructors: String::new(),
         walkers: String::new(),
         constructor_names: String::new(),
+        walked_constructor_names: String::new(),
         leaf_node_type_ids_map: String::new(),
         non_leaf_node_type_ids_map: String::new(),
         next_leaf_node_type_id: 0,
@@ -173,16 +152,38 @@ fn generate(
         }
     }
 
+    // Generate file containing constructors
+    let constructors = &state.constructors;
+    let constructor_names = &state.constructor_names;
+    #[rustfmt::skip]
+    let constructors = format!("
+        'use strict';
+
+        const {{ TOKEN, constructorError }} = require('../../raw-transfer/lazy-common.js'),
+            NodeArray = require('../../raw-transfer/node-array.js');
+
+        const textDecoder = new TextDecoder('utf-8', {{ ignoreBOM: true }}),
+            decodeStr = textDecoder.decode.bind(textDecoder),
+            {{ fromCodePoint }} = String,
+            inspectSymbol = Symbol.for('nodejs.util.inspect.custom');
+
+        {constructors}
+
+        module.exports = {{
+            {constructor_names}
+        }};
+    ");
+
     // Generate file containing walk functions
     let walkers = &state.walkers;
-    let constructor_names = &state.constructor_names;
+    let walked_constructor_names = &state.walked_constructor_names;
     #[rustfmt::skip]
     let walkers = format!("
         'use strict';
 
         const {{
-            {constructor_names}
-        }} = require('./lazy.js').constructors;
+            {walked_constructor_names}
+        }} = require('./constructors.js');
 
         module.exports = walkProgram;
 
@@ -213,7 +214,7 @@ fn generate(
         }};
     ");
 
-    (state.constructors, walkers, node_type_ids_map)
+    (constructors, walkers, node_type_ids_map)
 }
 
 /// Structure for calculating which types need walk functions.
@@ -752,9 +753,9 @@ fn generate_struct(
         }}
 
         const Debug{struct_name} = class {struct_name} {{}};
-
-        constructors.{struct_name} = {struct_name};
     ");
+
+    write_it!(state.constructor_names, "{struct_name}, ");
 
     // Generate walk function
     if !is_walked {
@@ -816,7 +817,7 @@ fn generate_struct(
         write_it!(state.non_leaf_node_type_ids_map, "['{struct_name}', {node_type_id}],\n");
     }
 
-    write_it!(state.constructor_names, "{struct_name}, ");
+    write_it!(state.walked_constructor_names, "{struct_name}, ");
 }
 
 /// Generate construct and walk functions for an enum.

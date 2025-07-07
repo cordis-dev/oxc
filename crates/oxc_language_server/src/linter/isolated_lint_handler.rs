@@ -46,19 +46,18 @@ impl IsolatedLintHandlerFileSystem {
 
 impl RuntimeFileSystem for IsolatedLintHandlerFileSystem {
     fn read_to_arena_str<'a>(
-        &self,
+        &'a self,
         path: &Path,
         allocator: &'a Allocator,
     ) -> Result<&'a str, std::io::Error> {
         if path == self.path_to_lint {
-            // TODO: i think we can avoid allocating here.
-            return Ok(allocator.alloc_str(&self.source_text));
+            return Ok(&self.source_text);
         }
 
         read_to_arena_str(path, allocator)
     }
 
-    fn write_file(&self, _path: &Path, _content: String) -> Result<(), std::io::Error> {
+    fn write_file(&self, _path: &Path, _content: &str) -> Result<(), std::io::Error> {
         panic!("writing file should not be allowed in Language Server");
     }
 }
