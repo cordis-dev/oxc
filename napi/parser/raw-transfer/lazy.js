@@ -2,6 +2,7 @@
 
 const { parseSyncRawImpl, parseAsyncRawImpl, returnBufferToCache } = require('./common.js'),
   { TOKEN } = require('./lazy-common.js'),
+  { DATA_POINTER_POS_32, PROGRAM_OFFSET } = require('../generated/constants.js'),
   { RawTransferData } = require('../generated/lazy/constructors.js'),
   walkProgram = require('../generated/lazy/walk.js'),
   { Visitor, getVisitorsArr } = require('./visitor.js');
@@ -30,7 +31,6 @@ module.exports = { parseSyncLazy, parseAsyncLazy, Visitor };
  * @param {Object} options - Parsing options
  * @returns {Object} - Object with property getters for `program`, `module`, `comments`, and `errors`,
  *   and `dispose` and `visit` methods
- * @throws {Error} - If raw transfer is not supported on this platform
  */
 function parseSyncLazy(filename, sourceText, options) {
   let _;
@@ -64,7 +64,6 @@ function parseSyncLazy(filename, sourceText, options) {
  * @param {Object} options - Parsing options
  * @returns {Object} - Object with property getters for `program`, `module`, `comments`, and `errors`,
  *   and `dispose` and `visit` methods
- * @throws {Error} - If raw transfer is not supported on this platform
  */
 function parseAsyncLazy(filename, sourceText, options) {
   let _;
@@ -94,19 +93,17 @@ const bufferRecycleRegistry = typeof FinalizationRegistry === 'undefined'
  * @returns {Object} - Object with property getters for `program`, `module`, `comments`, and `errors`,
  *   and `dispose` and `visit` methods
  */
-function construct(buffer, sourceText, sourceLen) {
+function construct(buffer, sourceText, sourceByteLen) {
   // Create AST object
-  const sourceIsAscii = sourceText.length === sourceLen;
-  const ast = { buffer, sourceText, sourceLen, sourceIsAscii, nodes: new Map(), token: TOKEN };
+  const sourceIsAscii = sourceText.length === sourceByteLen;
+  const ast = { buffer, sourceText, sourceByteLen, sourceIsAscii, nodes: new Map(), token: TOKEN };
 
   // Register `ast` with the recycle registry so buffer is returned to cache
   // when `ast` is garbage collected
   bufferRecycleRegistry.register(ast, buffer, ast);
 
   // Get root data class instance
-  // (2 * 1024 * 1024 * 1024 - 16) >> 2
-  const metadataPos32 = 536870908;
-  const rawDataPos = buffer.uint32[metadataPos32];
+  const rawDataPos = buffer.uint32[DATA_POINTER_POS_32];
   const data = new RawTransferData(rawDataPos, ast);
 
   return {
@@ -124,7 +121,7 @@ function construct(buffer, sourceText, sourceLen) {
     },
     dispose: dispose.bind(null, ast),
     visit(visitor) {
-      walkProgram(rawDataPos, ast, getVisitorsArr(visitor));
+      walkProgram(rawDataPos + PROGRAM_OFFSET, ast, getVisitorsArr(visitor));
     },
   };
 }

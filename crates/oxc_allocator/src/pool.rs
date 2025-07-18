@@ -1,4 +1,4 @@
-use std::{mem::ManuallyDrop, ops::Deref, sync::Mutex};
+use std::{iter, mem::ManuallyDrop, ops::Deref, sync::Mutex};
 
 use crate::Allocator;
 
@@ -13,7 +13,7 @@ pub struct AllocatorPool {
 impl AllocatorPool {
     /// Creates a new [`AllocatorPool`] pre-filled with the given number of default [`Allocator`] instances.
     pub fn new(size: usize) -> AllocatorPool {
-        let allocators = std::iter::repeat_with(Allocator::default).take(size).collect();
+        let allocators = iter::repeat_with(Allocator::new).take(size).collect();
         AllocatorPool { allocators: Mutex::new(allocators) }
     }
 
@@ -29,7 +29,7 @@ impl AllocatorPool {
             let mut allocators = self.allocators.lock().unwrap();
             allocators.pop()
         };
-        let allocator = allocator.unwrap_or_default();
+        let allocator = allocator.unwrap_or_else(Allocator::new);
 
         AllocatorGuard { allocator: ManuallyDrop::new(allocator), pool: self }
     }

@@ -259,31 +259,6 @@ impl ESTree for TSMappedTypeConstraint<'_, '_> {
     }
 }
 
-/// Serializer for `IdentifierReference` variant of `TSTypeName`.
-///
-/// Where is an identifier called `this`, TS-ESTree presents it as a `ThisExpression`.
-#[ast_meta]
-#[estree(
-    ts_type = "IdentifierReference | ThisExpression",
-    raw_deser = "
-        let id = DESER[Box<IdentifierReference>](POS);
-        if (id.name === 'this') id = { type: 'ThisExpression', start: id.start, end: id.end };
-        id
-    "
-)]
-pub struct TSTypeNameIdentifierReference<'a, 'b>(pub &'b IdentifierReference<'a>);
-
-impl ESTree for TSTypeNameIdentifierReference<'_, '_> {
-    fn serialize<S: Serializer>(&self, serializer: S) {
-        let ident = self.0;
-        if ident.name == "this" {
-            ThisExpression { span: ident.span }.serialize(serializer);
-        } else {
-            ident.serialize(serializer);
-        }
-    }
-}
-
 /// Serializer for `expression` field of `TSClassImplements`.
 ///
 /// Our AST represents `X.Y` in `class C implements X.Y {}` as a `TSQualifiedName`.
@@ -297,9 +272,10 @@ impl ESTree for TSTypeNameIdentifierReference<'_, '_> {
     raw_deser = "
         let expression = DESER[TSTypeName](POS_OFFSET.expression);
         if (expression.type === 'TSQualifiedName') {
+            let object = expression.left;
             let parent = expression = {
                 type: 'MemberExpression',
-                object: expression.left,
+                object,
                 property: expression.right,
                 optional: false,
                 computed: false,
@@ -307,17 +283,18 @@ impl ESTree for TSTypeNameIdentifierReference<'_, '_> {
                 end: expression.end,
             };
 
-            while (parent.object.type === 'TSQualifiedName') {
-                const object = parent.object;
+            while (object.type === 'TSQualifiedName') {
+                const { left } = object;
                 parent = parent.object = {
                     type: 'MemberExpression',
-                    object: object.left,
+                    object: left,
                     property: object.right,
                     optional: false,
                     computed: false,
                     start: object.start,
                     end: object.end,
                 };
+                object = left;
             }
         }
         expression
@@ -338,7 +315,7 @@ impl ESTree for TSTypeNameAsMemberExpression<'_, '_> {
     fn serialize<S: Serializer>(&self, serializer: S) {
         match self.0 {
             TSTypeName::IdentifierReference(ident) => {
-                TSTypeNameIdentifierReference(ident).serialize(serializer);
+                ident.serialize(serializer);
             }
             TSTypeName::QualifiedName(name) => {
                 // Convert to `TSQualifiedName` to `MemberExpression`.
@@ -351,6 +328,9 @@ impl ESTree for TSTypeNameAsMemberExpression<'_, '_> {
                 state.serialize_field("computed", &false);
                 state.serialize_span(name.span);
                 state.end();
+            }
+            TSTypeName::ThisExpression(e) => {
+                e.serialize(serializer);
             }
         }
     }

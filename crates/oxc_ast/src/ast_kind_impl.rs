@@ -123,6 +123,18 @@ impl<'a> AstKind<'a> {
         }
     }
 
+    pub fn is_property_key(&self) -> bool {
+        self.as_property_key_kind().is_some()
+    }
+
+    pub fn as_property_key_kind(&self) -> Option<PropertyKeyKind<'a>> {
+        match self {
+            Self::IdentifierName(ident) => Some(PropertyKeyKind::Static(ident)),
+            Self::PrivateIdentifier(ident) => Some(PropertyKeyKind::Private(ident)),
+            _ => None,
+        }
+    }
+
     pub fn from_expression(e: &'a Expression<'a>) -> Self {
         match e {
             Expression::BooleanLiteral(e) => Self::BooleanLiteral(e),
@@ -195,7 +207,6 @@ impl AstKind<'_> {
             Self::Program(_) => "Program".into(),
             Self::Directive(d) => d.directive.as_ref().into(),
             Self::Hashbang(_) => "Hashbang".into(),
-
             Self::BlockStatement(_) => "BlockStatement".into(),
             Self::BreakStatement(_) => "BreakStatement".into(),
             Self::ContinueStatement(_) => "ContinueStatement".into(),
@@ -239,7 +250,7 @@ impl AstKind<'_> {
             Self::RegExpLiteral(r) => format!("RegExpLiteral({})", r.regex).into(),
             Self::TemplateLiteral(t) => format!(
                 "TemplateLiteral({})",
-                t.quasi().map_or_else(|| "None".into(), |q| format!("Some({q})"))
+                t.single_quasi().map_or_else(|| "None".into(), |q| format!("Some({q})"))
             )
             .into(),
             Self::TemplateElement(_) => "TemplateElement".into(),
@@ -291,14 +302,11 @@ impl AstKind<'_> {
             Self::ObjectProperty(p) => {
                 format!("ObjectProperty({})", p.key.name().unwrap_or(COMPUTED)).into()
             }
-            Self::PropertyKey(p) => format!("PropertyKey({})", p.name().unwrap_or(COMPUTED)).into(),
             Self::Argument(_) => "Argument".into(),
-            Self::AssignmentTarget(_) => "AssignmentTarget".into(),
             Self::SimpleAssignmentTarget(a) => {
                 format!("SimpleAssignmentTarget({})", a.get_identifier_name().unwrap_or(&UNKNOWN))
                     .into()
             }
-            Self::AssignmentTargetPattern(_) => "AssignmentTargetPattern".into(),
             Self::ArrayAssignmentTarget(_) => "ArrayAssignmentTarget".into(),
             Self::ObjectAssignmentTarget(_) => "ObjectAssignmentTarget".into(),
             Self::AssignmentTargetWithDefault(_) => "AssignmentTargetWithDefault".into(),
@@ -384,6 +392,7 @@ impl AstKind<'_> {
             Self::TSArrayType(_) => "TSArrayType".into(),
             Self::TSOptionalType(_) => "TSOptionalType".into(),
             Self::TSTypeOperator(_) => "TSTypeOperator".into(),
+            Self::TSFunctionType(_) => "TSFunctionType".into(),
 
             Self::TSIndexedAccessType(_) => "TSIndexedAccessType".into(),
 
@@ -557,6 +566,22 @@ impl GetSpan for ModuleDeclarationKind<'_> {
             Self::ExportDefault(decl) => decl.span,
             Self::TSExportAssignment(decl) => decl.span,
             Self::TSNamespaceExport(decl) => decl.span,
+        }
+    }
+}
+
+pub enum PropertyKeyKind<'a> {
+    /// A static identifier property key, like `a` in `{ a: 1 }`.
+    Static(&'a IdentifierName<'a>),
+    /// A private identifier property key, like `#a` in `class C { #a = 1 }`.
+    Private(&'a PrivateIdentifier<'a>),
+}
+
+impl GetSpan for PropertyKeyKind<'_> {
+    fn span(&self) -> Span {
+        match self {
+            Self::Static(ident) => ident.span,
+            Self::Private(ident) => ident.span,
         }
     }
 }

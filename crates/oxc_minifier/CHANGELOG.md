@@ -4,6 +4,47 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
+## [0.77.2] - 2025-07-17
+
+### 🐛 Bug Fixes
+
+- ed696b5 minifier: Remove more unused assignment expressions (#12364) (Boshen)
+- 8777839 minifier: Improve remove unused variable declaration (#12351) (Boshen)
+
+### 🚜 Refactor
+
+- cc3bea4 minifier: Do not remove unused assignment expression yet (#12367) (Boshen)
+- eb12132 minifier: Unify access `CompressOptions` through `ctx.state` (#12346) (Boshen)
+- 7aea02c minifier: Move `State` to a separate file (#12322) (Boshen)
+
+
+## [0.77.1] - 2025-07-16
+
+### 🚀 Features
+
+- 1b80633 minifier: Remove unused function declaration (#12318) (Boshen)
+- 3f33e8c minifier: Remove unused assignment expression (#12314) (Boshen)
+- fb8289c minifier: Remove unused variable declaration (#11796) (Boshen)
+- 2cdf722 minifier: Constant fold small integer multiplication (n <= 255) (#12236) (Boshen)
+- 314f970 minifier: Remove unused `-1n` (#12235) (Boshen)
+
+### 🚜 Refactor
+
+- 30e8690 minifier: Move tests around (#12237) (Boshen)
+
+
+
+## [0.76.0] - 2025-07-08
+
+### 💥 BREAKING CHANGES
+
+- 8b30a5b codegen: [**BREAKING**] Introduce `CommentOptions` (#12114) (Boshen)
+
+### 🚀 Features
+
+- 35c6d48 minifier: Implement `Number` known methods (#12078) (Ethan Wu)
+
+
 ## [0.75.1] - 2025-07-03
 
 ### 🚀 Features

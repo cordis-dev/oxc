@@ -4,6 +4,50 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
+## [0.77.2] - 2025-07-17
+
+### 🚀 Features
+
+- 37be46c ast: Introduce `NewExpression::arguments_span` (#12368) (camc314)
+- 6b8f77d ast: Introduce `CallExpression::arguments_span` (#12321) (camc314)
+
+
+## [0.77.1] - 2025-07-16
+
+### 🚀 Features
+
+- 9b14fbc ast: Add `ThisExpression` to `TSTypeName` (#12156) (Boshen)
+
+### 🚜 Refactor
+
+- ee761de ast: Remove `AstKind` for `AssignmentTarget` (#12252) (Tyler Earls)
+- c025868 ast: Remove `AstKind` for `TSFunctionType` (#12287) (camc314)
+- c68b607 ast: Rename `TemplateLiteral::quasi` to `TemplateLiteral::single_quasi` (#12266) (Dunqing)
+- 32c32af ast: Check whether there is a single `quasi` in `TemplateLiteral::quasi` (#12265) (Dunqing)
+
+
+## [0.77.0] - 2025-07-12
+
+### 🚜 Refactor
+
+- 8814c53 ast: Remove `AstKind` for `PropertyKey` (#12108) (camchenry)
+
+### ⚡ Performance
+
+- 4c35f4a napi/parser: Optimize raw transfer deserializer for `TSClassImplements` (#12158) (overlookmotel)
+
+
+## [0.76.0] - 2025-07-08
+
+### 💥 BREAKING CHANGES
+
+- 8b30a5b codegen: [**BREAKING**] Introduce `CommentOptions` (#12114) (Boshen)
+
+### 🚜 Refactor
+
+- e8e2a25 ast: Remove `AstKind` for `AssignmentTargetPattern` (#12105) (camchenry)
+
+
 ## [0.75.1] - 2025-07-03
 
 ### 🚀 Features

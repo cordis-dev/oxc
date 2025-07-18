@@ -5,8 +5,8 @@ use oxc_semantic::Semantic;
 use oxc_span::{SourceType, Span};
 
 use crate::{
-    AllowWarnDeny, FrameworkFlags,
-    config::{LintConfig, LintPlugins},
+    AllowWarnDeny, FrameworkFlags, LintPlugins,
+    config::LintConfig,
     disable_directives::{DisableDirectives, DisableDirectivesBuilder, RuleCommentType},
     fixer::{Fix, FixKind, Message, PossibleFixes},
     frameworks,
@@ -63,8 +63,6 @@ pub struct ContextHost<'a> {
     pub(super) config: Arc<LintConfig>,
     /// Front-end frameworks that might be in use in the target file.
     pub(super) frameworks: FrameworkFlags,
-    /// A list of all available linter plugins.
-    pub(super) plugins: LintPlugins,
 }
 
 impl<'a> ContextHost<'a> {
@@ -90,7 +88,6 @@ impl<'a> ContextHost<'a> {
             DisableDirectivesBuilder::new().build(semantic.source_text(), semantic.comments());
 
         let file_path = file_path.as_ref().to_path_buf().into_boxed_path();
-        let plugins = config.plugins;
 
         Self {
             semantic,
@@ -101,7 +98,6 @@ impl<'a> ContextHost<'a> {
             file_path,
             config,
             frameworks: options.framework_hints,
-            plugins,
         }
         .sniff_for_frameworks()
     }
@@ -136,13 +132,13 @@ impl<'a> ContextHost<'a> {
 
     #[inline]
     pub fn plugins(&self) -> &LintPlugins {
-        &self.plugins
+        &self.config.plugins
     }
 
     /// Add a diagnostic message to the end of the list of diagnostics. Can be used
     /// by any rule to report issues.
     #[inline]
-    pub(super) fn push_diagnostic(&self, diagnostic: Message<'a>) {
+    pub(crate) fn push_diagnostic(&self, diagnostic: Message<'a>) {
         self.diagnostics.borrow_mut().push(diagnostic);
     }
 
@@ -273,7 +269,7 @@ impl<'a> ContextHost<'a> {
     /// on top of those hints, providing a more granular understanding of the
     /// frameworks in use.
     fn sniff_for_frameworks(mut self) -> Self {
-        if self.plugins.has_test() {
+        if self.plugins().has_test() {
             // let mut test_flags = FrameworkFlags::empty();
 
             let vitest_like = frameworks::has_vitest_imports(self.module_record());

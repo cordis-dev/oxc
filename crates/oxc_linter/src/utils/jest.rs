@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use oxc_ast::{
     AstKind,
     ast::{
-        CallExpression, Expression, ImportDeclaration, ImportDeclarationSpecifier, TemplateLiteral,
+        CallExpression, Expression, ImportDeclaration, ImportDeclarationSpecifier,
         match_member_expression,
     },
 };
@@ -12,13 +12,13 @@ use oxc_semantic::{AstNode, ReferenceId, Semantic, SymbolId};
 use oxc_span::CompactStr;
 
 use crate::LintContext;
-
-mod parse_jest_fn;
 pub use crate::utils::jest::parse_jest_fn::{
     ExpectError, KnownMemberExpressionParentKind, KnownMemberExpressionProperty,
     MemberExpressionElement, ParsedExpectFnCall, ParsedGeneralJestFnCall,
     ParsedJestFnCall as ParsedJestFnCallNew, parse_jest_fn_call,
 };
+
+mod parse_jest_fn;
 
 const JEST_METHOD_NAMES: [&str; 18] = [
     "afterAll",
@@ -271,8 +271,10 @@ pub fn get_node_name_vec<'a>(expr: &'a Expression<'a>) -> Vec<Cow<'a, str>> {
         Expression::StringLiteral(string_literal) => {
             chain.push(Cow::Borrowed(&string_literal.value));
         }
-        Expression::TemplateLiteral(template_literal) if is_pure_string(template_literal) => {
-            chain.push(Cow::Borrowed(template_literal.quasi().unwrap().as_str()));
+        Expression::TemplateLiteral(template_literal) => {
+            if let Some(quasi) = template_literal.single_quasi() {
+                chain.push(Cow::Borrowed(quasi.as_str()));
+            }
         }
         Expression::TaggedTemplateExpression(tagged_expr) => {
             chain.extend(get_node_name_vec(&tagged_expr.tag));
@@ -292,10 +294,6 @@ pub fn get_node_name_vec<'a>(expr: &'a Expression<'a>) -> Vec<Cow<'a, str>> {
     }
 
     chain
-}
-
-fn is_pure_string(template_literal: &TemplateLiteral) -> bool {
-    template_literal.expressions.is_empty() && template_literal.quasis.len() == 1
 }
 
 pub fn is_equality_matcher(matcher: &KnownMemberExpressionProperty) -> bool {

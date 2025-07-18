@@ -4,6 +4,74 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
+## [0.77.2] - 2025-07-17
+
+### 🚜 Refactor
+
+- 3c6b88b semantic: Refactor `check_binding_identifier` (#12303) (overlookmotel)
+
+### ⚡ Performance
+
+- b60d63b semantic: Reduce match arms in `check_binding_identifier` (#12304) (overlookmotel)
+
+
+## [0.77.1] - 2025-07-16
+
+### 🚀 Features
+
+- fb8289c minifier: Remove unused variable declaration (#11796) (Boshen)
+- c995fe2 semantic: Build semantic for `.d.ts` files (#12193) (camc314)
+
+### 🐛 Bug Fixes
+
+- 089f7b1 semantic: Allow `arguments`/`eval` as name of `TSTypeAliasDeclaration`, `TSInterfaceDeclaration` (#12291) (camc314)
+- 1bfd44f semantic: Allow `arguments`/`eval` as spread argument name inside `TSMethodSignature`, `TSFunctionType` (#12290) (camc314)
+- a740f3f semantic: Allow `arguments`/`eval` as argument name inside `TSMethodSignature` (#12289) (camc314)
+- cd98426 semantic: Handle var hoisting in catch block with same catch parameter name (#12313) (Dunqing)
+- e82f758 semantic: Allow `arguments`/`eval` as argument name inside `TSFunctionType` (#12288) (camc314)
+- 2a1e805 semantic: Allow assigning to `eval` and `arguments` in ambient context (#12208) (camc314)
+
+### 🚜 Refactor
+
+- ee761de ast: Remove `AstKind` for `AssignmentTarget` (#12252) (Tyler Earls)
+- c025868 ast: Remove `AstKind` for `TSFunctionType` (#12287) (camc314)
+
+### ⚡ Performance
+
+- 6f58abc semantic: Inline `SemanticBuilder::pop_ast_node` (#12280) (Boshen)
+
+
+## [0.77.0] - 2025-07-12
+
+### 🐛 Bug Fixes
+
+- e095e99 semantic: Panics when function is the part of `IfStatement` (#12190) (Dunqing)
+
+### 🚜 Refactor
+
+- 8a7c9e8 semantic: Streamline handling of no side effects for function (#12221) (Dunqing)
+- c868ee3 semantic: Rename `AstNodeIdAncestorsIter` and add comments (#12136) (overlookmotel)
+- 8814c53 ast: Remove `AstKind` for `PropertyKey` (#12108) (camchenry)
+- 228cff5 semantic,linter: Assert that Program is always the first node (#12123) (Ulrich Stark)
+
+### ⚡ Performance
+
+- c7889c3 semantic,linter: Simplify implementation and uses of ancestors iterators (#12164) (Ulrich Stark)
+- 6cfcb7e semantic: Dereference `parent_id`s to slice only once (#12137) (overlookmotel)
+
+
+## [0.76.0] - 2025-07-08
+
+### 🚜 Refactor
+
+- e8e2a25 ast: Remove `AstKind` for `AssignmentTargetPattern` (#12105) (camchenry)
+- 54cf5cb semantic: Remove Option from parent_* methods (#12087) (Ulrich Stark)
+
+### ⚡ Performance
+
+- 2bf1d7e semantic: Implement `FusedIterator` for `AstNodeParentIter` (#12094) (overlookmotel)
+
+
 ## [0.75.1] - 2025-07-03
 
 ### 🚀 Features

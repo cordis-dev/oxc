@@ -14,7 +14,7 @@ use oxc::{
     allocator::Allocator,
     ast::ast::Program,
     ast_visit::Visit,
-    codegen::{Codegen, CodegenOptions, LegalComment},
+    codegen::{Codegen, CodegenOptions, CommentOptions},
     diagnostics::OxcDiagnostic,
     isolated_declarations::{IsolatedDeclarations, IsolatedDeclarationsOptions},
     minifier::{CompressOptions, MangleOptions, Minifier, MinifierOptions},
@@ -29,7 +29,10 @@ use oxc::{
 };
 use oxc_formatter::{FormatOptions, Formatter};
 use oxc_index::Idx;
-use oxc_linter::{ConfigStore, ConfigStoreBuilder, LintOptions, Linter, ModuleRecord, Oxlintrc};
+use oxc_linter::{
+    ConfigStore, ConfigStoreBuilder, ExternalPluginStore, LintOptions, Linter, ModuleRecord,
+    Oxlintrc,
+};
 use oxc_napi::{Comment, OxcError, convert_utf8_to_utf16};
 
 use crate::options::{OxcLinterOptions, OxcOptions, OxcRunOptions};
@@ -174,6 +177,7 @@ impl Oxc {
                 if ret.errors.is_empty() {
                     let codegen_result = Codegen::new()
                         .with_options(CodegenOptions {
+                            comments: CommentOptions { jsdoc: true, ..CommentOptions::disabled() },
                             source_map_path: codegen_options
                                 .enable_sourcemap
                                 .unwrap_or_default()
@@ -235,9 +239,6 @@ impl Oxc {
             .with_scoping(symbol_table)
             .with_options(CodegenOptions {
                 minify: minifier_options.whitespace.unwrap_or_default(),
-                comments: true,
-                annotation_comments: true,
-                legal_comments: LegalComment::Inline,
                 source_map_path: codegen_options
                     .enable_sourcemap
                     .unwrap_or_default()
@@ -290,15 +291,21 @@ impl Oxc {
                 let oxlintrc =
                     Oxlintrc::from_string(&linter_options.config.as_ref().unwrap().to_string())
                         .unwrap_or_default();
-                let config_builder =
-                    ConfigStoreBuilder::from_oxlintrc(false, oxlintrc, None).unwrap_or_default();
+                let config_builder = ConfigStoreBuilder::from_oxlintrc(
+                    false,
+                    oxlintrc,
+                    None,
+                    &mut ExternalPluginStore::default(),
+                )
+                .unwrap_or_default();
                 config_builder.build()
             } else {
                 ConfigStoreBuilder::default().build()
             };
             let linter_ret = Linter::new(
                 LintOptions::default(),
-                ConfigStore::new(lint_config, FxHashMap::default()),
+                ConfigStore::new(lint_config, FxHashMap::default(), ExternalPluginStore::default()),
+                None,
             )
             .run(path, Rc::clone(&semantic), Arc::clone(module_record));
             self.diagnostics.extend(linter_ret.into_iter().map(|e| e.error));

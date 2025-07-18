@@ -73,6 +73,9 @@ impl<'a> PeepholeOptimizations {
             "fromCharCode" => Self::try_fold_string_from_char_code(*span, arguments, object, ctx),
             "toString" => Self::try_fold_to_string(*span, arguments, object, ctx),
             "pow" => self.try_fold_pow(*span, arguments, object, ctx),
+            "isFinite" | "isNaN" | "isInteger" | "isSafeInteger" => {
+                Self::try_fold_number_methods(*span, arguments, object, name, ctx)
+            }
             "sqrt" | "cbrt" => Self::try_fold_roots(*span, arguments, name, object, ctx),
             "abs" | "ceil" | "floor" | "round" | "fround" | "trunc" | "sign" => {
                 Self::try_fold_math_unary(*span, arguments, name, object, ctx)
@@ -409,7 +412,7 @@ impl<'a> PeepholeOptimizations {
         object: &Expression<'a>,
         ctx: &mut Ctx<'a, '_>,
     ) -> Option<Expression<'a>> {
-        if self.target < ESTarget::ES2016 {
+        if ctx.options().target < ESTarget::ES2016 {
             return None;
         }
         if !Self::validate_global_reference(object, "Math", ctx)
@@ -723,7 +726,7 @@ impl<'a> PeepholeOptimizations {
                 }
             }
             Expression::StringLiteral(base_str) => {
-                if self.target < ESTarget::ES2015
+                if ctx.state.options.target < ESTarget::ES2015
                     || args.is_empty()
                     || !args.iter().all(Argument::is_expression)
                 {
@@ -914,7 +917,7 @@ impl<'a> PeepholeOptimizations {
             "NEGATIVE_INFINITY" => num(span, f64::NEG_INFINITY),
             "NaN" => num(span, f64::NAN),
             "MAX_SAFE_INTEGER" => {
-                if self.target < ESTarget::ES2016 {
+                if ctx.options().target < ESTarget::ES2016 {
                     num(span, 2.0f64.powi(53) - 1.0)
                 } else {
                     // 2**53 - 1
@@ -922,7 +925,7 @@ impl<'a> PeepholeOptimizations {
                 }
             }
             "MIN_SAFE_INTEGER" => {
-                if self.target < ESTarget::ES2016 {
+                if ctx.options().target < ESTarget::ES2016 {
                     num(span, -(2.0f64.powi(53) - 1.0))
                 } else {
                     // -(2**53 - 1)
@@ -934,7 +937,7 @@ impl<'a> PeepholeOptimizations {
                 }
             }
             "EPSILON" => {
-                if self.target < ESTarget::ES2016 {
+                if ctx.options().target < ESTarget::ES2016 {
                     return None;
                 }
                 // 2**-52
@@ -1025,6 +1028,38 @@ impl<'a> PeepholeOptimizations {
             _ => None,
         }
     }
+
+    fn try_fold_number_methods(
+        span: Span,
+        args: &mut Arguments<'a>,
+        object: &Expression<'a>,
+        name: &str,
+        ctx: &mut Ctx<'a, '_>,
+    ) -> Option<Expression<'a>> {
+        if !Self::validate_global_reference(object, "Number", ctx) {
+            return None;
+        }
+        if args.len() != 1 {
+            return None;
+        }
+        let extracted_expr = args.first()?.as_expression()?;
+        if !extracted_expr.is_number_literal() {
+            return None;
+        }
+        let extracted = extracted_expr.get_side_free_number_value(ctx)?;
+        let result = match name {
+            "isFinite" => Some(extracted.is_finite()),
+            "isInteger" => Some(extracted.fract().abs() < f64::EPSILON),
+            "isNaN" => Some(extracted.is_nan()),
+            "isSafeInteger" => {
+                let integer = extracted.fract().abs() < f64::EPSILON;
+                let safe = extracted.abs() <= 2f64.powi(53) - 1.0;
+                Some(safe && integer)
+            }
+            _ => None,
+        };
+        result.map(|value| ctx.ast.expression_boolean_literal(span, value))
+    }
 }
 
 /// Port from: <https://github.com/google/closure-compiler/blob/v20240609/test/com/google/javascript/jscomp/PeepholeReplaceKnownMethodsTest.java>
@@ -1034,12 +1069,12 @@ mod test {
 
     use crate::{
         CompressOptions,
-        tester::{run, test, test_same},
+        tester::{test, test_options, test_same},
     };
 
     fn test_es2015(code: &str, expected: &str) {
-        let opts = CompressOptions { target: ESTarget::ES2015, ..CompressOptions::default() };
-        assert_eq!(run(code, Some(opts)), run(expected, None));
+        let options = CompressOptions { target: ESTarget::ES2015, ..CompressOptions::default() };
+        test_options(code, expected, &options);
     }
 
     fn test_value(code: &str, expected: &str) {
@@ -1650,36 +1685,33 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn test_fold_number_functions_is_safe_integer() {
-        test("Number.isSafeInteger(1)", "true");
-        test("Number.isSafeInteger(1.5)", "false");
-        test("Number.isSafeInteger(9007199254740991)", "true");
-        test("Number.isSafeInteger(9007199254740992)", "false");
-        test("Number.isSafeInteger(-9007199254740991)", "true");
-        test("Number.isSafeInteger(-9007199254740992)", "false");
+        test_value("Number.isSafeInteger(1)", "!0");
+        test_value("Number.isSafeInteger(1.5)", "!1");
+        test_value("Number.isSafeInteger(9007199254740991)", "!0");
+        test_value("Number.isSafeInteger(9007199254740992)", "!1");
+        test_value("Number.isSafeInteger(-9007199254740991)", "!0");
+        test_value("Number.isSafeInteger(-9007199254740992)", "!1");
     }
 
     #[test]
-    #[ignore]
     fn test_fold_number_functions_is_finite() {
-        test("Number.isFinite(1)", "true");
-        test("Number.isFinite(1.5)", "true");
-        test("Number.isFinite(NaN)", "false");
-        test("Number.isFinite(Infinity)", "false");
-        test("Number.isFinite(-Infinity)", "false");
-        test_same("Number.isFinite('a')");
+        test_value("Number.isFinite(1)", "!0");
+        test_value("Number.isFinite(1.5)", "!0");
+        test_value("Number.isFinite(NaN)", "!1");
+        test_value("Number.isFinite(Infinity)", "!1");
+        test_value("Number.isFinite(-Infinity)", "!1");
+        test_same_value("Number.isFinite('a')");
     }
 
     #[test]
-    #[ignore]
     fn test_fold_number_functions_is_nan() {
-        test("Number.isNaN(1)", "false");
-        test("Number.isNaN(1.5)", "false");
-        test("Number.isNaN(NaN)", "true");
-        test_same("Number.isNaN('a')");
+        test_value("Number.isNaN(1)", "!1");
+        test_value("Number.isNaN(1.5)", "!1");
+        test_value("Number.isNaN(NaN)", "!0");
+        test_same_value("Number.isNaN('a')");
         // unknown function may have side effects
-        test_same("Number.isNaN(+(void unknown()))");
+        test_same_value("Number.isNaN(+(void unknown()))");
     }
 
     #[test]

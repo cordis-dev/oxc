@@ -4,6 +4,120 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
+## [0.77.2] - 2025-07-17
+
+### 🚜 Refactor
+
+- 4517624 napi/parser: Use `sourceByteLen` for UTF8 source length (#12365) (overlookmotel)
+
+
+## [0.77.2] - 2025-07-17
+
+### 🚜 Refactor
+
+- 4517624 napi/parser: Use `sourceByteLen` for UTF8 source length (#12365) (overlookmotel)
+
+
+## [0.77.1] - 2025-07-16
+
+### 🚀 Features
+
+- 9b14fbc ast: Add `ThisExpression` to `TSTypeName` (#12156) (Boshen)
+
+### 🚜 Refactor
+
+- a2da682 napi/parser: Clarify pointer maths (#12300) (overlookmotel)
+- 2f9bd11 allocator: Fixed size allocator leave space for metadata after arena (#12278) (overlookmotel)
+- 5fba91c napi/parser: Raw transfer: introduce metadata struct (#12269) (overlookmotel)
+- 39ef911 napi/parser, allocator: Raw transfer: store buffer size and align as consts (#12275) (overlookmotel)
+- d009bdb napi/parser: Raw transfer: store offsets as consts (#12268) (overlookmotel)
+- 43f61ed napi/parser: Correct comment about raw transfer buffer size (#12273) (overlookmotel)
+- 28ed99b napi/parser: Do not compile raw transfer code on WASM (#12271) (overlookmotel)
+
+### ⚡ Performance
+
+- cc1e9fc napi/parser: Raw transfer: reduce size of buffer by 16 bytes (#12277) (overlookmotel)
+- 28be5de napi/parser: Raw transfer: move check for supported platform (#12274) (overlookmotel)
+
+
+## [0.77.1] - 2025-07-16
+
+### 🚀 Features
+
+- 9b14fbc ast: Add `ThisExpression` to `TSTypeName` (#12156) (Boshen)
+
+### 🚜 Refactor
+
+- a2da682 napi/parser: Clarify pointer maths (#12300) (overlookmotel)
+- 2f9bd11 allocator: Fixed size allocator leave space for metadata after arena (#12278) (overlookmotel)
+- 5fba91c napi/parser: Raw transfer: introduce metadata struct (#12269) (overlookmotel)
+- 39ef911 napi/parser, allocator: Raw transfer: store buffer size and align as consts (#12275) (overlookmotel)
+- d009bdb napi/parser: Raw transfer: store offsets as consts (#12268) (overlookmotel)
+- 43f61ed napi/parser: Correct comment about raw transfer buffer size (#12273) (overlookmotel)
+- 28ed99b napi/parser: Do not compile raw transfer code on WASM (#12271) (overlookmotel)
+
+### ⚡ Performance
+
+- cc1e9fc napi/parser: Raw transfer: reduce size of buffer by 16 bytes (#12277) (overlookmotel)
+- 28be5de napi/parser: Raw transfer: move check for supported platform (#12274) (overlookmotel)
+
+
+## [0.77.0] - 2025-07-12
+
+### 🚀 Features
+
+- 407429a napi/parser,napi/transform: Accept `lang=dts` (#12154) (Boshen)
+
+### 🚜 Refactor
+
+- baa3726 tests/napi: Add `build-test` script for tests (#12132) (camc314)
+
+### ⚡ Performance
+
+- 4c35f4a napi/parser: Optimize raw transfer deserializer for `TSClassImplements` (#12158) (overlookmotel)
+
+
+## [0.77.0] - 2025-07-12
+
+### 🚀 Features
+
+- 407429a napi/parser,napi/transform: Accept `lang=dts` (#12154) (Boshen)
+
+### 🚜 Refactor
+
+- baa3726 tests/napi: Add `build-test` script for tests (#12132) (camc314)
+
+### ⚡ Performance
+
+- 4c35f4a napi/parser: Optimize raw transfer deserializer for `TSClassImplements` (#12158) (overlookmotel)
+
+
+## [0.76.0] - 2025-07-08
+
+### 🐛 Bug Fixes
+
+- a490e00 napi/parser: Lazy visit: correct error messages (#12109) (overlookmotel)
+
+### 🚜 Refactor
+
+- c5e8d90 napi/parser: Lazy deser: `constructors.js` export static object (#12090) (overlookmotel)
+- fe35285 napi/parser: Lazy deser: remove `construct` function (#12089) (overlookmotel)
+- 9ae0815 napi/parser: Move files (#12088) (overlookmotel)
+
+
+## [0.76.0] - 2025-07-08
+
+### 🐛 Bug Fixes
+
+- a490e00 napi/parser: Lazy visit: correct error messages (#12109) (overlookmotel)
+
+### 🚜 Refactor
+
+- c5e8d90 napi/parser: Lazy deser: `constructors.js` export static object (#12090) (overlookmotel)
+- fe35285 napi/parser: Lazy deser: remove `construct` function (#12089) (overlookmotel)
+- 9ae0815 napi/parser: Move files (#12088) (overlookmotel)
+
+
 ## [0.75.1] - 2025-07-03
 
 ### 🐛 Bug Fixes

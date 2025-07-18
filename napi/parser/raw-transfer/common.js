@@ -7,6 +7,7 @@ const {
   parseAsyncRaw: parseAsyncRawBinding,
   getBufferOffset,
 } = require('../bindings.js');
+const { BUFFER_SIZE, BUFFER_ALIGN, IS_TS_FLAG_POS } = require('../generated/constants.js');
 
 module.exports = {
   parseSyncRawImpl,
@@ -15,6 +16,18 @@ module.exports = {
   isJsAst,
   returnBufferToCache,
 };
+
+// Throw an error if running on a platform which raw transfer doesn't support.
+//
+// Note: This module is lazy-loaded only when user calls `parseSync` or `parseAsync` with
+// `experimentalRawTransfer` or `experimentalLazy` options, or calls `experimentalGetLazyVisitor`.
+if (!rawTransferSupported()) {
+  throw new Error(
+    '`experimentalRawTransfer` and `experimentalLazy` options are not supported ' +
+      'on 32-bit or big-endian systems, versions of NodeJS prior to v22.0.0, ' +
+      'versions of Deno prior to v2.0.0, or other runtimes',
+  );
+}
 
 /**
  * Parse JS/TS source synchronously on current thread using raw transfer.
@@ -28,7 +41,6 @@ module.exports = {
  * @param {Object|undefined} options - Parsing options
  * @param {function} convert - Function to convert the buffer returned from Rust into a JS object
  * @returns {Object} - The return value of `convert`
- * @throws {Error} - If raw transfer is not supported on this platform
  */
 function parseSyncRawImpl(filename, sourceText, options, convert) {
   const { buffer, sourceByteLen } = prepareRaw(sourceText);
@@ -88,7 +100,6 @@ const queue = [];
  * @param {Object|undefined} options - Parsing options
  * @param {function} convert - Function to convert the buffer returned from Rust into a JS object
  * @returns {Object} - The return value of `convert`
- * @throws {Error} - If raw transfer is not supported on this platform
  */
 async function parseAsyncRawImpl(filename, sourceText, options, convert) {
   // Wait for a free CPU core if all CPUs are currently busy.
@@ -130,9 +141,8 @@ async function parseAsyncRawImpl(filename, sourceText, options, convert) {
   return data;
 }
 
-const ONE_GIB = 1 << 30,
-  TWO_GIB = ONE_GIB * 2,
-  SIX_GIB = ONE_GIB * 6;
+const ARRAY_BUFFER_SIZE = BUFFER_SIZE + BUFFER_ALIGN;
+const ONE_GIB = 1 << 30;
 
 // We keep a cache of buffers for raw transfer, so we can reuse them as much as possible.
 //
@@ -177,17 +187,8 @@ const textEncoder = new TextEncoder();
  *   - `buffer`: `Uint8Array` containing the AST in raw form.
  *   - `sourceByteLen`: Length of source text in UTF-8 bytes
  *     (which may not be equal to `sourceText.length` if source contains non-ASCII characters).
- * @throws {Error} - If raw transfer is not supported on this platform
  */
 function prepareRaw(sourceText) {
-  if (!rawTransferSupported()) {
-    throw new Error(
-      '`experimentalRawTransfer` and `experimentalLazy` options are not supported ' +
-        'on 32-bit or big-endian systems, versions of NodeJS prior to v22.0.0, ' +
-        'versions of Deno prior to v2.0.0, or other runtimes',
-    );
-  }
-
   // Cancel timeout for clearing buffers
   if (clearBuffersTimeout !== null) {
     clearTimeout(clearBuffersTimeout);
@@ -226,9 +227,7 @@ function prepareRaw(sourceText) {
  * @returns {boolean} - `true` if AST is JS, `false` if TS
  */
 function isJsAst(buffer) {
-  // 2147483636 = (2 * 1024 * 1024 * 1024) - 12
-  // i.e. 12 bytes from end of 2 GiB buffer
-  return buffer[2147483636] === 0;
+  return buffer[IS_TS_FLAG_POS] === 0;
 }
 
 /**
@@ -277,10 +276,10 @@ function clearBuffersCache() {
  * @returns {Uint8Array} - Buffer
  */
 function createBuffer() {
-  const arrayBuffer = new ArrayBuffer(SIX_GIB);
+  const arrayBuffer = new ArrayBuffer(ARRAY_BUFFER_SIZE);
   const offset = getBufferOffset(new Uint8Array(arrayBuffer));
-  const buffer = new Uint8Array(arrayBuffer, offset, TWO_GIB);
-  buffer.uint32 = new Uint32Array(arrayBuffer, offset, TWO_GIB / 4);
-  buffer.float64 = new Float64Array(arrayBuffer, offset, TWO_GIB / 8);
+  const buffer = new Uint8Array(arrayBuffer, offset, BUFFER_SIZE);
+  buffer.uint32 = new Uint32Array(arrayBuffer, offset, BUFFER_SIZE / 4);
+  buffer.float64 = new Float64Array(arrayBuffer, offset, BUFFER_SIZE / 8);
   return buffer;
 }

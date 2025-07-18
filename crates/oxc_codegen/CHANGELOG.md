@@ -4,6 +4,30 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
+
+## [0.77.1] - 2025-07-16
+
+### 🚀 Features
+
+- 9b14fbc ast: Add `ThisExpression` to `TSTypeName` (#12156) (Boshen)
+
+### 🚜 Refactor
+
+- bb047a9 codegen: Use `SliceIterExt` in string printer (#12296) (overlookmotel)
+
+
+
+## [0.76.0] - 2025-07-08
+
+### 💥 BREAKING CHANGES
+
+- 8b30a5b codegen: [**BREAKING**] Introduce `CommentOptions` (#12114) (Boshen)
+
+### 🐛 Bug Fixes
+
+- 92af759 codegen: Wrap comment and object literal with parens to avoid invalid syntax (#12111) (Boshen)
+
+
 ## [0.75.1] - 2025-07-03
 
 ### 🚀 Features

@@ -1,6 +1,10 @@
 #![expect(clippy::self_named_module_files)] // for rules.rs
 #![allow(clippy::literal_string_with_formatting_args)]
 
+use std::{path::Path, rc::Rc, sync::Arc};
+
+use oxc_semantic::{AstNode, Semantic};
+
 #[cfg(test)]
 mod tester;
 
@@ -9,6 +13,7 @@ mod config;
 mod context;
 mod disable_directives;
 mod external_linter;
+mod external_plugin_store;
 mod fixer;
 mod frameworks;
 mod globals;
@@ -23,19 +28,16 @@ pub mod loader;
 pub mod rules;
 pub mod table;
 
-use std::{path::Path, rc::Rc, sync::Arc};
-
-use oxc_semantic::{AstNode, Semantic};
-
 pub use crate::{
     config::{
-        Config, ConfigBuilderError, ConfigStore, ConfigStoreBuilder, ESLintRule, LintPlugins,
-        Oxlintrc,
+        BuiltinLintPlugins, Config, ConfigBuilderError, ConfigStore, ConfigStoreBuilder,
+        ESLintRule, LintPlugins, Oxlintrc,
     },
     context::LintContext,
     external_linter::{
-        ExternalLinter, ExternalLinterCb, ExternalLinterLoadPluginCb, PluginLoadResult,
+        ExternalLinter, ExternalLinterCb, ExternalLinterLoadPluginCb, LintResult, PluginLoadResult,
     },
+    external_plugin_store::{ExternalPluginStore, ExternalRuleId},
     fixer::FixKind,
     frameworks::FrameworkFlags,
     loader::LINTABLE_EXTENSIONS,
@@ -68,15 +70,21 @@ fn size_asserts() {
 }
 
 #[derive(Debug, Clone)]
+#[expect(clippy::struct_field_names)]
 pub struct Linter {
     options: LintOptions,
-    // config: Arc<LintConfig>,
     config: ConfigStore,
+    #[cfg_attr(not(all(feature = "oxlint2", not(feature = "disable_oxlint2"))), expect(dead_code))]
+    external_linter: Option<ExternalLinter>,
 }
 
 impl Linter {
-    pub fn new(options: LintOptions, config: ConfigStore) -> Self {
-        Self { options, config }
+    pub fn new(
+        options: LintOptions,
+        config: ConfigStore,
+        external_linter: Option<ExternalLinter>,
+    ) -> Self {
+        Self { options, config, external_linter }
     }
 
     /// Set the kind of auto fixes to apply.
@@ -109,7 +117,10 @@ impl Linter {
         semantic: Rc<Semantic<'a>>,
         module_record: Arc<ModuleRecord>,
     ) -> Vec<Message<'a>> {
-        let ResolvedLinterState { rules, config } = self.config.resolve(path);
+        let ResolvedLinterState { rules, config, external_rules } = self.config.resolve(path);
+
+        #[cfg(not(all(feature = "oxlint2", not(feature = "disable_oxlint2"))))]
+        let _ = external_rules;
 
         let ctx_host =
             Rc::new(ContextHost::new(path, semantic, module_record, self.options, config));
@@ -123,6 +134,10 @@ impl Linter {
 
         let should_run_on_jest_node =
             ctx_host.plugins().has_test() && ctx_host.frameworks().is_test();
+
+        if path.to_str().is_some_and(|str| str.ends_with(".d.ts")) {
+            return ctx_host.take_diagnostics();
+        }
 
         // IMPORTANT: We have two branches here for performance reasons:
         //
@@ -142,7 +157,7 @@ impl Linter {
         // don't thrash the cache too much. Feel free to tweak based on benchmarking.
         //
         // See https://github.com/oxc-project/oxc/pull/6600 for more context.
-        if semantic.stats().nodes > 200_000 {
+        if semantic.nodes().len() > 200_000 {
             // Collect rules into a Vec so that we can iterate over the rules multiple times
             let rules = rules.collect::<Vec<_>>();
 
@@ -189,6 +204,9 @@ impl Linter {
             }
         }
 
+        #[cfg(all(feature = "oxlint2", not(feature = "disable_oxlint2")))]
+        self.run_external_rules(&external_rules, path, &ctx_host);
+
         if let Some(severity) = self.options.report_unused_directive {
             if severity.is_warn_deny() {
                 ctx_host.report_unused_directives(severity.into());
@@ -196,6 +214,58 @@ impl Linter {
         }
 
         ctx_host.take_diagnostics()
+    }
+
+    #[cfg(all(feature = "oxlint2", not(feature = "disable_oxlint2")))]
+    fn run_external_rules(
+        &self,
+        external_rules: &[(ExternalRuleId, AllowWarnDeny)],
+        path: &Path,
+        ctx_host: &ContextHost,
+    ) {
+        use oxc_diagnostics::OxcDiagnostic;
+        use oxc_span::Span;
+
+        use crate::fixer::PossibleFixes;
+
+        if external_rules.is_empty() {
+            return;
+        }
+
+        // `external_linter` always exists when `oxlint2` feature is enabled
+        let external_linter = self.external_linter.as_ref().unwrap();
+
+        let result = (external_linter.run)(
+            path.to_str().unwrap().to_string(),
+            external_rules.iter().map(|(rule_id, _)| rule_id.raw()).collect(),
+        );
+        match result {
+            Ok(diagnostics) => {
+                for diagnostic in diagnostics {
+                    match self.config.resolve_plugin_rule_names(diagnostic.external_rule_id) {
+                        Some((plugin_name, rule_name)) => {
+                            ctx_host.push_diagnostic(Message::new(
+                                // TODO: `error` isn't right, we need to get the severity from `external_rules`
+                                OxcDiagnostic::error(diagnostic.message)
+                                    .with_label(Span::new(diagnostic.loc.start, diagnostic.loc.end))
+                                    .with_error_code(
+                                        plugin_name.to_string(),
+                                        rule_name.to_string(),
+                                    ),
+                                PossibleFixes::None,
+                            ));
+                        }
+                        None => {
+                            // TODO: report diagnostic, this should be unreachable
+                            debug_assert!(false);
+                        }
+                    }
+                }
+            }
+            Err(_err) => {
+                // TODO: report diagnostic
+            }
+        }
     }
 }
 

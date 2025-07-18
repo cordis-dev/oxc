@@ -422,7 +422,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, PropertyKey<'a>> {
     #[inline]
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
         let allocator = self.allocator;
-        let parent = allocator.alloc(AstNodes::PropertyKey(transmute_self(self)));
+        let parent = self.parent;
         match self.inner {
             PropertyKey::StaticIdentifier(inner) => allocator
                 .alloc(AstNode::<IdentifierName> {
@@ -522,7 +522,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, AssignmentTarget<'a>> {
     #[inline]
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
         let allocator = self.allocator;
-        let parent = allocator.alloc(AstNodes::AssignmentTarget(transmute_self(self)));
+        let parent = self.parent;
         match self.inner {
             it @ match_simple_assignment_target!(AssignmentTarget) => {
                 let inner = it.to_simple_assignment_target();
@@ -615,7 +615,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, AssignmentTargetPattern<'a>> {
     #[inline]
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
         let allocator = self.allocator;
-        let parent = allocator.alloc(AstNodes::AssignmentTargetPattern(transmute_self(self)));
+        let parent = self.parent;
         match self.inner {
             AssignmentTargetPattern::ArrayAssignmentTarget(inner) => allocator
                 .alloc(AstNode::<ArrayAssignmentTarget> {
@@ -2042,6 +2042,14 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSTypeName<'a>> {
                 .fmt(f),
             TSTypeName::QualifiedName(inner) => allocator
                 .alloc(AstNode::<TSQualifiedName> {
+                    inner,
+                    parent,
+                    allocator,
+                    following_node: self.following_node,
+                })
+                .fmt(f),
+            TSTypeName::ThisExpression(inner) => allocator
+                .alloc(AstNode::<ThisExpression> {
                     inner,
                     parent,
                     allocator,

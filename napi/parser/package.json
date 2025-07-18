@@ -1,10 +1,11 @@
 {
   "name": "oxc-parser",
-  "version": "0.75.1",
+  "version": "0.77.2",
   "main": "index.js",
   "browser": "wasm.mjs",
   "scripts": {
     "build-dev": "napi build --platform --js bindings.js",
+    "build-test": "pnpm run build",
     "build": "pnpm run build-dev --features allocator --release",
     "postbuild-dev": "node patch.mjs",
     "build-wasi": "pnpm run build-dev --release --target wasm32-wasip1-threads",
@@ -43,6 +44,7 @@
     "wasm.mjs",
     "bindings.js",
     "webcontainer-fallback.js",
+    "generated/constants.js",
     "generated/deserialize/js.js",
     "generated/deserialize/ts.js",
     "generated/lazy/constructors.js",

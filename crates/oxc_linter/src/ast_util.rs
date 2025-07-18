@@ -241,7 +241,6 @@ pub fn outermost_paren_parent<'a, 'b>(
     semantic
         .nodes()
         .ancestors(node.id())
-        .skip(1)
         .find(|parent| !matches!(parent.kind(), AstKind::ParenthesizedExpression(_)))
 }
 
@@ -253,7 +252,6 @@ pub fn nth_outermost_paren_parent<'a, 'b>(
     semantic
         .nodes()
         .ancestors(node.id())
-        .skip(1)
         .filter(|parent| !matches!(parent.kind(), AstKind::ParenthesizedExpression(_)))
         .nth(n)
 }
@@ -264,7 +262,7 @@ pub fn iter_outer_expressions<'a, 's>(
     semantic: &'s Semantic<'a>,
     node_id: NodeId,
 ) -> impl Iterator<Item = AstKind<'a>> + 's {
-    semantic.nodes().ancestor_kinds(node_id).skip(1).filter(|parent| {
+    semantic.nodes().ancestor_kinds(node_id).filter(|parent| {
         !matches!(
             parent,
             AstKind::ParenthesizedExpression(_)
@@ -310,9 +308,7 @@ pub fn extract_regex_flags<'a>(
     }
     let flag_arg = match &args[1] {
         Argument::StringLiteral(flag_arg) => flag_arg.value,
-        Argument::TemplateLiteral(template) if template.is_no_substitution_template() => {
-            template.quasi().expect("no-substitution templates always have a quasi")
-        }
+        Argument::TemplateLiteral(template) => template.single_quasi()?,
         _ => return None,
     };
     let mut flags = RegExpFlags::empty();
@@ -661,7 +657,7 @@ pub fn is_default_this_binding<'a>(
                 current_node = parent;
             }
             AstKind::ReturnStatement(_) => {
-                let upper_func = semantic.nodes().ancestors(parent.id()).skip(1).find(|node| {
+                let upper_func = semantic.nodes().ancestors(parent.id()).find(|node| {
                     matches!(
                         node.kind(),
                         AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)

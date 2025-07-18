@@ -1,3 +1,5 @@
+use std::ptr;
+
 use phf::{Set, phf_set};
 use rustc_hash::FxHashMap;
 
@@ -104,24 +106,72 @@ fn invalid_let_declaration(x0: &str, span1: Span) -> OxcDiagnostic {
 }
 
 pub fn check_binding_identifier(ident: &BindingIdentifier, ctx: &SemanticBuilder<'_>) {
-    let strict_mode = ctx.strict_mode();
-    // It is a Diagnostic if the StringValue of a BindingIdentifier is "eval" or "arguments" within strict mode code.
-    if strict_mode && matches!(ident.name.as_str(), "eval" | "arguments") {
-        return ctx.error(unexpected_identifier_assign(&ident.name, ident.span));
-    }
+    if ctx.strict_mode() {
+        // In strict mode, `eval` and `arguments` are banned as identifiers.
+        if matches!(ident.name.as_str(), "eval" | "arguments") {
+            // `eval` and `arguments` are allowed as the names of declare functions as well as their arguments.
+            //
+            // declare function eval(): void; // OK
+            // declare function arguments(): void; // OK
+            // declare function f(eval: number, arguments: number): number; // OK
+            // declare function f(...eval): number; // OK
+            // declare function f(...arguments): number; // OK
+            // type K = (arguments: any[]) => void; // OK
+            // interface Foo { bar(arguments: any[]): void; baz(...arguments: any[]): void; } // OK
+            // declare function g({eval, arguments}: {eval: number, arguments: number}): number; // Error
+            // declare function h([eval, arguments]: [number, number]): number; // Error
+            let is_declare_function = |kind: &AstKind| {
+                kind.as_function()
+                    .is_some_and(|func| matches!(func.r#type, FunctionType::TSDeclareFunction))
+            };
 
-    // LexicalDeclaration : LetOrConst BindingList ;
-    // * It is a Syntax Error if the BoundNames of BindingList contains "let".
-    if !strict_mode && ident.name == "let" {
-        for node_id in ctx.nodes.ancestor_ids(ctx.current_node_id).skip(1) {
-            match ctx.nodes.kind(node_id) {
-                AstKind::VariableDeclaration(decl) if decl.kind.is_lexical() => {
-                    return ctx.error(invalid_let_declaration(decl.kind.as_str(), ident.span));
+            let parent = ctx.nodes.parent_node(ctx.current_node_id);
+            let is_ok = match parent.kind() {
+                AstKind::Function(func) => matches!(func.r#type, FunctionType::TSDeclareFunction),
+                AstKind::FormalParameter(_) => {
+                    is_declare_function(&ctx.nodes.parent_kind(parent.id()))
+                        || ctx.nodes.ancestor_kinds(parent.id()).nth(1).is_some_and(|node| {
+                            matches!(
+                                node,
+                                AstKind::TSFunctionType(_) | AstKind::TSMethodSignature(_)
+                            )
+                        })
                 }
-                AstKind::VariableDeclaration(_) | AstKind::Function(_) | AstKind::Program(_) => {
-                    break;
+                AstKind::BindingRestElement(_) => {
+                    let grand_parent = ctx.nodes.parent_node(parent.id());
+                    matches!(grand_parent.kind(), AstKind::FormalParameters(_)) && {
+                        let great_grand_parent = ctx.nodes.parent_kind(grand_parent.id());
+
+                        is_declare_function(&great_grand_parent)
+                            || matches!(
+                                great_grand_parent,
+                                AstKind::TSMethodSignature(_) | AstKind::TSFunctionType(_)
+                            )
+                    }
                 }
-                _ => {}
+                AstKind::TSTypeAliasDeclaration(_) | AstKind::TSInterfaceDeclaration(_) => true,
+                _ => false,
+            };
+
+            if !is_ok {
+                ctx.error(unexpected_identifier_assign(&ident.name, ident.span));
+            }
+        }
+    } else {
+        // LexicalDeclaration : LetOrConst BindingList ;
+        // * It is a Syntax Error if the BoundNames of BindingList contains "let".
+        if ident.name == "let" {
+            for node_kind in ctx.nodes.ancestor_kinds(ctx.current_node_id) {
+                match node_kind {
+                    AstKind::VariableDeclarator(decl) => {
+                        if decl.kind.is_lexical() {
+                            ctx.error(invalid_let_declaration(decl.kind.as_str(), ident.span));
+                        }
+                        break;
+                    }
+                    AstKind::Function(_) => break,
+                    _ => {}
+                }
             }
         }
     }
@@ -135,9 +185,12 @@ pub fn check_identifier_reference(ident: &IdentifierReference, ctx: &SemanticBui
     //  Static Semantics: AssignmentTargetType
     //  1. If this IdentifierReference is contained in strict mode code and StringValue of Identifier is "eval" or "arguments", return invalid.
     if ctx.strict_mode() && matches!(ident.name.as_str(), "arguments" | "eval") {
-        for node_id in ctx.nodes.ancestor_ids(ctx.current_node_id).skip(1) {
-            match ctx.nodes.kind(node_id) {
-                AstKind::AssignmentTarget(_) | AstKind::SimpleAssignmentTarget(_) => {
+        for node_kind in ctx.nodes.ancestor_kinds(ctx.current_node_id) {
+            match node_kind {
+                AstKind::SimpleAssignmentTarget(_)
+                | AstKind::ObjectAssignmentTarget(_)
+                | AstKind::AssignmentTargetPropertyIdentifier(_)
+                | AstKind::ArrayAssignmentTarget(_) => {
                     return ctx.error(unexpected_identifier_assign(&ident.name, ident.span));
                 }
                 m if m.is_member_expression_kind() => break,
@@ -152,8 +205,8 @@ pub fn check_identifier_reference(ident: &IdentifierReference, ctx: &SemanticBui
     //   It is a Syntax Error if ContainsArguments of ClassStaticBlockStatementList is true.
 
     if ident.name == "arguments" {
-        for node_id in ctx.nodes.ancestor_ids(ctx.current_node_id).skip(1) {
-            match ctx.nodes.kind(node_id) {
+        for node_kind in ctx.nodes.ancestor_kinds(ctx.current_node_id) {
+            match node_kind {
                 AstKind::Function(_) => break,
                 AstKind::PropertyDefinition(_) => {
                     return ctx.error(unexpected_arguments("class field initializer", ident.span));
@@ -431,7 +484,7 @@ pub fn check_function_declaration_in_labeled_statement<'a>(
             ctx.error(function_declaration_strict(decl.span));
         } else {
             // skip(1) for `LabeledStatement`
-            for kind in ctx.nodes.ancestor_kinds(ctx.current_node_id).skip(1) {
+            for kind in ctx.nodes.ancestor_kinds(ctx.current_node_id) {
                 match kind {
                     // Nested labeled statement
                     AstKind::LabeledStatement(_) => {}
@@ -475,12 +528,38 @@ pub fn check_variable_declarator_redeclaration(
     });
 }
 
+/// Check for Annex B `if (foo) function a() {} else function b() {}`
+pub fn is_function_part_of_if_statement(function: &Function, builder: &SemanticBuilder) -> bool {
+    if builder.current_scope_flags().is_strict_mode() {
+        return false;
+    }
+    let AstKind::IfStatement(stmt) = builder.nodes.parent_kind(builder.current_node_id) else {
+        return false;
+    };
+    if let Statement::FunctionDeclaration(func) = &stmt.consequent {
+        if ptr::eq(func.as_ref(), function) {
+            return true;
+        }
+    }
+    if let Some(Statement::FunctionDeclaration(func)) = &stmt.alternate {
+        if ptr::eq(func.as_ref(), function) {
+            return true;
+        }
+    }
+    false
+}
+
 // It is a Syntax Error if the LexicallyDeclaredNames of StatementList contains any duplicate entries,
 // unless the source text matched by this production is not strict mode code
 // and the duplicate entries are only bound by FunctionDeclarations.
 // https://tc39.es/ecma262/#sec-block-level-function-declarations-web-legacy-compatibility-semantics
 pub fn check_function_redeclaration(func: &Function, ctx: &SemanticBuilder<'_>) {
     let Some(id) = &func.id else { return };
+
+    if is_function_part_of_if_statement(func, ctx) {
+        return;
+    }
+
     let symbol_id = id.symbol_id();
 
     let redeclarations = ctx.scoping.symbol_redeclarations(symbol_id);
@@ -580,8 +659,8 @@ fn invalid_break(span: Span) -> OxcDiagnostic {
 
 pub fn check_break_statement(stmt: &BreakStatement, ctx: &SemanticBuilder<'_>) {
     // It is a Syntax Error if this BreakStatement is not nested, directly or indirectly (but not crossing function or static initialization block boundaries), within an IterationStatement or a SwitchStatement.
-    for node_id in ctx.nodes.ancestor_ids(ctx.current_node_id).skip(1) {
-        match ctx.nodes.kind(node_id) {
+    for node_kind in ctx.nodes.ancestor_kinds(ctx.current_node_id) {
+        match node_kind {
             AstKind::Program(_) => {
                 return stmt.label.as_ref().map_or_else(
                     || ctx.error(invalid_break(stmt.span)),
@@ -622,8 +701,8 @@ fn invalid_continue(span: Span) -> OxcDiagnostic {
 
 pub fn check_continue_statement(stmt: &ContinueStatement, ctx: &SemanticBuilder<'_>) {
     // It is a Syntax Error if this ContinueStatement is not nested, directly or indirectly (but not crossing function or static initialization block boundaries), within an IterationStatement.
-    for node_id in ctx.nodes.ancestor_ids(ctx.current_node_id).skip(1) {
-        match ctx.nodes.kind(node_id) {
+    for node_kind in ctx.nodes.ancestor_kinds(ctx.current_node_id) {
+        match node_kind {
             AstKind::Program(_) => {
                 return stmt.label.as_ref().map_or_else(
                     || ctx.error(invalid_continue(stmt.span)),
@@ -671,8 +750,8 @@ fn label_redeclaration(x0: &str, span1: Span, span2: Span) -> OxcDiagnostic {
 }
 
 pub fn check_labeled_statement(stmt: &LabeledStatement, ctx: &SemanticBuilder<'_>) {
-    for node_id in ctx.nodes.ancestor_ids(ctx.current_node_id).skip(1) {
-        match ctx.nodes.kind(node_id) {
+    for node_kind in ctx.nodes.ancestor_kinds(ctx.current_node_id) {
+        match node_kind {
             // label cannot cross boundary on function or static block
             AstKind::Function(_) | AstKind::StaticBlock(_) | AstKind::Program(_) => break,
             // check label name redeclaration
@@ -973,8 +1052,8 @@ pub fn check_unary_expression(unary_expr: &UnaryExpression, ctx: &SemanticBuilde
 }
 
 fn is_in_formal_parameters(ctx: &SemanticBuilder<'_>) -> bool {
-    for node_id in ctx.nodes.ancestor_ids(ctx.current_node_id).skip(1) {
-        match ctx.nodes.kind(node_id) {
+    for node_kind in ctx.nodes.ancestor_kinds(ctx.current_node_id) {
+        match node_kind {
             AstKind::FormalParameter(_) => return true,
             AstKind::Program(_) | AstKind::Function(_) | AstKind::ArrowFunctionExpression(_) => {
                 break;

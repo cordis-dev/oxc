@@ -1,11 +1,9 @@
 #![allow(clippy::unused_self)]
 
-mod collapse_variable_declarations;
 mod convert_to_dotted_properties;
 mod fold_constants;
 mod minimize_conditional_expression;
 mod minimize_conditions;
-mod minimize_exit_points;
 mod minimize_expression_in_boolean_context;
 mod minimize_for_statement;
 mod minimize_if_statement;
@@ -15,21 +13,23 @@ mod minimize_statements;
 mod normalize;
 mod remove_dead_code;
 mod remove_unused_expression;
+mod remove_unused_variable_declaration;
 mod replace_known_methods;
-mod statement_fusion;
 mod substitute_alternate_syntax;
 
+use oxc_ast_visit::Visit;
+use oxc_semantic::ReferenceId;
 use rustc_hash::FxHashSet;
 
 use oxc_allocator::Vec;
 use oxc_ast::ast::*;
 use oxc_data_structures::stack::NonEmptyStack;
-use oxc_syntax::{es_target::ESTarget, scope::ScopeId};
+use oxc_syntax::scope::ScopeId;
 use oxc_traverse::{ReusableTraverseCtx, Traverse, traverse_mut_with_ctx};
 
 use crate::{
-    ctx::{Ctx, MinifierState, TraverseCtx},
-    options::CompressOptionsKeepNames,
+    ctx::{Ctx, TraverseCtx},
+    state::MinifierState,
 };
 
 pub use self::normalize::{Normalize, NormalizeOptions};
@@ -40,9 +40,6 @@ pub struct State {
 }
 
 pub struct PeepholeOptimizations {
-    target: ESTarget,
-    keep_names: CompressOptionsKeepNames,
-
     /// Walk the ast in a fixed point loop until no changes are made.
     /// `prev_function_changed`, `functions_changed` and `current_function` track changes
     /// in top level and each function. No minification code are run if the function is not changed
@@ -56,10 +53,8 @@ pub struct PeepholeOptimizations {
 }
 
 impl<'a> PeepholeOptimizations {
-    pub fn new(target: ESTarget, keep_names: CompressOptionsKeepNames) -> Self {
+    pub fn new() -> Self {
         Self {
-            target,
-            keep_names,
             iteration: 0,
             prev_functions_changed: FxHashSet::default(),
             functions_changed: FxHashSet::default(),
@@ -102,8 +97,9 @@ impl<'a> PeepholeOptimizations {
 
     #[inline]
     fn is_prev_function_changed(&self) -> bool {
-        let (_, prev_changed, _) = self.current_function.last();
-        *prev_changed
+        true
+        // let (_, prev_changed, _) = self.current_function.last();
+        // *prev_changed
     }
 
     fn enter_program_or_function(&mut self, scope_id: ScopeId) {
@@ -153,8 +149,16 @@ impl<'a> Traverse<'a, MinifierState<'a>> for PeepholeOptimizations {
         self.enter_program_or_function(program.scope_id());
     }
 
-    fn exit_program(&mut self, _program: &mut Program<'a>, _ctx: &mut TraverseCtx<'a>) {
+    fn exit_program(&mut self, program: &mut Program<'a>, ctx: &mut TraverseCtx<'a>) {
         self.exit_program_or_function();
+
+        let refs_before =
+            ctx.scoping().resolved_references().flatten().copied().collect::<FxHashSet<_>>();
+        let mut counter = ReferencesCounter::default();
+        counter.visit_program(program);
+        for reference_id_to_remove in refs_before.difference(&counter.refs) {
+            ctx.scoping_mut().delete_reference(*reference_id_to_remove);
+        }
     }
 
     fn enter_function(&mut self, func: &mut Function<'a>, _ctx: &mut TraverseCtx<'a>) {
@@ -396,13 +400,11 @@ impl<'a> Traverse<'a, MinifierState<'a>> for PeepholeOptimizations {
 
 /// Changes that do not interfere with optimizations that are run inside the fixed-point loop,
 /// which can be done as a last AST pass.
-pub struct LatePeepholeOptimizations {
-    target: ESTarget,
-}
+pub struct LatePeepholeOptimizations;
 
 impl<'a> LatePeepholeOptimizations {
-    pub fn new(target: ESTarget) -> Self {
-        Self { target }
+    pub fn new() -> Self {
+        Self
     }
 
     pub fn build(
@@ -454,12 +456,7 @@ pub struct DeadCodeElimination {
 
 impl<'a> DeadCodeElimination {
     pub fn new() -> Self {
-        Self {
-            inner: PeepholeOptimizations::new(
-                ESTarget::ESNext,
-                CompressOptionsKeepNames::all_true(),
-            ),
-        }
+        Self { inner: PeepholeOptimizations::new() }
     }
 
     pub fn build(
@@ -490,5 +487,18 @@ impl<'a> Traverse<'a, MinifierState<'a>> for DeadCodeElimination {
         let mut ctx = Ctx::new(ctx);
         self.inner.fold_constants_exit_expression(expr, &mut state, &mut ctx);
         self.inner.remove_dead_code_exit_expression(expr, &mut state, &mut ctx);
+    }
+}
+
+#[derive(Default)]
+struct ReferencesCounter {
+    refs: FxHashSet<ReferenceId>,
+}
+
+impl<'a> Visit<'a> for ReferencesCounter {
+    fn visit_identifier_reference(&mut self, it: &IdentifierReference<'a>) {
+        if let Some(reference_id) = it.reference_id.get() {
+            self.refs.insert(reference_id);
+        }
     }
 }

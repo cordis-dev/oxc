@@ -2,7 +2,7 @@
 use std::path::Path;
 
 use oxc_allocator::Allocator;
-use oxc_codegen::{Codegen, CodegenOptions};
+use oxc_codegen::{Codegen, CodegenOptions, CommentOptions};
 use oxc_mangler::MangleOptions;
 use oxc_minifier::{CompressOptions, Minifier, MinifierOptions};
 use oxc_parser::Parser;
@@ -50,15 +50,13 @@ fn minify(
     let mut program = ret.program;
     let options = MinifierOptions {
         mangle: mangle.then(MangleOptions::default),
-        compress: Some(CompressOptions::default()),
+        compress: Some(CompressOptions::smallest()),
     };
     let ret = Minifier::new(options).build(allocator, &mut program);
     Codegen::new()
         .with_options(CodegenOptions {
             minify: nospace,
-            comments: false,
-            annotation_comments: false,
-            legal_comments: oxc_codegen::LegalComment::Inline,
+            comments: CommentOptions::disabled(),
             ..CodegenOptions::default()
         })
         .with_scoping(ret.scoping)

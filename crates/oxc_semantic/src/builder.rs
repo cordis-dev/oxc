@@ -214,51 +214,47 @@ impl<'a> SemanticBuilder<'a> {
         if self.build_jsdoc {
             self.jsdoc = JSDocBuilder::new(self.source_text, &program.comments);
         }
-        if self.source_type.is_typescript_definition() {
-            let scope_id = self.scoping.add_scope(None, NodeId::DUMMY, ScopeFlags::Top);
-            program.scope_id.set(Some(scope_id));
+
+        // Use counts of nodes, scopes, symbols, and references to pre-allocate sufficient capacity
+        // in `AstNodes`, `ScopeTree` and `SymbolTable`.
+        //
+        // This means that as we traverse the AST and fill up these structures with data,
+        // they never need to grow and reallocate - which is an expensive operation as it
+        // involves copying all the memory from the old allocation to the new one.
+        // For large source files, these structures are very large, so growth is very costly
+        // as it involves copying massive chunks of memory.
+        // Avoiding this growth produces up to 30% perf boost on our benchmarks.
+        //
+        // If user did not provide existing `Stats`, calculate them by visiting AST.
+        #[cfg_attr(not(debug_assertions), expect(unused_variables))]
+        let (stats, check_stats) = if let Some(stats) = self.stats {
+            (stats, None)
         } else {
-            // Use counts of nodes, scopes, symbols, and references to pre-allocate sufficient capacity
-            // in `AstNodes`, `ScopeTree` and `SymbolTable`.
-            //
-            // This means that as we traverse the AST and fill up these structures with data,
-            // they never need to grow and reallocate - which is an expensive operation as it
-            // involves copying all the memory from the old allocation to the new one.
-            // For large source files, these structures are very large, so growth is very costly
-            // as it involves copying massive chunks of memory.
-            // Avoiding this growth produces up to 30% perf boost on our benchmarks.
-            //
-            // If user did not provide existing `Stats`, calculate them by visiting AST.
-            #[cfg_attr(not(debug_assertions), expect(unused_variables))]
-            let (stats, check_stats) = if let Some(stats) = self.stats {
-                (stats, None)
-            } else {
-                let stats = Stats::count(program);
-                let stats_with_excess = stats.increase_by(self.excess_capacity);
-                (stats_with_excess, Some(stats))
-            };
-            self.nodes.reserve(stats.nodes as usize);
-            self.scoping.reserve(
-                stats.symbols as usize,
-                stats.references as usize,
-                stats.scopes as usize,
+            let stats = Stats::count(program);
+            let stats_with_excess = stats.increase_by(self.excess_capacity);
+            (stats_with_excess, Some(stats))
+        };
+        self.nodes.reserve(stats.nodes as usize);
+        self.scoping.reserve(
+            stats.symbols as usize,
+            stats.references as usize,
+            stats.scopes as usize,
+        );
+
+        // Visit AST to generate scopes tree etc
+        self.visit_program(program);
+
+        // Check that estimated counts accurately (unless in release mode)
+        #[cfg(debug_assertions)]
+        if let Some(stats) = check_stats {
+            #[expect(clippy::cast_possible_truncation)]
+            let actual_stats = Stats::new(
+                self.nodes.len() as u32,
+                self.scoping.scopes_len() as u32,
+                self.scoping.symbols_len() as u32,
+                self.scoping.references.len() as u32,
             );
-
-            // Visit AST to generate scopes tree etc
-            self.visit_program(program);
-
-            // Check that estimated counts accurately (unless in release mode)
-            #[cfg(debug_assertions)]
-            if let Some(stats) = check_stats {
-                #[expect(clippy::cast_possible_truncation)]
-                let actual_stats = Stats::new(
-                    self.nodes.len() as u32,
-                    self.scoping.scopes_len() as u32,
-                    self.scoping.symbols_len() as u32,
-                    self.scoping.references.len() as u32,
-                );
-                stats.assert_accurate(actual_stats);
-            }
+            stats.assert_accurate(actual_stats);
         }
 
         let comments = self.alloc(&program.comments);
@@ -317,6 +313,7 @@ impl<'a> SemanticBuilder<'a> {
         self.record_ast_node();
     }
 
+    #[inline]
     fn pop_ast_node(&mut self) {
         self.current_node_id = self.nodes.parent_id(self.current_node_id);
     }
@@ -357,6 +354,7 @@ impl<'a> SemanticBuilder<'a> {
     }
 
     /// Is the current scope in strict mode?
+    #[inline]
     pub(crate) fn strict_mode(&self) -> bool {
         self.current_scope_flags().is_strict_mode()
     }
@@ -2073,9 +2071,8 @@ impl<'a> SemanticBuilder<'a> {
             AstKind::CatchParameter(_) => {
                 self.resolve_references_for_current_scope();
             }
-            AstKind::TSTypeQuery(_)
-            // Clear the reference flags that are set in AstKind::PropertySignature
-            | AstKind::PropertyKey(_) => {
+            AstKind::TSTypeQuery(_) | AstKind::TSPropertySignature(_) => {
+                // Clear the reference flags that may have been set when entering the node.
                 self.current_reference_flags = ReferenceFlags::empty();
             }
             AstKind::LabeledStatement(_) => self.unused_labels.mark_unused(self.current_node_id),

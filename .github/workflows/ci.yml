@@ -106,7 +106,7 @@ jobs:
           save-cache: ${{ github.ref_name == 'main' }}
           cache-key: s390x-unknown-linux-gnu
           tools: cross
-      - run: cross test --target s390x-unknown-linux-gnu
+      - run: cross test --all-features --target s390x-unknown-linux-gnu
 
   test-wasm32-wasip1-threads:
     name: Test wasm32-wasip1-threads
@@ -172,7 +172,7 @@ jobs:
         name: Run tests in workspace
         run: |
           rustup target add wasm32-wasip1-threads
-          pnpm run build
+          pnpm run build-test
           pnpm run test
       - if: steps.filter.outputs.src == 'true'
         name: Run e2e tests

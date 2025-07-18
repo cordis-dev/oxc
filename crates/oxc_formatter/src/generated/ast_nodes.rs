@@ -37,7 +37,6 @@ pub enum AstNodes<'a> {
     Elision(&'a AstNode<'a, Elision>),
     ObjectExpression(&'a AstNode<'a, ObjectExpression<'a>>),
     ObjectProperty(&'a AstNode<'a, ObjectProperty<'a>>),
-    PropertyKey(&'a AstNode<'a, PropertyKey<'a>>),
     TemplateLiteral(&'a AstNode<'a, TemplateLiteral<'a>>),
     TaggedTemplateExpression(&'a AstNode<'a, TaggedTemplateExpression<'a>>),
     TemplateElement(&'a AstNode<'a, TemplateElement<'a>>),
@@ -56,9 +55,7 @@ pub enum AstNodes<'a> {
     LogicalExpression(&'a AstNode<'a, LogicalExpression<'a>>),
     ConditionalExpression(&'a AstNode<'a, ConditionalExpression<'a>>),
     AssignmentExpression(&'a AstNode<'a, AssignmentExpression<'a>>),
-    AssignmentTarget(&'a AstNode<'a, AssignmentTarget<'a>>),
     SimpleAssignmentTarget(&'a AstNode<'a, SimpleAssignmentTarget<'a>>),
-    AssignmentTargetPattern(&'a AstNode<'a, AssignmentTargetPattern<'a>>),
     ArrayAssignmentTarget(&'a AstNode<'a, ArrayAssignmentTarget<'a>>),
     ObjectAssignmentTarget(&'a AstNode<'a, ObjectAssignmentTarget<'a>>),
     AssignmentTargetRest(&'a AstNode<'a, AssignmentTargetRest<'a>>),
@@ -200,6 +197,7 @@ pub enum AstNodes<'a> {
     TSInferType(&'a AstNode<'a, TSInferType<'a>>),
     TSTypeQuery(&'a AstNode<'a, TSTypeQuery<'a>>),
     TSImportType(&'a AstNode<'a, TSImportType<'a>>),
+    TSFunctionType(&'a AstNode<'a, TSFunctionType<'a>>),
     TSConstructorType(&'a AstNode<'a, TSConstructorType<'a>>),
     TSMappedType(&'a AstNode<'a, TSMappedType<'a>>),
     TSTemplateLiteralType(&'a AstNode<'a, TSTemplateLiteralType<'a>>),
@@ -2048,6 +2046,7 @@ impl<'a> From<&'a TSTypeName<'a>> for SiblingNode<'a> {
         match node {
             TSTypeName::IdentifierReference(inner) => SiblingNode::IdentifierReference(inner),
             TSTypeName::QualifiedName(inner) => SiblingNode::TSQualifiedName(inner),
+            TSTypeName::ThisExpression(inner) => SiblingNode::ThisExpression(inner),
         }
     }
 }
@@ -2326,7 +2325,6 @@ impl<'a> AstNodes<'a> {
             Self::Elision(n) => n.span(),
             Self::ObjectExpression(n) => n.span(),
             Self::ObjectProperty(n) => n.span(),
-            Self::PropertyKey(n) => n.span(),
             Self::TemplateLiteral(n) => n.span(),
             Self::TaggedTemplateExpression(n) => n.span(),
             Self::TemplateElement(n) => n.span(),
@@ -2345,9 +2343,7 @@ impl<'a> AstNodes<'a> {
             Self::LogicalExpression(n) => n.span(),
             Self::ConditionalExpression(n) => n.span(),
             Self::AssignmentExpression(n) => n.span(),
-            Self::AssignmentTarget(n) => n.span(),
             Self::SimpleAssignmentTarget(n) => n.span(),
-            Self::AssignmentTargetPattern(n) => n.span(),
             Self::ArrayAssignmentTarget(n) => n.span(),
             Self::ObjectAssignmentTarget(n) => n.span(),
             Self::AssignmentTargetRest(n) => n.span(),
@@ -2489,6 +2485,7 @@ impl<'a> AstNodes<'a> {
             Self::TSInferType(n) => n.span(),
             Self::TSTypeQuery(n) => n.span(),
             Self::TSImportType(n) => n.span(),
+            Self::TSFunctionType(n) => n.span(),
             Self::TSConstructorType(n) => n.span(),
             Self::TSMappedType(n) => n.span(),
             Self::TSTemplateLiteralType(n) => n.span(),
@@ -2521,7 +2518,6 @@ impl<'a> AstNodes<'a> {
             Self::Elision(n) => n.parent,
             Self::ObjectExpression(n) => n.parent,
             Self::ObjectProperty(n) => n.parent,
-            Self::PropertyKey(n) => n.parent,
             Self::TemplateLiteral(n) => n.parent,
             Self::TaggedTemplateExpression(n) => n.parent,
             Self::TemplateElement(n) => n.parent,
@@ -2540,9 +2536,7 @@ impl<'a> AstNodes<'a> {
             Self::LogicalExpression(n) => n.parent,
             Self::ConditionalExpression(n) => n.parent,
             Self::AssignmentExpression(n) => n.parent,
-            Self::AssignmentTarget(n) => n.parent,
             Self::SimpleAssignmentTarget(n) => n.parent,
-            Self::AssignmentTargetPattern(n) => n.parent,
             Self::ArrayAssignmentTarget(n) => n.parent,
             Self::ObjectAssignmentTarget(n) => n.parent,
             Self::AssignmentTargetRest(n) => n.parent,
@@ -2684,6 +2678,7 @@ impl<'a> AstNodes<'a> {
             Self::TSInferType(n) => n.parent,
             Self::TSTypeQuery(n) => n.parent,
             Self::TSImportType(n) => n.parent,
+            Self::TSFunctionType(n) => n.parent,
             Self::TSConstructorType(n) => n.parent,
             Self::TSMappedType(n) => n.parent,
             Self::TSTemplateLiteralType(n) => n.parent,
@@ -2716,7 +2711,6 @@ impl<'a> AstNodes<'a> {
             Self::Elision(n) => SiblingNode::from(n.inner),
             Self::ObjectExpression(n) => SiblingNode::from(n.inner),
             Self::ObjectProperty(n) => SiblingNode::from(n.inner),
-            Self::PropertyKey(n) => n.parent.as_sibling_node(),
             Self::TemplateLiteral(n) => SiblingNode::from(n.inner),
             Self::TaggedTemplateExpression(n) => SiblingNode::from(n.inner),
             Self::TemplateElement(n) => SiblingNode::from(n.inner),
@@ -2735,9 +2729,7 @@ impl<'a> AstNodes<'a> {
             Self::LogicalExpression(n) => SiblingNode::from(n.inner),
             Self::ConditionalExpression(n) => SiblingNode::from(n.inner),
             Self::AssignmentExpression(n) => SiblingNode::from(n.inner),
-            Self::AssignmentTarget(n) => n.parent.as_sibling_node(),
             Self::SimpleAssignmentTarget(n) => n.parent.as_sibling_node(),
-            Self::AssignmentTargetPattern(n) => n.parent.as_sibling_node(),
             Self::ArrayAssignmentTarget(n) => SiblingNode::from(n.inner),
             Self::ObjectAssignmentTarget(n) => SiblingNode::from(n.inner),
             Self::AssignmentTargetRest(n) => SiblingNode::from(n.inner),
@@ -2879,6 +2871,7 @@ impl<'a> AstNodes<'a> {
             Self::TSInferType(n) => SiblingNode::from(n.inner),
             Self::TSTypeQuery(n) => SiblingNode::from(n.inner),
             Self::TSImportType(n) => SiblingNode::from(n.inner),
+            Self::TSFunctionType(n) => SiblingNode::from(n.inner),
             Self::TSConstructorType(n) => SiblingNode::from(n.inner),
             Self::TSMappedType(n) => SiblingNode::from(n.inner),
             Self::TSTemplateLiteralType(n) => SiblingNode::from(n.inner),
@@ -2911,7 +2904,6 @@ impl<'a> AstNodes<'a> {
             Self::Elision(_) => "Elision",
             Self::ObjectExpression(_) => "ObjectExpression",
             Self::ObjectProperty(_) => "ObjectProperty",
-            Self::PropertyKey(_) => "PropertyKey",
             Self::TemplateLiteral(_) => "TemplateLiteral",
             Self::TaggedTemplateExpression(_) => "TaggedTemplateExpression",
             Self::TemplateElement(_) => "TemplateElement",
@@ -2930,9 +2922,7 @@ impl<'a> AstNodes<'a> {
             Self::LogicalExpression(_) => "LogicalExpression",
             Self::ConditionalExpression(_) => "ConditionalExpression",
             Self::AssignmentExpression(_) => "AssignmentExpression",
-            Self::AssignmentTarget(_) => "AssignmentTarget",
             Self::SimpleAssignmentTarget(_) => "SimpleAssignmentTarget",
-            Self::AssignmentTargetPattern(_) => "AssignmentTargetPattern",
             Self::ArrayAssignmentTarget(_) => "ArrayAssignmentTarget",
             Self::ObjectAssignmentTarget(_) => "ObjectAssignmentTarget",
             Self::AssignmentTargetRest(_) => "AssignmentTargetRest",
@@ -3074,6 +3064,7 @@ impl<'a> AstNodes<'a> {
             Self::TSInferType(_) => "TSInferType",
             Self::TSTypeQuery(_) => "TSTypeQuery",
             Self::TSImportType(_) => "TSImportType",
+            Self::TSFunctionType(_) => "TSFunctionType",
             Self::TSConstructorType(_) => "TSConstructorType",
             Self::TSMappedType(_) => "TSMappedType",
             Self::TSTemplateLiteralType(_) => "TSTemplateLiteralType",
@@ -3907,7 +3898,7 @@ impl<'a> AstNode<'a, ObjectProperty<'a>> {
 impl<'a> AstNode<'a, PropertyKey<'a>> {
     #[inline]
     pub fn as_ast_nodes(&self) -> &AstNodes<'a> {
-        let parent = self.allocator.alloc(AstNodes::PropertyKey(transmute_self(self)));
+        let parent = self.parent;
         let node = match self.inner {
             PropertyKey::StaticIdentifier(s) => {
                 AstNodes::IdentifierName(self.allocator.alloc(AstNode {
@@ -4849,7 +4840,7 @@ impl<'a> AstNode<'a, AssignmentExpression<'a>> {
 impl<'a> AstNode<'a, AssignmentTarget<'a>> {
     #[inline]
     pub fn as_ast_nodes(&self) -> &AstNodes<'a> {
-        let parent = self.allocator.alloc(AstNodes::AssignmentTarget(transmute_self(self)));
+        let parent = self.parent;
         let node = match self.inner {
             it @ match_simple_assignment_target!(AssignmentTarget) => {
                 AstNodes::SimpleAssignmentTarget(self.allocator.alloc(AstNode {
@@ -4860,12 +4851,15 @@ impl<'a> AstNode<'a, AssignmentTarget<'a>> {
                 }))
             }
             it @ match_assignment_target_pattern!(AssignmentTarget) => {
-                AstNodes::AssignmentTargetPattern(self.allocator.alloc(AstNode {
-                    inner: it.to_assignment_target_pattern(),
-                    parent,
-                    allocator: self.allocator,
-                    following_node: self.following_node,
-                }))
+                return self
+                    .allocator
+                    .alloc(AstNode {
+                        inner: it.to_assignment_target_pattern(),
+                        parent,
+                        allocator: self.allocator,
+                        following_node: self.following_node,
+                    })
+                    .as_ast_nodes();
             }
         };
         self.allocator.alloc(node)
@@ -4950,7 +4944,7 @@ impl<'a> GetSpan for AstNode<'a, SimpleAssignmentTarget<'a>> {
 impl<'a> AstNode<'a, AssignmentTargetPattern<'a>> {
     #[inline]
     pub fn as_ast_nodes(&self) -> &AstNodes<'a> {
-        let parent = self.allocator.alloc(AstNodes::AssignmentTargetPattern(transmute_self(self)));
+        let parent = self.parent;
         let node = match self.inner {
             AssignmentTargetPattern::ArrayAssignmentTarget(s) => {
                 AstNodes::ArrayAssignmentTarget(self.allocator.alloc(AstNode {
@@ -5116,12 +5110,15 @@ impl<'a> AstNode<'a, AssignmentTargetMaybeDefault<'a>> {
                 }))
             }
             it @ match_assignment_target!(AssignmentTargetMaybeDefault) => {
-                AstNodes::AssignmentTarget(self.allocator.alloc(AstNode {
-                    inner: it.to_assignment_target(),
-                    parent,
-                    allocator: self.allocator,
-                    following_node: self.following_node,
-                }))
+                return self
+                    .allocator
+                    .alloc(AstNode {
+                        inner: it.to_assignment_target(),
+                        parent,
+                        allocator: self.allocator,
+                        following_node: self.following_node,
+                    })
+                    .as_ast_nodes();
             }
         };
         self.allocator.alloc(node)
@@ -6321,12 +6318,15 @@ impl<'a> AstNode<'a, ForStatementLeft<'a>> {
                 }))
             }
             it @ match_assignment_target!(ForStatementLeft) => {
-                AstNodes::AssignmentTarget(self.allocator.alloc(AstNode {
-                    inner: it.to_assignment_target(),
-                    parent,
-                    allocator: self.allocator,
-                    following_node: self.following_node,
-                }))
+                return self
+                    .allocator
+                    .alloc(AstNode {
+                        inner: it.to_assignment_target(),
+                        parent,
+                        allocator: self.allocator,
+                        following_node: self.following_node,
+                    })
+                    .as_ast_nodes();
             }
         };
         self.allocator.alloc(node)
@@ -10555,11 +10555,12 @@ impl<'a> AstNode<'a, TSType<'a>> {
                     following_node: self.following_node,
                 }))
             }
-            TSType::TSFunctionType(s) => {
-                panic!(
-                    "No kind for current enum variant yet, please see `tasks/ast_tools/src/generators/ast_kind.rs`"
-                )
-            }
+            TSType::TSFunctionType(s) => AstNodes::TSFunctionType(self.allocator.alloc(AstNode {
+                inner: s.as_ref(),
+                parent,
+                allocator: self.allocator,
+                following_node: self.following_node,
+            })),
             TSType::TSImportType(s) => AstNodes::TSImportType(self.allocator.alloc(AstNode {
                 inner: s.as_ref(),
                 parent,
@@ -11502,6 +11503,14 @@ impl<'a> AstNode<'a, TSTypeName<'a>> {
             }
             TSTypeName::QualifiedName(s) => {
                 AstNodes::TSQualifiedName(self.allocator.alloc(AstNode {
+                    inner: s.as_ref(),
+                    parent,
+                    allocator: self.allocator,
+                    following_node: self.following_node,
+                }))
+            }
+            TSTypeName::ThisExpression(s) => {
+                AstNodes::ThisExpression(self.allocator.alloc(AstNode {
                     inner: s.as_ref(),
                     parent,
                     allocator: self.allocator,
@@ -12946,7 +12955,7 @@ impl<'a> AstNode<'a, TSFunctionType<'a>> {
             .alloc(self.inner.type_parameters.as_ref().map(|inner| AstNode {
                 inner: inner.as_ref(),
                 allocator: self.allocator,
-                parent: self.parent,
+                parent: self.allocator.alloc(AstNodes::TSFunctionType(transmute_self(self))),
                 following_node,
             }))
             .as_ref()
@@ -12959,7 +12968,7 @@ impl<'a> AstNode<'a, TSFunctionType<'a>> {
             .alloc(self.inner.this_param.as_ref().map(|inner| AstNode {
                 inner: inner.as_ref(),
                 allocator: self.allocator,
-                parent: self.parent,
+                parent: self.allocator.alloc(AstNodes::TSFunctionType(transmute_self(self))),
                 following_node,
             }))
             .as_ref()
@@ -12971,7 +12980,7 @@ impl<'a> AstNode<'a, TSFunctionType<'a>> {
         self.allocator.alloc(AstNode {
             inner: self.inner.params.as_ref(),
             allocator: self.allocator,
-            parent: self.parent,
+            parent: self.allocator.alloc(AstNodes::TSFunctionType(transmute_self(self))),
             following_node,
         })
     }
@@ -12982,7 +12991,7 @@ impl<'a> AstNode<'a, TSFunctionType<'a>> {
         self.allocator.alloc(AstNode {
             inner: self.inner.return_type.as_ref(),
             allocator: self.allocator,
-            parent: self.parent,
+            parent: self.allocator.alloc(AstNodes::TSFunctionType(transmute_self(self))),
             following_node,
         })
     }

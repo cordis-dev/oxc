@@ -206,7 +206,9 @@ impl<'a> Symbol<'_, 'a> {
                 AstKind::ParenthesizedExpression(_)
                 | AstKind::IdentifierReference(_)
                 | AstKind::SimpleAssignmentTarget(_)
-                | AstKind::AssignmentTarget(_) => {}
+                | AstKind::AssignmentTargetPropertyIdentifier(_)
+                | AstKind::ArrayAssignmentTarget(_)
+                | AstKind::ObjectAssignmentTarget(_) => {}
                 AstKind::ForInStatement(ForInStatement { body, .. })
                 | AstKind::ForOfStatement(ForOfStatement { body, .. }) => match body {
                     Statement::ReturnStatement(_) => return true,
@@ -245,13 +247,12 @@ impl<'a> Symbol<'_, 'a> {
             return false;
         }
 
-        for parent in self.nodes().ancestors(reference.node_id()).map(AstNode::kind) {
+        for parent in self.nodes().ancestor_kinds(reference.node_id()) {
             match parent {
                 AstKind::IdentifierReference(_)
                 | AstKind::SimpleAssignmentTarget(_)
                 | AstKind::AssignmentTargetPropertyIdentifier(_)
-                | AstKind::AssignmentTargetPropertyProperty(_)
-                | AstKind::AssignmentTarget(_) => {}
+                | AstKind::AssignmentTargetPropertyProperty(_) => {}
                 AstKind::AssignmentExpression(assignment) => {
                     return options.is_ignored_assignment_target(self, &assignment.left);
                 }
@@ -405,7 +406,7 @@ impl<'a> Symbol<'_, 'a> {
         let name = self.name();
         let ref_span = self.get_ref_span(reference);
 
-        for node in self.nodes().ancestors(reference.node_id()).skip(1) {
+        for node in self.nodes().ancestors(reference.node_id()) {
             match node.kind() {
                 // references used in declaration of another variable are definitely
                 // used by others
@@ -816,9 +817,9 @@ impl<'a> Symbol<'_, 'a> {
                 AstKind::VariableDeclarator(decl) if needs_variable_identifier => {
                     return decl.id.get_binding_identifier().map(BindingIdentifier::symbol_id);
                 }
-                AstKind::AssignmentTarget(target) if needs_variable_identifier => {
+                AstKind::SimpleAssignmentTarget(target) if needs_variable_identifier => {
                     return match target {
-                        AssignmentTarget::AssignmentTargetIdentifier(id) => {
+                        SimpleAssignmentTarget::AssignmentTargetIdentifier(id) => {
                             self.scoping().get_reference(id.reference_id()).symbol_id()
                         }
                         _ => None,

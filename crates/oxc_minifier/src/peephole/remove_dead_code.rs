@@ -28,6 +28,7 @@ impl<'a> PeepholeOptimizations {
             Statement::ForStatement(s) => self.try_fold_for(s, state, ctx),
             Statement::TryStatement(s) => Self::try_fold_try(s, ctx),
             Statement::LabeledStatement(s) => Self::try_fold_labeled(s, ctx),
+            Statement::FunctionDeclaration(f) => Self::remove_unused_function_declaration(f, ctx),
             _ => None,
         } {
             *stmt = new_stmt;
@@ -47,8 +48,10 @@ impl<'a> PeepholeOptimizations {
             Expression::ConditionalExpression(e) => {
                 self.try_fold_conditional_expression(e, state, ctx)
             }
-            Expression::SequenceExpression(sequence_expression) => {
-                self.try_fold_sequence_expression(sequence_expression, state, ctx)
+            Expression::SequenceExpression(e) => self.try_fold_sequence_expression(e, state, ctx),
+            Expression::AssignmentExpression(_) => {
+                self.remove_unused_assignment_expression(expr, state, ctx);
+                None
             }
             _ => None,
         } {

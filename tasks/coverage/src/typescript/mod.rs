@@ -55,6 +55,8 @@ impl<T: Case> Suite<T> for TypeScriptSuite<T> {
             "privateNamesIncompatibleModifiersJs.ts",
             // Exporting JSDoc types from `.js`
             "importingExportingTypes.ts",
+            // This is just a binary file
+            "TransportStream.ts",
         ]
         .iter()
         .any(|p| path.to_string_lossy().contains(p));
@@ -135,9 +137,30 @@ impl Case for TypeScriptCase {
 // TODO: Filter out more not-supported error codes here
 static NOT_SUPPORTED_ERROR_CODES: phf::Set<&'static str> = phf::phf_set![
     "2315",  // Type 'U' is not generic.
-    "7005",  // Variable 'x' implicitly has an 'any' type.
-    "7006",  // Parameter 'x' implicitly has an 'any' type.
-    "7008",  // Member 'v' implicitly has an 'any' type.
+    "2665", // Invalid module name in augmentation. Module 'foo' resolves to an untyped module at '/node_modules/foo/index.js', which cannot be augmented.
+    "6053", // File 'invalid.ts' not found.
+    "6054", // File 'b.js.map' has an unsupported extension. The only supported extensions are '.ts', '.tsx', '.d.ts', '.js', '.jsx', '.cts', '.d.cts', '.cjs', '.mts', '.d.mts', '.mjs'.
+    "6082", // Only 'amd' and 'system' modules are supported alongside --outFile.
+    "6131", // Cannot compile modules using option 'outFile' unless the '--module' flag is 'amd' or 'system'.
+    "6133", // 'f1' is declared but its value is never read.
+    "6137", // Cannot import type declaration files. Consider importing 'foo-bar' instead of '@types/foo-bar'.
+    "6138", // Property 'used' is declared but its value is never read.
+    "6142", // Module '/foo' was resolved to '/foo.jsx', but '--jsx' is not set.
+    "6192", // All imports in import declaration are unused.
+    "6196", // 'i1' is declared but never used.
+    "6198", // All destructured elements are unused.
+    "6199", // All variables are unused.
+    "6200", // Definitions of the following identifiers conflict with those in another file: A, B, C, D, E, F, G, H, I
+    "6205", // All type parameters are unused.
+    "6229", // Tag 'MyComp4' expects at least '4' arguments, but the JSX factory 'React.createElement' provides at most '2'.
+    "6231", // Could not resolve the path 'invalid' with the extensions: '.ts', '.tsx', '.d.ts', '.js', '.jsx', '.cts', '.d.cts', '.cjs', '.mts', '.d.mts', '.mjs'.
+    "6232", // Declaration augments declaration in another file. This cannot be serialized.
+    "6234", // This expression is not callable because it is a 'get' accessor. Did you mean to use it without '()'?
+    "6263", // Module './dir/native.node' was resolved to 'dir/native.d.node.ts', but '--allowArbitraryExtensions' is not set.
+    "6379", // Composite projects may not disable incremental compilation.
+    "7005", // Variable 'x' implicitly has an 'any' type.
+    "7006", // Parameter 'x' implicitly has an 'any' type.
+    "7008", // Member 'v' implicitly has an 'any' type.
     "7009", // 'new' expression, whose target lacks a construct signature, implicitly has an 'any' type.
     "7010", // 'temp', which lacks return-type annotation, implicitly has an 'any' return type.
     "7011", // Function expression, which lacks return-type annotation, implicitly has an 'any' return type.
@@ -155,12 +178,17 @@ static NOT_SUPPORTED_ERROR_CODES: phf::Set<&'static str> = phf::phf_set![
     "7024", // Function implicitly has return type 'any' because it does not have a return type annotation and is referenced directly or indirectly in one of its return expressions.
     "7025", // Generator implicitly has yield type 'any'. Consider supplying a return type annotation.
     "7026", // JSX element implicitly has type 'any' because no interface 'JSX.IntrinsicElements' exists.
+    "7027", // Unreachable code detected.
+    "7028", // Unused label.
+    "7029", // Fallthrough case in switch.
+    "7030", // Not all code paths return a value.
     "7031", // Binding element 'a5' implicitly has an 'any' type.
     "7032", // Property 'message' implicitly has type 'any', because its set accessor lacks a parameter type annotation.
     "7033", // Property 'message' implicitly has type 'any', because its get accessor lacks a return type annotation.
     "7034", // Variable 'x' implicitly has type 'any[]' in some locations where its type cannot be determined.
     "7036", // Dynamic import's specifier must be of type 'string', but here has type 'null'.
     "7039", // Mapped object type implicitly has an 'any' template type.
+    "7041", // The containing arrow function captures the global value of 'this'.
     "7052", // Element implicitly has an 'any' type because type '{ get: (key: string) => string; }' has no index signature. Did you mean to call 'c.get'?
     "7053", // Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{}'.
     "7055", // 'h', which lacks return-type annotation, implicitly has an 'any' yield type.

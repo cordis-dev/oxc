@@ -180,10 +180,7 @@ impl ValidTitle {
                 );
             }
             Argument::TemplateLiteral(template_literal) => {
-                if !template_literal.is_no_substitution_template() {
-                    return;
-                }
-                if let Some(quasi) = template_literal.quasi() {
+                if let Some(quasi) = template_literal.single_quasi() {
                     validate_title(
                         quasi.as_str(),
                         template_literal.span,

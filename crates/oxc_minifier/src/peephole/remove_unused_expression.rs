@@ -32,6 +32,9 @@ impl<'a> PeepholeOptimizations {
             Expression::ConditionalExpression(_) => self.fold_conditional_expression(e, state, ctx),
             Expression::BinaryExpression(_) => self.fold_binary_expression(e, state, ctx),
             Expression::CallExpression(_) => self.fold_call_expression(e, state, ctx),
+            Expression::AssignmentExpression(_) => {
+                self.remove_unused_assignment_expression(e, state, ctx)
+            }
             _ => !e.may_have_side_effects(ctx),
         }
     }
@@ -58,7 +61,7 @@ impl<'a> PeepholeOptimizations {
                     self.remove_unused_expression(e, state, ctx)
                 }
             }
-            _ => false,
+            _ => !e.may_have_side_effects(ctx),
         }
     }
 
@@ -99,7 +102,7 @@ impl<'a> PeepholeOptimizations {
         }
 
         // try optional chaining and nullish coalescing
-        if self.target >= ESTarget::ES2020 {
+        if ctx.options().target >= ESTarget::ES2020 {
             let LogicalExpression {
                 span: logical_span,
                 left: logical_left,
@@ -665,7 +668,7 @@ impl<'a> PeepholeOptimizations {
 mod test {
     use crate::{
         CompressOptions, TreeShakeOptions,
-        tester::{test, test_options, test_same, test_same_options},
+        tester::{default_options, test, test_options, test_same, test_same_options},
     };
 
     #[test]
@@ -768,6 +771,8 @@ mod test {
         test_same("delete x.y");
         test_same("delete x.y.z()");
         test_same("+0n"); // Uncaught TypeError: Cannot convert a BigInt value to a number
+        test("-0n", "");
+        test("-1n", "");
     }
 
     #[test]
@@ -946,14 +951,14 @@ mod test {
     fn treeshake_options_annotations_false() {
         let options = CompressOptions {
             treeshake: TreeShakeOptions { annotations: false, ..TreeShakeOptions::default() },
-            ..CompressOptions::smallest()
+            ..default_options()
         };
         test_same_options("function test() {} /* @__PURE__ */ test()", &options);
         test_same_options("function test() {} /* @__PURE__ */ new test()", &options);
 
         let options = CompressOptions {
             treeshake: TreeShakeOptions { annotations: true, ..TreeShakeOptions::default() },
-            ..CompressOptions::smallest()
+            ..default_options()
         };
         test_options("function test() {} /* @__PURE__ */ test()", "function test() {}", &options);
         test_options(

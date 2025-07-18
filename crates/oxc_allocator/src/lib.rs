@@ -18,6 +18,14 @@
 //!
 //! * `from_raw_parts` - Adds [`Allocator::from_raw_parts`] method.
 //!   Usage of this feature is not advisable, and it will be removed as soon as we're able to.
+//!
+//! * `fixed_size` - Makes [`AllocatorPool`] create large fixed-size allocators, instead of
+//!   flexibly-sized ones.
+//!   Only supported on 64-bit little-endian platforms at present.
+//!   Usage of this feature is not advisable, and it will be removed as soon as we're able to.
+//!
+//! * `disable_fixed_size` - Disables `fixed_size` feature.
+//!   Purpose is to prevent `--all-features` enabling fixed sized allocators.
 
 #![warn(missing_docs)]
 
@@ -32,7 +40,6 @@ mod convert;
 #[cfg(feature = "from_raw_parts")]
 mod from_raw_parts;
 pub mod hash_map;
-mod pool;
 mod string_builder;
 mod take_in;
 mod vec;
@@ -45,7 +52,50 @@ pub use boxed::Box;
 pub use clone_in::CloneIn;
 pub use convert::{FromIn, IntoIn};
 pub use hash_map::HashMap;
-pub use pool::{AllocatorGuard, AllocatorPool};
 pub use string_builder::StringBuilder;
 pub use take_in::{Dummy, TakeIn};
 pub use vec::Vec;
+
+// Fixed size allocators are only supported on 64-bit little-endian platforms at present
+
+#[cfg(not(all(
+    feature = "fixed_size",
+    not(feature = "disable_fixed_size"),
+    target_pointer_width = "64",
+    target_endian = "little"
+)))]
+mod pool;
+
+#[cfg(all(
+    feature = "fixed_size",
+    not(feature = "disable_fixed_size"),
+    target_pointer_width = "64",
+    target_endian = "little"
+))]
+mod pool_fixed_size;
+#[cfg(all(
+    feature = "fixed_size",
+    not(feature = "disable_fixed_size"),
+    target_pointer_width = "64",
+    target_endian = "little"
+))]
+use pool_fixed_size as pool;
+
+pub use pool::{AllocatorGuard, AllocatorPool};
+
+mod generated {
+    #[cfg(all(
+        feature = "fixed_size",
+        not(feature = "disable_fixed_size"),
+        target_pointer_width = "64",
+        target_endian = "little"
+    ))]
+    pub mod fixed_size_constants;
+}
+#[cfg(all(
+    feature = "fixed_size",
+    not(feature = "disable_fixed_size"),
+    target_pointer_width = "64",
+    target_endian = "little"
+))]
+use generated::fixed_size_constants;
