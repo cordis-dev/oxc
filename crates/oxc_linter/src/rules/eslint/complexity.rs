@@ -190,7 +190,8 @@ fn has_logical_expression_parent<'a>(
     node: &AstNode<'a>,
     nodes: &'a AstNodes<'a>,
 ) -> bool {
-    if let Some(parent_id) = nodes.parent_id(node.id()) {
+    let parent_id = nodes.parent_id(node.id());
+    if parent_id != node.id() {
         let parent = nodes.get_node(parent_id);
         matches!(parent.kind(), AstKind::LogicalExpression(_))
     } else {
