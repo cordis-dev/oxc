@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { execa } from 'execa';
 
 const PACKAGE_ROOT_PATH = path.dirname(import.meta.dirname);
-const ENTRY_POINT_PATH = path.join(PACKAGE_ROOT_PATH, 'src/index.js');
+const ENTRY_POINT_PATH = path.join(PACKAGE_ROOT_PATH, 'dist/index.js');
 
 async function runOxlint(cwd: string, args: string[] = []) {
   return await execa('node', [ENTRY_POINT_PATH, ...args], {
@@ -20,7 +20,7 @@ function normalizeOutput(output: string): string {
     .replace(/using \d+ threads./, 'using X threads.');
 }
 
-describe('cli options for bundling', () => {
+describe('oxlint2 CLI', () => {
   it('should lint a directory without errors', async () => {
     const { stdout, exitCode } = await runOxlint(
       'test/fixtures/built_in_no_errors',
@@ -78,6 +78,33 @@ describe('cli options for bundling', () => {
   it('should report an error if a rule is not found within a custom plugin', async () => {
     const { stdout, exitCode } = await runOxlint(
       'test/fixtures/custom_plugin_missing_rule',
+    );
+
+    expect(exitCode).toBe(1);
+    expect(normalizeOutput(stdout)).toMatchSnapshot();
+  });
+
+  it('should report the correct severity when using a custom plugin', async () => {
+    const { stdout, exitCode } = await runOxlint(
+      'test/fixtures/basic_custom_plugin_warn_severity',
+    );
+
+    expect(exitCode).toBe(0);
+    expect(normalizeOutput(stdout)).toMatchSnapshot();
+  });
+
+  it('should work with multiple rules', async () => {
+    const { stdout, exitCode } = await runOxlint(
+      'test/fixtures/basic_custom_plugin_multiple_rules',
+    );
+
+    expect(exitCode).toBe(1);
+    expect(normalizeOutput(stdout)).toMatchSnapshot();
+  });
+
+  it('should receive data via `context`', async () => {
+    const { stdout, exitCode } = await runOxlint(
+      'test/fixtures/context_properties',
     );
 
     expect(exitCode).toBe(1);

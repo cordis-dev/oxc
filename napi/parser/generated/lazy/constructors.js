@@ -12472,6 +12472,14 @@ class StaticExport {
 
 const DebugStaticExport = class StaticExport {};
 
+function constructU32(pos, ast) {
+  return ast.buffer.uint32[pos >> 2];
+}
+
+function constructU8(pos, ast) {
+  return ast.buffer[pos];
+}
+
 function constructStr(pos, ast) {
   const pos32 = pos >> 2,
     { buffer } = ast,
@@ -13353,10 +13361,6 @@ function constructF64(pos, ast) {
   return ast.buffer.float64[pos >> 3];
 }
 
-function constructU8(pos, ast) {
-  return ast.buffer[pos];
-}
-
 function constructBoxJSXOpeningElement(pos, ast) {
   return new JSXOpeningElement(ast.buffer.uint32[pos >> 2], ast);
 }
@@ -13748,19 +13752,15 @@ function constructBoxTSExternalModuleReference(pos, ast) {
   return new TSExternalModuleReference(ast.buffer.uint32[pos >> 2], ast);
 }
 
-function constructU32(pos, ast) {
-  return ast.buffer.uint32[pos >> 2];
+function constructU64(pos, ast) {
+  const { uint32 } = ast.buffer,
+    pos32 = pos >> 2;
+  return uint32[pos32] + uint32[pos32 + 1] * 4294967296;
 }
 
 function constructOptionNameSpan(pos, ast) {
   if (ast.buffer.uint32[(pos + 8) >> 2] === 0 && ast.buffer.uint32[(pos + 12) >> 2] === 0) return null;
   return new NameSpan(pos, ast);
-}
-
-function constructU64(pos, ast) {
-  const { uint32 } = ast.buffer,
-    pos32 = pos >> 2;
-  return uint32[pos32] + uint32[pos32 + 1] * 4294967296;
 }
 
 function constructOptionU64(pos, ast) {

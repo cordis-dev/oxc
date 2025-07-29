@@ -4,6 +4,20 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
+## [0.78.0] - 2025-07-24
+
+### 🚀 Features
+
+- c135beb codegen: Keep function expression PIFEs (#12470) (sapphi-red)
+
+
+## [0.77.3] - 2025-07-20
+
+### 🚀 Features
+
+- 0920e98 codegen: Keep arrow function PIFEs (#12353) (sapphi-red)
+
+
 
 ## [0.77.1] - 2025-07-16
 

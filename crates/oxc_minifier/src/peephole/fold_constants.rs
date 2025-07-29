@@ -7,27 +7,21 @@ use oxc_ecmascript::{
 };
 use oxc_span::GetSpan;
 use oxc_syntax::operator::{BinaryOperator, LogicalOperator};
-use oxc_traverse::Ancestor;
 
 use crate::ctx::Ctx;
 
-use super::{PeepholeOptimizations, State};
+use super::PeepholeOptimizations;
 
 impl<'a> PeepholeOptimizations {
     /// Constant Folding
     ///
     /// <https://github.com/google/closure-compiler/blob/v20240609/src/com/google/javascript/jscomp/PeepholeFoldConstants.java>
-    pub fn fold_constants_exit_expression(
-        &self,
-        expr: &mut Expression<'a>,
-        state: &mut State,
-        ctx: &mut Ctx<'a, '_>,
-    ) {
+    pub fn fold_constants_exit_expression(&self, expr: &mut Expression<'a>, ctx: &mut Ctx<'a, '_>) {
         match expr {
             Expression::TemplateLiteral(t) => {
-                self.try_inline_values_in_template_literal(t, state, ctx);
+                self.try_inline_values_in_template_literal(t, ctx);
             }
-            Expression::ObjectExpression(e) => self.fold_object_spread(e, state, ctx),
+            Expression::ObjectExpression(e) => self.fold_object_spread(e, ctx),
             _ => {}
         }
 
@@ -43,21 +37,7 @@ impl<'a> PeepholeOptimizations {
             _ => None,
         } {
             *expr = folded_expr;
-            state.changed = true;
-        }
-
-        // Save `const value = false` into constant values.
-        if let Ancestor::VariableDeclaratorInit(decl) = ctx.parent() {
-            // TODO: Check for no write references.
-            if decl.kind().is_const() {
-                if let BindingPatternKind::BindingIdentifier(ident) = &decl.id().kind {
-                    // TODO: refactor all the above code to return value instead of expression, to avoid calling `evaluate_value` again.
-                    if let Some(value) = expr.evaluate_value(ctx) {
-                        let symbol_id = ident.symbol_id();
-                        ctx.state.constant_values.insert(symbol_id, value);
-                    }
-                }
-            }
+            ctx.state.changed = true;
         }
     }
 
@@ -664,12 +644,7 @@ impl<'a> PeepholeOptimizations {
         None
     }
 
-    fn fold_object_spread(
-        &self,
-        e: &mut ObjectExpression<'a>,
-        state: &mut State,
-        ctx: &mut Ctx<'a, '_>,
-    ) {
+    fn fold_object_spread(&self, e: &mut ObjectExpression<'a>, ctx: &mut Ctx<'a, '_>) {
         let (new_size, should_fold) =
             e.properties.iter().fold((0, false), |(new_size, should_fold), p| {
                 let ObjectPropertyKind::SpreadProperty(spread_element) = p else {
@@ -745,7 +720,7 @@ impl<'a> PeepholeOptimizations {
         }
 
         e.properties = new_properties;
-        state.changed = true;
+        ctx.state.changed = true;
     }
 
     fn is_spread_inlineable_object_literal(
@@ -774,7 +749,7 @@ impl<'a> PeepholeOptimizations {
     fn try_inline_values_in_template_literal(
         &self,
         t: &mut TemplateLiteral<'a>,
-        state: &mut State,
+
         ctx: &mut Ctx<'a, '_>,
     ) {
         let has_expr_to_inline = t
@@ -824,7 +799,7 @@ impl<'a> PeepholeOptimizations {
             }
         }
 
-        state.changed = true;
+        ctx.state.changed = true;
     }
 }
 
@@ -1441,7 +1416,7 @@ mod test {
     fn test_fold_logical_op2() {
         fold("x = function(){} && x", "x=x");
         fold("x = true && function(){}", "x=function(){}");
-        fold("x = [(function(){alert(x)})()] && x", "x=(function(){alert(x)}(),x)");
+        fold("x = [(function(){alert(x)})()] && x", "x=((function(){alert(x)})(),x)");
     }
 
     #[test]

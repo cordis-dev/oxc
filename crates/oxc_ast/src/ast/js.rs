@@ -1795,6 +1795,16 @@ pub struct Function<'a> {
     #[builder(default)]
     #[estree(skip)]
     pub pure: bool,
+    #[builder(default)]
+    #[estree(skip)]
+    /// `true` if the function should be marked as "Possibly-Invoked Function Expression" (PIFE).
+    ///
+    /// This only affects FunctionExpressions.
+    ///
+    /// References:
+    /// - v8 blog post about PIFEs: <https://v8.dev/blog/preparser#pife>
+    /// - related PR: <https://github.com/oxc-project/oxc/pull/12353>
+    pub pife: bool,
 }
 
 #[ast]
@@ -1935,6 +1945,14 @@ pub struct ArrowFunctionExpression<'a> {
     #[builder(default)]
     #[estree(skip)]
     pub pure: bool,
+    #[builder(default)]
+    #[estree(skip)]
+    /// `true` if the function should be marked as "Possibly-Invoked Function Expression" (PIFE).
+    ///
+    /// References:
+    /// - v8 blog post about PIFEs: <https://v8.dev/blog/preparser#pife>
+    /// - introduced PR: <https://github.com/oxc-project/oxc/pull/12353>
+    pub pife: bool,
 }
 
 /// Generator Function Definitions

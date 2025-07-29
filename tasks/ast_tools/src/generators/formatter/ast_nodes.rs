@@ -18,6 +18,11 @@ pub fn get_node_type(ty: &TokenStream) -> TokenStream {
 
 const FORMATTER_CRATE_PATH: &str = "crates/oxc_formatter";
 
+/// Based on the printing comments algorithm, the last child of these AST nodes don't need to print comments.
+/// Without following nodes could lead to only print comments that before the end of the node, which is what we want.
+const AST_NODE_WITHOUT_FOLLOWING_NODE_LIST: &[&str] =
+    &["ExpressionStatement", "AssignmentExpression", "FormalParameters"];
+
 pub struct FormatterAstNodesGenerator;
 
 define_generator!(FormatterAstNodesGenerator);
@@ -196,6 +201,11 @@ fn generate_struct_impls(struct_def: &StructDef, schema: &Schema) -> TokenStream
 
     let fields = &struct_def.fields;
     let methods = fields.iter().enumerate().filter_map(|(index, field)| {
+        if field.name == "span" {
+            // Instead of generating a method for `span`, we implement the `GetSpan` trait for it.
+            return None;
+        }
+
         let field_type_def = field.type_def(schema);
         let is_option = field_type_def.is_option();
         let (original_field_type, is_box) = if let TypeDef::Box(box_def) =
@@ -255,8 +265,16 @@ fn generate_struct_impls(struct_def: &StructDef, schema: &Schema) -> TokenStream
                 quote! { &self.inner.#field_name }
             };
 
-            let mut following_node = quote! {
-                self.following_node
+            let mut following_node = if index == fields.len() - 1
+                && AST_NODE_WITHOUT_FOLLOWING_NODE_LIST.contains(&struct_def.name.as_str())
+            {
+                quote! {
+                    None
+                }
+            } else {
+                quote! {
+                    self.following_node
+                }
             };
 
             let mut next_field_index = index + 1;
@@ -352,6 +370,13 @@ fn generate_struct_impls(struct_def: &StructDef, schema: &Schema) -> TokenStream
             }
         }
 
+        ///@@line_break
+        impl<'a> GetSpan for AstNode<'a, #type_ty>  {
+            #[inline]
+            fn span(&self) -> oxc_span::Span {
+                self.inner.span()
+            }
+        }
     }
 }
 
@@ -565,7 +590,7 @@ fn ast_node_and_ast_nodes_impls() -> TokenStream {
         }
 
         ///@@line_break
-        impl<'a>  AstNode<'a, Program<'a>> {
+        impl<'a> AstNode<'a, Program<'a>> {
             pub fn new(inner: &'a Program<'a>, parent: &'a AstNodes<'a>, allocator: &'a Allocator) -> Self {
                 AstNode { inner, parent, allocator, following_node: None }
             }

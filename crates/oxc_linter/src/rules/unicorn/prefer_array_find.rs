@@ -1,7 +1,8 @@
 use oxc_ast::{
     AstKind,
     ast::{
-        Argument, AssignmentTarget, BindingPatternKind, CallExpression, Expression, UnaryOperator,
+        Argument, AssignmentTarget, BindingPatternKind, CallExpression, Expression,
+        SimpleAssignmentTarget, UnaryOperator,
     },
 };
 use oxc_diagnostics::OxcDiagnostic;
@@ -72,8 +73,11 @@ impl Rule for PreferArrayFind {
 
         if let AstKind::CallExpression(call_expr) = node.kind() {
             if is_method_call(call_expr, None, Some(&["shift"]), Some(0), Some(0)) {
-                if let Expression::CallExpression(filter_call_expr) =
-                    call_expr.callee.as_member_expression().unwrap().object().get_inner_expression()
+                if let Some(Expression::CallExpression(filter_call_expr)) = call_expr
+                    .callee
+                    .get_inner_expression()
+                    .as_member_expression()
+                    .map(|expression| expression.object().get_inner_expression())
                 {
                     if is_filter_call(filter_call_expr) {
                         ctx.diagnostic(prefer_array_find_diagnostic(
@@ -155,6 +159,7 @@ impl Rule for PreferArrayFind {
                                     }
                                 }
                                 AstKind::AssignmentExpression(assignment_expr) => {
+                                    // Check for array destructuring: [foo] = items
                                     if let AssignmentTarget::ArrayAssignmentTarget(target) =
                                         &assignment_expr.left
                                     {
@@ -162,6 +167,16 @@ impl Rule for PreferArrayFind {
                                             && target.elements[0].is_some()
                                         {
                                             destructuring_nodes.push(reference);
+                                        }
+                                    } else if let Some(
+                                        SimpleAssignmentTarget::AssignmentTargetIdentifier(ident),
+                                    ) = assignment_expr.left.as_simple_assignment_target()
+                                    {
+                                        // Check for simple reassignment: items = something
+                                        if ident.span
+                                            == ctx.nodes().get_node(reference.node_id()).span()
+                                        {
+                                            is_used_elsewhere = true; // Variable is being reassigned
                                         }
                                     }
                                 }
@@ -197,12 +212,11 @@ impl Rule for PreferArrayFind {
                     })
                 })
             {
-                if let Expression::CallExpression(filter_call_expr) = at_call_expr
+                if let Some(Expression::CallExpression(filter_call_expr)) = at_call_expr
                     .callee
-                    .as_member_expression()
-                    .unwrap()
-                    .object()
                     .get_inner_expression()
+                    .as_member_expression()
+                    .map(|expression| expression.object().get_inner_expression())
                 {
                     if is_filter_call(filter_call_expr) {
                         ctx.diagnostic(prefer_array_find_diagnostic(
@@ -216,12 +230,11 @@ impl Rule for PreferArrayFind {
         // `array.filter().pop()`
         if let AstKind::CallExpression(pop_call_expr) = node.kind() {
             if is_method_call(pop_call_expr, None, Some(&["pop"]), Some(0), Some(0)) {
-                if let Expression::CallExpression(filter_call_expr) = pop_call_expr
+                if let Some(Expression::CallExpression(filter_call_expr)) = pop_call_expr
                     .callee
-                    .as_member_expression()
-                    .unwrap()
-                    .object()
                     .get_inner_expression()
+                    .as_member_expression()
+                    .map(|expression| expression.object().get_inner_expression())
                 {
                     if is_filter_call(filter_call_expr) {
                         ctx.diagnostic(prefer_array_find_diagnostic(
@@ -241,11 +254,15 @@ fn is_filter_call(call_expr: &CallExpression) -> bool {
 
 fn is_left_hand_side<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) -> bool {
     match ctx.nodes().parent_kind(node.id()) {
-        AstKind::ArrayPattern(_) | AstKind::SimpleAssignmentTarget(_) => true,
         AstKind::AssignmentExpression(expr) => expr.left.span() == node.span(),
         AstKind::AssignmentPattern(expr) => expr.left.span() == node.span(),
         AstKind::UpdateExpression(expr) => expr.argument.span() == node.span(),
         AstKind::UnaryExpression(expr) => expr.operator == UnaryOperator::Delete,
+        AstKind::ArrayAssignmentTarget(_)
+        | AstKind::ObjectAssignmentTarget(_)
+        | AstKind::AssignmentTargetWithDefault(_)
+        | AstKind::ArrayPattern(_)
+        | AstKind::IdentifierReference(_) => true,
         _ => false,
     }
 }
@@ -427,6 +444,8 @@ fn test() {
         "array.filter().at(0)",
         "array.filter(foo, thisArgument, extraArgument).at(0)",
         "array.filter(...foo).at(0)",
+        // oxc-project/oxc#12399
+        "{a.pop!()}",
     ];
 
     let fail = vec![
@@ -609,6 +628,9 @@ fn test() {
 				)
 				// comment 6
 				;",
+        // oxc-project/oxc#12399
+        "array.filter(foo).pop!()",
+        "array.filter(foo)?.pop()",
     ];
 
     let _fix: Vec<(&'static str, &'static str, Option<serde_json::Value>)> = vec![

@@ -6,7 +6,7 @@ use oxc_syntax::es_target::ESTarget;
 
 use crate::ctx::Ctx;
 
-use super::{PeepholeOptimizations, State};
+use super::PeepholeOptimizations;
 
 /// Minimize Conditions
 ///
@@ -15,7 +15,6 @@ impl<'a> PeepholeOptimizations {
     pub fn minimize_conditions_exit_expression(
         &self,
         expr: &mut Expression<'a>,
-        state: &mut State,
         ctx: &mut Ctx<'a, '_>,
     ) {
         let mut changed = false;
@@ -57,7 +56,7 @@ impl<'a> PeepholeOptimizations {
             }
         }
         if changed {
-            state.changed = true;
+            ctx.state.changed = true;
         }
     }
 
@@ -527,8 +526,9 @@ mod test {
         // In the following test case, we can't remove the duplicate "alert(x);" lines since each "x"
         // refers to a different variable.
         // We only try removing duplicate statements if the AST is normalized and names are unique.
-        test_same(
+        test(
             "if (Math.random() < 0.5) { let x = 3; alert(x); } else { let x = 5; alert(x); }",
+            "if (Math.random() < 0.5) { let x = 3; alert(3); } else { let x = 5; alert(5); }",
         );
     }
 

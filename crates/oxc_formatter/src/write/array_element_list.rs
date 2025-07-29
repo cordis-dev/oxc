@@ -53,7 +53,7 @@ impl<'a> Format<'a> for ArrayElementList<'a, '_> {
                 ) {
                     filler.entry(
                         &format_once(|f| {
-                            if get_lines_before(element.span().start, f) > 1 {
+                            if get_lines_before(element.span(), f) > 1 {
                                 write!(f, empty_line())
                             } else if f
                                 .comments()
@@ -70,7 +70,11 @@ impl<'a> Format<'a> for ArrayElementList<'a, '_> {
 
                 filler.finish()
             }
-            ArrayLayout::OnePerLine => write_array_node(self.elements, f),
+            ArrayLayout::OnePerLine => write_array_node(
+                self.elements.len(),
+                self.elements.iter().map(|e| if e.is_elision() { None } else { Some(e) }),
+                f,
+            ),
         }
     }
 }

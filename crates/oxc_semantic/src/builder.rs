@@ -611,7 +611,7 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
         });
         /* cfg - must be above directives as directives are in cfg */
 
-        // Don't call `enter_node` here as `Program` is a special case - node has no `parent_id`.
+        // Don't call `enter_node` here as `Program` is a special case - node has itself as `parent_id`.
         // Inline the specific logic for `Program` here instead.
         // This avoids `Nodes::add_node` having to handle the special case.
         // We can also skip calling `self.enter_kind`, `self.record_ast_node`
@@ -1791,8 +1791,6 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
     }
 
     fn visit_simple_assignment_target(&mut self, it: &SimpleAssignmentTarget<'a>) {
-        let kind = AstKind::SimpleAssignmentTarget(self.alloc(it));
-        self.enter_node(kind);
         // Except that the read-write flags has been set in visit_assignment_expression
         // and visit_update_expression, this is always a write-only reference here.
         if !self.current_reference_flags.is_write() {
@@ -1819,7 +1817,6 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
                 self.visit_member_expression(it.to_member_expression());
             }
         }
-        self.leave_node(kind);
     }
 
     fn visit_assignment_target_property_identifier(

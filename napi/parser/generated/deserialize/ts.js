@@ -20,7 +20,7 @@ function deserialize(buffer, sourceTextInput, sourceByteLenInput) {
   sourceByteLen = sourceByteLenInput;
   sourceIsAscii = sourceText.length === sourceByteLen;
 
-  const data = deserializeRawTransferData(uint32[536870906]);
+  const data = deserializeRawTransferData(uint32[536870902]);
 
   uint8 =
     uint32 =
@@ -4151,6 +4151,14 @@ function deserializeErrorSeverity(pos) {
   }
 }
 
+function deserializeU32(pos) {
+  return uint32[pos >> 2];
+}
+
+function deserializeU8(pos) {
+  return uint8[pos];
+}
+
 function deserializeStr(pos) {
   const pos32 = pos >> 2,
     len = uint32[pos32 + 2];
@@ -4986,10 +4994,6 @@ function deserializeF64(pos) {
   return float64[pos >> 3];
 }
 
-function deserializeU8(pos) {
-  return uint8[pos];
-}
-
 function deserializeBoxJSXOpeningElement(pos) {
   return deserializeJSXOpeningElement(uint32[pos >> 2]);
 }
@@ -5365,18 +5369,14 @@ function deserializeBoxTSExternalModuleReference(pos) {
   return deserializeTSExternalModuleReference(uint32[pos >> 2]);
 }
 
-function deserializeU32(pos) {
-  return uint32[pos >> 2];
+function deserializeU64(pos) {
+  const pos32 = pos >> 2;
+  return uint32[pos32] + uint32[pos32 + 1] * 4294967296;
 }
 
 function deserializeOptionNameSpan(pos) {
   if (uint32[(pos + 8) >> 2] === 0 && uint32[(pos + 12) >> 2] === 0) return null;
   return deserializeNameSpan(pos);
-}
-
-function deserializeU64(pos) {
-  const pos32 = pos >> 2;
-  return uint32[pos32] + uint32[pos32 + 1] * 4294967296;
 }
 
 function deserializeOptionU64(pos) {

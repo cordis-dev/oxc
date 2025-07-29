@@ -11,7 +11,7 @@ use std::{
 use cow_utils::CowUtils;
 use ignore::{gitignore::Gitignore, overrides::OverrideBuilder};
 use oxc_allocator::AllocatorPool;
-use oxc_diagnostics::{DiagnosticService, GraphicalReportHandler, OxcDiagnostic};
+use oxc_diagnostics::{DiagnosticSender, DiagnosticService, GraphicalReportHandler, OxcDiagnostic};
 use oxc_linter::{
     AllowWarnDeny, Config, ConfigStore, ConfigStoreBuilder, ExternalLinter, ExternalPluginStore,
     InvalidFilterKind, LintFilter, LintOptions, LintService, LintServiceOptions, Linter, Oxlintrc,
@@ -20,7 +20,7 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use serde_json::Value;
 
 use crate::{
-    cli::{CliRunResult, LintCommand, MiscOptions, ReportUnusedDirectives, Runner, WarningOptions},
+    cli::{CliRunResult, LintCommand, MiscOptions, ReportUnusedDirectives, WarningOptions},
     output_formatter::{LintCommandInfo, OutputFormatter},
     walk::Walk,
 };
@@ -32,10 +32,8 @@ pub struct LintRunner {
     external_linter: Option<ExternalLinter>,
 }
 
-impl Runner for LintRunner {
-    type Options = LintCommand;
-
-    fn new(options: Self::Options, external_linter: Option<ExternalLinter>) -> Self {
+impl LintRunner {
+    pub(crate) fn new(options: LintCommand, external_linter: Option<ExternalLinter>) -> Self {
         Self {
             options,
             cwd: env::current_dir().expect("Failed to get current working directory"),
@@ -43,7 +41,7 @@ impl Runner for LintRunner {
         }
     }
 
-    fn run(self, stdout: &mut dyn Write) -> CliRunResult {
+    pub(crate) fn run(self, stdout: &mut dyn Write) -> CliRunResult {
         let format_str = self.options.output_options.format;
         let output_formatter = OutputFormatter::new(format_str);
 
@@ -313,9 +311,8 @@ impl Runner for LintRunner {
             }
         }
 
-        let mut diagnostic_service =
+        let (mut diagnostic_service, tx_error) =
             Self::get_diagnostic_service(&output_formatter, &warning_options, &misc_options);
-        let tx_error = diagnostic_service.sender().clone();
 
         let number_of_rules = linter.number_of_rules();
 
@@ -324,14 +321,14 @@ impl Runner for LintRunner {
         // Spawn linting in another thread so diagnostics can be printed immediately from diagnostic_service.run.
         rayon::spawn(move || {
             let mut lint_service = LintService::new(linter, allocator_pool, options);
-            let _ = lint_service.with_paths(paths);
+            lint_service.with_paths(paths);
 
             // Use `RawTransferFileSystem` if `oxlint2` feature is enabled.
             // This reads the source text into start of allocator, instead of the end.
             #[cfg(all(feature = "oxlint2", not(feature = "disable_oxlint2")))]
             {
                 use crate::raw_fs::RawTransferFileSystem;
-                let _ = lint_service.with_file_system(Box::new(RawTransferFileSystem));
+                lint_service.with_file_system(Box::new(RawTransferFileSystem));
             }
 
             lint_service.run(&tx_error);
@@ -373,11 +370,15 @@ impl LintRunner {
         reporter: &OutputFormatter,
         warning_options: &WarningOptions,
         misc_options: &MiscOptions,
-    ) -> DiagnosticService {
-        DiagnosticService::new(reporter.get_diagnostic_reporter())
-            .with_quiet(warning_options.quiet)
-            .with_silent(misc_options.silent)
-            .with_max_warnings(warning_options.max_warnings)
+    ) -> (DiagnosticService, DiagnosticSender) {
+        let (service, sender) = DiagnosticService::new(reporter.get_diagnostic_reporter());
+        (
+            service
+                .with_quiet(warning_options.quiet)
+                .with_silent(misc_options.silent)
+                .with_max_warnings(warning_options.max_warnings),
+            sender,
+        )
     }
 
     // moved into a separate function for readability, but it's only ever used
@@ -449,8 +450,15 @@ impl LintRunner {
             }
         }
         for directory in directories {
-            if let Ok(config) = Self::find_oxlint_config_in_directory(directory) {
-                nested_oxlintrc.insert(directory, config);
+            #[expect(clippy::match_same_arms)]
+            match Self::find_oxlint_config_in_directory(directory) {
+                Ok(Some(v)) => {
+                    nested_oxlintrc.insert(directory, v);
+                }
+                Ok(None) => {}
+                Err(_) => {
+                    // TODO(camc314): report this error
+                }
             }
         }
 
@@ -502,18 +510,12 @@ impl LintRunner {
     /// Looks in a directory for an oxlint config file, returns the oxlint config if it exists
     /// and returns `Err` if none exists or the file is invalid. Does not apply the default
     /// config file.
-    fn find_oxlint_config_in_directory(dir: &Path) -> Result<Oxlintrc, String> {
+    fn find_oxlint_config_in_directory(dir: &Path) -> Result<Option<Oxlintrc>, OxcDiagnostic> {
         let possible_config_path = dir.join(Self::DEFAULT_OXLINTRC);
         if possible_config_path.is_file() {
-            Oxlintrc::from_file(&possible_config_path).map_err(|e| {
-                let handler = GraphicalReportHandler::new();
-                let mut err = String::new();
-                handler.render_report(&mut err, &e).unwrap();
-                err
-            })
+            Oxlintrc::from_file(&possible_config_path).map(Some)
         } else {
-            // TODO: Better error handling here.
-            Err("No oxlint config file found".to_string())
+            Ok(None)
         }
     }
 

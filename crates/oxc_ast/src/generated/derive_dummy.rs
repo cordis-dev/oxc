@@ -1058,6 +1058,7 @@ impl<'a> Dummy<'a> for Function<'a> {
             body: Dummy::dummy(allocator),
             scope_id: Dummy::dummy(allocator),
             pure: Dummy::dummy(allocator),
+            pife: Dummy::dummy(allocator),
         }
     }
 }
@@ -1140,6 +1141,7 @@ impl<'a> Dummy<'a> for ArrowFunctionExpression<'a> {
             body: Dummy::dummy(allocator),
             scope_id: Dummy::dummy(allocator),
             pure: Dummy::dummy(allocator),
+            pife: Dummy::dummy(allocator),
         }
     }
 }

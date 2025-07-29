@@ -188,7 +188,6 @@ impl Gen for Statement<'_> {
 impl Gen for ExpressionStatement<'_> {
     fn r#gen(&self, p: &mut Codegen, _ctx: Context) {
         p.print_comments_at(self.span.start);
-        p.add_source_mapping(self.span);
         p.print_indent();
         p.start_of_stmt = p.code_len();
         p.print_expression(&self.expression);
@@ -688,7 +687,8 @@ impl Gen for VariableDeclarator<'_> {
 impl Gen for Function<'_> {
     fn r#gen(&self, p: &mut Codegen, ctx: Context) {
         let n = p.code_len();
-        let wrap = self.is_expression() && (p.start_of_stmt == n || p.start_of_default_export == n);
+        let wrap = self.is_expression()
+            && ((p.start_of_stmt == n || p.start_of_default_export == n) || self.pife);
         p.wrap(wrap, |p| {
             p.print_space_before_identifier();
             p.add_source_mapping(self.span);
@@ -1388,7 +1388,7 @@ impl GenExpr for CallExpression<'_> {
         let is_export_default = p.start_of_default_export == p.code_len();
         let mut wrap = precedence >= Precedence::New || ctx.intersects(Context::FORBID_CALL);
         let pure = self.pure && p.options.print_annotation_comment();
-        if precedence >= Precedence::Postfix && pure {
+        if !wrap && pure && precedence >= Precedence::Postfix {
             wrap = true;
         }
 
@@ -1401,7 +1401,6 @@ impl GenExpr for CallExpression<'_> {
             } else if is_statement {
                 p.start_of_stmt = p.code_len();
             }
-            p.add_source_mapping(self.span);
             self.callee.print_expr(p, Precedence::Postfix, Context::empty());
             if self.optional {
                 p.print_str("?.");
@@ -1635,7 +1634,7 @@ impl Gen for PropertyKey<'_> {
 
 impl GenExpr for ArrowFunctionExpression<'_> {
     fn gen_expr(&self, p: &mut Codegen, precedence: Precedence, ctx: Context) {
-        p.wrap(precedence >= Precedence::Assign, |p| {
+        p.wrap(precedence >= Precedence::Assign || self.pife, |p| {
             if self.r#async {
                 p.print_space_before_identifier();
                 p.add_source_mapping(self.span);
@@ -1727,10 +1726,12 @@ impl GenExpr for UnaryExpression<'_> {
             let operator = self.operator.as_str();
             if self.operator.is_keyword() {
                 p.print_space_before_identifier();
+                p.add_source_mapping(self.span);
                 p.print_str(operator);
                 p.print_soft_space();
             } else {
                 p.print_space_before_operator(self.operator.into());
+                p.add_source_mapping(self.span);
                 p.print_str(operator);
                 p.prev_op = Some(self.operator.into());
                 p.prev_op_end = p.code().len();
@@ -2195,9 +2196,16 @@ impl GenExpr for TSAsExpression<'_> {
 impl GenExpr for TSSatisfiesExpression<'_> {
     fn gen_expr(&self, p: &mut Codegen, precedence: Precedence, ctx: Context) {
         p.print_ascii_byte(b'(');
-        p.print_ascii_byte(b'(');
-        self.expression.print_expr(p, precedence, Context::default());
-        p.print_ascii_byte(b')');
+        let should_wrap =
+            if let Expression::FunctionExpression(func) = &self.expression.without_parentheses() {
+                // pife is handled on Function side
+                !func.pife
+            } else {
+                true
+            };
+        p.wrap(should_wrap, |p| {
+            self.expression.print_expr(p, precedence, Context::default());
+        });
         p.print_str(" satisfies ");
         self.type_annotation.print(p, ctx);
         p.print_ascii_byte(b')');

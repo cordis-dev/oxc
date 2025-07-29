@@ -80,16 +80,78 @@ mod pool_fixed_size;
     target_endian = "little"
 ))]
 use pool_fixed_size as pool;
+// Import here so `generated/assert_layouts.rs` can access it.
+// Add `debug_assertions` here because `assert_layouts` is only loaded in debug mode,
+// so this is required to avoid unused vars lint warning in release mode.
+#[cfg(all(
+    debug_assertions,
+    feature = "fixed_size",
+    not(feature = "disable_fixed_size"),
+    target_pointer_width = "64",
+    target_endian = "little"
+))]
+use pool_fixed_size::FixedSizeAllocatorMetadata;
+// Export so can be used in `napi/oxlint2`
+#[cfg(all(
+    feature = "fixed_size",
+    not(feature = "disable_fixed_size"),
+    target_pointer_width = "64",
+    target_endian = "little"
+))]
+pub use pool_fixed_size::free_fixed_size_allocator;
 
 pub use pool::{AllocatorGuard, AllocatorPool};
 
+// Dummy implementations of interfaces from `pool_fixed_size`, just to stop clippy complaining.
+// Seems to be necessary due to feature unification.
+#[cfg(not(all(
+    feature = "fixed_size",
+    not(feature = "disable_fixed_size"),
+    target_pointer_width = "64",
+    target_endian = "little"
+)))]
+#[allow(missing_docs, clippy::missing_safety_doc, clippy::unused_self, clippy::allow_attributes)]
+mod dummies {
+    use std::{ptr::NonNull, sync::atomic::AtomicBool};
+
+    use super::Allocator;
+
+    #[doc(hidden)]
+    pub struct FixedSizeAllocatorMetadata {
+        pub id: u32,
+        pub alloc_ptr: NonNull<u8>,
+        pub is_double_owned: AtomicBool,
+    }
+
+    #[doc(hidden)]
+    pub unsafe fn free_fixed_size_allocator(_metadata_ptr: NonNull<FixedSizeAllocatorMetadata>) {
+        unreachable!();
+    }
+
+    #[doc(hidden)]
+    impl Allocator {
+        pub unsafe fn fixed_size_metadata_ptr(&self) -> NonNull<FixedSizeAllocatorMetadata> {
+            unreachable!();
+        }
+    }
+}
+#[cfg(not(all(
+    feature = "fixed_size",
+    not(feature = "disable_fixed_size"),
+    target_pointer_width = "64",
+    target_endian = "little"
+)))]
+pub use dummies::*;
+
+#[cfg(all(
+    feature = "fixed_size",
+    not(feature = "disable_fixed_size"),
+    target_pointer_width = "64",
+    target_endian = "little"
+))]
 mod generated {
-    #[cfg(all(
-        feature = "fixed_size",
-        not(feature = "disable_fixed_size"),
-        target_pointer_width = "64",
-        target_endian = "little"
-    ))]
+    #[cfg(debug_assertions)]
+    pub mod assert_layouts;
     pub mod fixed_size_constants;
 }
 #[cfg(all(
