@@ -476,9 +476,6 @@ impl<'a> Visit<'a> for ExplicitTypesChecker<'a, '_> {
             AstKind::ArrowFunctionExpression(arrow) => self.fns.push(Fn::Arrow(arrow)),
             AstKind::Class(_) => self.fns.push(Fn::None),
             AstKind::ReturnStatement(ret) => {
-                // returns outside of functions are semantic errors
-                let src: &str = self.ctx.source_text();
-                debug_assert!(!self.fns.is_empty(), "{src}");
                 let Some(f) = self.fns.last() else {
                     return;
                 };
@@ -540,6 +537,14 @@ impl<'a> Visit<'a> for ExplicitTypesChecker<'a, '_> {
                 self.target_symbol = None;
             }
         }
+    }
+
+    fn visit_call_expression(&mut self, _it: &CallExpression<'a>) {
+        // ignore
+    }
+
+    fn visit_jsx_element(&mut self, _it: &JSXElement<'a>) {
+        // ignore
     }
 
     fn visit_class(&mut self, class: &Class<'a>) {
@@ -1471,6 +1476,16 @@ mod test {
             ",
                 Some(json!([{ "allowOverloadFunctions": true, }])),
             ),
+            ("React.useEffect(() => { test() }, []);", None),
+            (
+                "const ex = () => (args: { fn: (arg: string) => void }) => args; export const Test = ex()({ fn: () => {} });",
+                None,
+            ),
+            (
+                "function ErrorTrackingRules(): JSX.Element { return (<BindLogic><DndContext onDragEnd={({ active, over }) => { /**/ }}></DndContext></BindLogic>); }; export default ErrorTrackingRules;",
+                None,
+            ),
+            ("export namespace B{return}", None),
         ];
 
         let fail = vec![

@@ -909,7 +909,10 @@ impl Gen for ImportDeclaration<'_> {
 impl Gen for WithClause<'_> {
     fn r#gen(&self, p: &mut Codegen, ctx: Context) {
         p.add_source_mapping(self.span);
-        self.attributes_keyword.print(p, ctx);
+        p.print_str(match self.keyword {
+            WithClauseKeyword::With => "with",
+            WithClauseKeyword::Assert => "assert",
+        });
         p.print_soft_space();
         p.add_source_mapping(self.span);
         p.print_ascii_byte(b'{');
@@ -3029,17 +3032,28 @@ impl Gen for TSTupleType<'_> {
     }
 }
 
+fn parenthesize_check_type_of_conditional_type(ty: &TSType<'_>) -> bool {
+    matches!(
+        ty,
+        TSType::TSFunctionType(_) | TSType::TSConstructorType(_) | TSType::TSConditionalType(_)
+    )
+}
+
 impl Gen for TSUnionType<'_> {
     fn r#gen(&self, p: &mut Codegen, ctx: Context) {
         let Some((first, rest)) = self.types.split_first() else {
             return;
         };
-        first.print(p, ctx);
+        p.wrap(parenthesize_check_type_of_conditional_type(first), |p| {
+            first.print(p, ctx);
+        });
         for item in rest {
             p.print_soft_space();
             p.print_str("|");
             p.print_soft_space();
-            item.print(p, ctx);
+            p.wrap(parenthesize_check_type_of_conditional_type(item), |p| {
+                item.print(p, ctx);
+            });
         }
     }
 }
@@ -3485,6 +3499,27 @@ impl Gen for TSImportType<'_> {
         if let Some(type_parameters) = &self.type_arguments {
             type_parameters.print(p, ctx);
         }
+    }
+}
+
+impl Gen for TSImportTypeQualifier<'_> {
+    fn r#gen(&self, p: &mut Codegen, ctx: Context) {
+        match self {
+            TSImportTypeQualifier::Identifier(ident) => {
+                p.print_str(ident.name.as_str());
+            }
+            TSImportTypeQualifier::QualifiedName(qualified) => {
+                qualified.print(p, ctx);
+            }
+        }
+    }
+}
+
+impl Gen for TSImportTypeQualifiedName<'_> {
+    fn r#gen(&self, p: &mut Codegen, ctx: Context) {
+        self.left.print(p, ctx);
+        p.print_ascii_byte(b'.');
+        p.print_str(self.right.name.as_str());
     }
 }
 

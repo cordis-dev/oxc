@@ -490,7 +490,6 @@ pub fn check_function_declaration<'a>(
 // It is a Syntax Error if IsLabelledFunction(Statement) is true.
 pub fn check_function_declaration_in_labeled_statement<'a>(
     body: &Statement<'a>,
-
     ctx: &SemanticBuilder<'a>,
 ) {
     if let Statement::FunctionDeclaration(decl) = body {
@@ -509,7 +508,6 @@ pub fn check_function_declaration_in_labeled_statement<'a>(
                     | AstKind::DoWhileStatement(_)
                     | AstKind::WithStatement(_)
                     | AstKind::IfStatement(_) => break,
-
                     _ => return,
                 }
             }
@@ -767,7 +765,7 @@ pub fn check_labeled_statement(stmt: &LabeledStatement, ctx: &SemanticBuilder<'_
     for node_kind in ctx.nodes.ancestor_kinds(ctx.current_node_id) {
         match node_kind {
             // label cannot cross boundary on function or static block
-            AstKind::Function(_) | AstKind::StaticBlock(_) | AstKind::Program(_) => break,
+            AstKind::Function(_) | AstKind::StaticBlock(_) => break,
             // check label name redeclaration
             AstKind::LabeledStatement(label_stmt) if stmt.label.name == label_stmt.label.name => {
                 return ctx.error(label_redeclaration(

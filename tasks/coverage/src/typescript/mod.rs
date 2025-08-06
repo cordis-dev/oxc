@@ -62,6 +62,12 @@ impl<T: Case> Suite<T> for TypeScriptSuite<T> {
             // These tests just check `let` as variable name under `target:es6`
             "downlevelLetConst6.ts",
             "VariableDeclaration6_es6.ts",
+            // TS2339 should be reported for `.js` file by `checkJs: true`. REPL shows error but here isn't...
+            "privateIdentifierExpando.ts",
+            // We report error but this case does not, since `.js` file with `checkJs: false`
+            "plainJSRedeclare3.ts",
+            // We do not ignore or exclude BOMs
+            "bom-utf16be.ts",
         ]
         .iter()
         .any(|p| path.to_string_lossy().contains(p));
@@ -162,6 +168,90 @@ static NOT_SUPPORTED_ERROR_CODES: phf::Set<&'static str> = phf::phf_set![
     "2320", // Interface 'Z' cannot simultaneously extend types 'X' and 'Y'.
     "2322", // Type 'number' is not assignable to type 'string'.
     "2328", // Types of parameters 'f' and 'f' are incompatible.
+    "2340", // Only public and protected methods of the base class are accessible via the 'super' keyword.
+    "2341", // Property 'sfn' is private and only accessible within class 'clodule<T>'.
+    "2343", // This syntax requires an imported helper named '__esDecorate' which does not exist in 'tslib'.
+    "2344", // Type 'number' does not satisfy the constraint 'string'.
+    "2345", // Argument of type '(string | number | boolean)[]' is not assignable to parameter of type '[string, number, boolean]'.
+    "2347", // Untyped function calls may not accept type arguments.
+    "2348", // Value of type 'new () => string' is not callable. Did you mean to include 'new'?
+    "2349", // This expression is not callable.
+    "2350", // Only a void function can be called with the 'new' keyword.
+    "2351", // This expression is not constructable.
+    "2352", // Conversion of type 'string' to type 'number' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+    "2353", // Object literal may only specify known properties, and 'trueness' does not exist in type 'Action'.
+    "2354", // This syntax requires an imported helper but module 'tslib' cannot be found.
+    "2355", // A function whose declared type is neither 'undefined', 'void', nor 'any' must return a value.
+    "2358", // The left-hand side of an 'instanceof' expression must be of type 'any', an object type or a type parameter.
+    "2359", // The right-hand side of an 'instanceof' expression must be either of type 'any', a class, function, or other type assignable to the 'Function' interface type, or an object type with a 'Symbol.hasInstance' method.
+    "2362", // The left-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+    "2363", // The right-hand side of an arithmetic operation must be of type 'any', 'number', 'bigint' or an enum type.
+    "2365", // Operator '+' cannot be applied to types 'boolean' and 'boolean'.
+    "2366", // Function lacks ending return statement and return type does not include 'undefined'.
+    "2367", // This comparison appears to be unintentional because the types '0' and '1' have no overlap.
+    "2370", // A rest parameter must be of an array type.
+    "2375", // Type '{ value: undefined; }' is not assignable to type 'A' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    "2403", // Subsequent variable declarations must have the same type.  Variable 'x' must be of type 'any', but here has type 'any[]'.
+    "2407", // The right-hand side of a 'for...in' statement must be of type 'any', an object type or a type parameter, but here has type 'Color.Blue'.
+    "2409", // Return type of constructor signature must be assignable to the instance type of the class.
+    "2411", // Property 'y' of type 'string' is not assignable to 'string' index type 'number'.
+    "2412", // Type 'undefined' is not assignable to type 'string' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the type of the target.
+    "2413", // '`a${string}a`' index type '"c"' is not assignable to '`${string}a`' index type '"b"'.
+    "2415", // Class 'L' incorrectly extends base class 'G'.
+    "2416", // Property 'num' in type 'WrongTypePropertyImpl' is not assignable to the same property in base type 'WrongTypeProperty'.
+    "2417", // Class static side 'typeof Conestoga' incorrectly extends base class static side 'typeof Wagon'.
+    "2418", // Type of computed property's value is '"str"', which is not assignable to type '"sym"'.
+    "2420", // Class 'C' incorrectly implements interface 'I'.
+    "2422", // A class can only implement an object type or intersection of object types with statically known members.
+    "2423", // Class 'A' defines instance member function 'm', but extended class 'B' defines it as instance member accessor.
+    "2425", // Class 'Good' defines instance member property 'f', but extended class 'Baad' defines it as instance member function.
+    "2426", // Class 'Base' defines instance member accessor 'x', but extended class 'Derived' defines it as instance member function.
+    "2430", // Interface 'Bar' incorrectly extends interface 'Foo'.
+    "2433", // A namespace declaration cannot be in a different file from a class or function with which it is merged.
+    "2445", // Property 'p' is protected and only accessible within class 'C3' and its subclasses.
+    "2446", // Property 'x' is protected and only accessible through an instance of class 'Derived1'. This is an instance of class 'Base'.
+    "2447", // The '&' operator is not allowed for boolean types. Consider using '&&' instead.
+    "2448", // Block-scoped variable 'v' used before its declaration.
+    "2449", // Class 'A' used before its declaration.
+    "2450", // Enum 'E' used before its declaration.
+    "2454", // Variable 'getValue' is used before being assigned.
+    "2456", // Type alias 'A' circularly references itself.
+    "2458", // An AMD module cannot have multiple name assignments.
+    "2459", // Module '"./a"' declares 'bar' locally, but it is not exported.
+    "2460", // Module '"./a"' declares 'bar' locally, but it is exported as 'baz'.
+    "2461", // Type 'number' is not an array type.
+    "2467", // A computed property name cannot reference a type parameter from its containing type.
+    "2468", // Cannot find global value 'Promise'.
+    "2469", // The '+' operator cannot be applied to type 'symbol'.
+    "2488", // Type '() => any' must have a '[Symbol.iterator]()' method that returns an iterator.
+    "2490", // The type returned by the 'next()' method of an iterator must have a 'value' property.
+    "2493", // Tuple type '[string, number]' of length '2' has no element at index '2'.
+    "2495", // Type 'MyStringIterator' is not an array type or a string type.
+    "2497", // This module can only be referenced with ECMAScript imports/exports by turning on the 'esModuleInterop' flag and referencing its default export.
+    "2498", // Module '"interface"' uses 'export =' and cannot be used with 'export *'.
+    "2502", // 'foo' is referenced directly or indirectly in its own type annotation.
+    "2503", // Cannot find namespace 'no'.
+    "2504", // Type '{ [Symbol.asyncIterator](_: number): AsyncGenerator<number, void, unknown>; }' must have a '[Symbol.asyncIterator]()' method that returns an async iterator.
+    "2506", // 'C' is referenced directly or indirectly in its own base expression.
+    "2507", // Type 'TFunction' is not a constructor function type.
+    "2508", // No base constructor has the specified number of type arguments.
+    "2509", // Base constructor return type 'never' is not an object type or intersection of object types with statically known members.
+    "2510", // Base constructors must all have the same return type.
+    "2511", // Cannot create an instance of an abstract class.
+    "2512", // Overload signatures must all be abstract or non-abstract.
+    "2513", // Abstract method 'foo' in class 'B' cannot be accessed via super expression.
+    "2514", // A tuple type cannot be indexed with a negative value.
+    "2515", // Non-abstract class 'C' does not implement inherited abstract member next from class 'Iterator<number, undefined, unknown>'.
+    "2516", // All declarations of an abstract method must be consecutive.
+    "2527", // The inferred type of 'A1' references an inaccessible 'unique symbol' type. A type annotation is necessary.
+    "2531", // Object is possibly 'null'.
+    "2532", // Object is possibly 'undefined'.
+    "2533", // Object is possibly 'null' or 'undefined'.
+    "2534", // A function returning 'never' cannot have a reachable end point.
+    "2536", // Type '"0.0"' cannot be used to index type 'T'.
+    "2537", // Type '{ bar: string; }' has no matching index signature for type 'string'.
+    "2538", // Type '[]' cannot be used as an index type.
+    "2540", // Cannot assign to 'ro' because it is a read-only property.
     "2665", // Invalid module name in augmentation. Module 'foo' resolves to an untyped module at '/node_modules/foo/index.js', which cannot be augmented.
     "4023", // Exported variable 'foo' has or is using name 'Foo' from external module "type" but cannot be named.
     "4025", // Exported variable 'b' has or is using private name 'a'.

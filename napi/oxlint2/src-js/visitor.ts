@@ -72,11 +72,12 @@
 // for objects created by user code in visitors. If ephemeral user-created objects all fit in new space,
 // it will avoid full GC runs, which should greatly improve performance.
 
-import type { CompiledVisitorEntry, EnterExit, Node, VisitFn, Visitor } from './types.ts';
-
 // TODO(camc314): we need to generate `.d.ts` file for this module.
 // @ts-expect-error
 import { LEAF_NODE_TYPES_COUNT, NODE_TYPE_IDS_MAP, NODE_TYPES_COUNT } from '../dist/parser/generated/lazy/types.cjs';
+import { assertIs } from './utils.js';
+
+import type { CompiledVisitorEntry, EnterExit, Node, VisitFn, Visitor } from './types.ts';
 
 const { isArray } = Array;
 
@@ -87,6 +88,7 @@ type CompilingNonLeafVisitorEntry = {
   enter: VisitFn | VisitFn[] | null;
   exit: VisitFn | VisitFn[] | null;
 } | null;
+type CompilingVisitor = Array<CompilingLeafVisitorEntry | CompilingNonLeafVisitorEntry>;
 
 // Compiled visitor used for visiting each file.
 // Same array is reused for each file.
@@ -220,11 +222,11 @@ export function addVisitorToCompiled(visitor: Visitor): void {
     const typeId = NODE_TYPE_IDS_MAP.get(name);
     if (typeId === void 0) throw new Error(`Unknown node type '${name}' in visitor object`);
 
-    const existing = compiledVisitor[typeId] as CompilingNonLeafVisitorEntry;
+    const existing = (compiledVisitor as CompilingVisitor)[typeId];
     if (typeId < LEAF_NODE_TYPES_COUNT) {
-      // Leaf node - store just 1 function, not enter+exit pair.
-      // Note: `existing` here is actually `CompilingLeafVisitorEntry`, but can't tell TS compiler that
-      // without adding some code which would add (small) runtime cost.
+      // Leaf node - store just 1 function, not enter+exit pair
+      assertIs<CompilingLeafVisitorEntry>(existing);
+
       if (existing === null) {
         compiledVisitor[typeId] = visitFn;
       } else if (isArray(existing)) {
@@ -240,13 +242,15 @@ export function addVisitorToCompiled(visitor: Visitor): void {
         }
       } else {
         // Same as above, enter visitor is put to front of list to make sure enter is called before exit
-        (compiledVisitor[typeId] as CompilingLeafVisitorEntry) = isExit
-          ? createVisitFnArray(existing as unknown as VisitFn, visitFn)
-          : createVisitFnArray(visitFn, existing as unknown as VisitFn);
+        (compiledVisitor as CompilingVisitor)[typeId] = isExit
+          ? createVisitFnArray(existing, visitFn)
+          : createVisitFnArray(visitFn, existing);
         mergedLeafVisitorTypeIds.push(typeId);
       }
     } else {
       // Not leaf node - store enter+exit pair
+      assertIs<CompilingNonLeafVisitorEntry>(existing);
+
       if (existing === null) {
         const enterExit = compiledVisitor[typeId] = getEnterExitObject();
         if (isExit) {

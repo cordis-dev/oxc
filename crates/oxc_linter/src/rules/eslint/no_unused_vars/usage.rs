@@ -416,7 +416,8 @@ impl<'a> Symbol<'_, 'a> {
                 // used by others
                 AstKind::VariableDeclarator(_)
                 | AstKind::JSXExpressionContainer(_)
-                | AstKind::Argument(_) => {
+                | AstKind::Argument(_)
+                | AstKind::PropertyDefinition(_) => {
                     // definitely used, short-circuit
                     return false;
                 }
@@ -651,6 +652,7 @@ impl<'a> Symbol<'_, 'a> {
                         AstKind::CallExpression(_)
                             | AstKind::AwaitExpression(_)
                             | AstKind::YieldExpression(_)
+                            | AstKind::ChainExpression(_)
                     ) {
                         continue;
                     }

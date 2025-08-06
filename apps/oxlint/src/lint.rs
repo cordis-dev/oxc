@@ -276,7 +276,19 @@ impl LintRunner {
             || nested_configs.values().any(|config| config.plugins().has_import());
         let mut options = LintServiceOptions::new(self.cwd).with_cross_module(use_cross_module);
 
-        let lint_config = config_builder.build();
+        let lint_config = match config_builder.build(&external_plugin_store) {
+            Ok(config) => config,
+            Err(e) => {
+                print_and_flush_stdout(
+                    stdout,
+                    &format!(
+                        "Failed to build configuration.\n{}\n",
+                        render_report(&handler, &OxcDiagnostic::error(e.to_string()))
+                    ),
+                );
+                return CliRunResult::InvalidOptionConfig;
+            }
+        };
 
         let report_unused_directives = match inline_config_options.report_unused_directives {
             ReportUnusedDirectives::WithoutSeverity(true) => Some(AllowWarnDeny::Warn),
@@ -445,7 +457,10 @@ impl LintRunner {
             while let Some(dir) = current {
                 // NOTE: Initial benchmarking showed that it was faster to iterate over the directories twice
                 // rather than constructing the configs in one iteration. It's worth re-benchmarking that though.
-                directories.insert(dir);
+                let inserted = directories.insert(dir);
+                if !inserted {
+                    break;
+                }
                 current = dir.parent();
             }
         }
@@ -486,7 +501,19 @@ impl LintRunner {
             }
             .with_filters(filters);
 
-            let config = builder.build();
+            let config = match builder.build(external_plugin_store) {
+                Ok(config) => config,
+                Err(e) => {
+                    print_and_flush_stdout(
+                        stdout,
+                        &format!(
+                            "Failed to build configuration.\n{}\n",
+                            render_report(handler, &OxcDiagnostic::error(e.to_string()))
+                        ),
+                    );
+                    return Err(CliRunResult::InvalidOptionConfig);
+                }
+            };
             nested_configs.insert(dir.to_path_buf(), config);
         }
 
@@ -860,29 +887,12 @@ mod test {
 
     #[test]
     fn test_fix() {
-        use std::fs;
-        let file = "fixtures/linter/fix.js";
-        let args = &["--fix", file];
-        let content_original = fs::read_to_string(file).unwrap();
-        #[expect(clippy::disallowed_methods)]
-        let content = content_original.replace("\r\n", "\n");
-        assert_eq!(&content, "debugger\n");
-
-        // Apply fix to the file.
-        Tester::new().test(args);
-        #[expect(clippy::disallowed_methods)]
-        let new_content = fs::read_to_string(file).unwrap().replace("\r\n", "\n");
-        assert_eq!(new_content, "\n");
-
-        // File should not be modified if no fix is applied.
-        let modified_before: std::time::SystemTime =
-            fs::metadata(file).unwrap().modified().unwrap();
-        Tester::new().test(args);
-        let modified_after = fs::metadata(file).unwrap().modified().unwrap();
-        assert_eq!(modified_before, modified_after);
-
-        // Write the file back.
-        fs::write(file, content_original).unwrap();
+        Tester::test_fix("fixtures/fix_argument/fix.js", "debugger\n", "\n");
+        Tester::test_fix(
+            "fixtures/fix_argument/fix.vue",
+            "<script>debugger;</script>\n<script>debugger;</script>\n",
+            "<script></script>\n<script></script>\n",
+        );
     }
 
     #[test]

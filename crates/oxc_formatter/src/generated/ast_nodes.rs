@@ -196,6 +196,7 @@ pub enum AstNodes<'a> {
     TSInferType(&'a AstNode<'a, TSInferType<'a>>),
     TSTypeQuery(&'a AstNode<'a, TSTypeQuery<'a>>),
     TSImportType(&'a AstNode<'a, TSImportType<'a>>),
+    TSImportTypeQualifiedName(&'a AstNode<'a, TSImportTypeQualifiedName<'a>>),
     TSFunctionType(&'a AstNode<'a, TSFunctionType<'a>>),
     TSConstructorType(&'a AstNode<'a, TSConstructorType<'a>>),
     TSMappedType(&'a AstNode<'a, TSMappedType<'a>>),
@@ -386,6 +387,7 @@ pub enum SiblingNode<'a> {
     TSInferType(&'a TSInferType<'a>),
     TSTypeQuery(&'a TSTypeQuery<'a>),
     TSImportType(&'a TSImportType<'a>),
+    TSImportTypeQualifiedName(&'a TSImportTypeQualifiedName<'a>),
     TSFunctionType(&'a TSFunctionType<'a>),
     TSConstructorType(&'a TSConstructorType<'a>),
     TSMappedType(&'a TSMappedType<'a>),
@@ -1419,6 +1421,12 @@ impl<'a> From<&'a TSImportType<'a>> for SiblingNode<'a> {
     }
 }
 
+impl<'a> From<&'a TSImportTypeQualifiedName<'a>> for SiblingNode<'a> {
+    fn from(node: &'a TSImportTypeQualifiedName<'a>) -> Self {
+        SiblingNode::TSImportTypeQualifiedName(node)
+    }
+}
+
 impl<'a> From<&'a TSFunctionType<'a>> for SiblingNode<'a> {
     fn from(node: &'a TSFunctionType<'a>) -> Self {
         SiblingNode::TSFunctionType(node)
@@ -2106,6 +2114,17 @@ impl<'a> From<&'a TSTypeQueryExprName<'a>> for SiblingNode<'a> {
     }
 }
 
+impl<'a> From<&'a TSImportTypeQualifier<'a>> for SiblingNode<'a> {
+    fn from(node: &'a TSImportTypeQualifier<'a>) -> Self {
+        match node {
+            TSImportTypeQualifier::Identifier(inner) => SiblingNode::IdentifierName(inner),
+            TSImportTypeQualifier::QualifiedName(inner) => {
+                SiblingNode::TSImportTypeQualifiedName(inner)
+            }
+        }
+    }
+}
+
 impl<'a> From<&'a TSModuleReference<'a>> for SiblingNode<'a> {
     fn from(node: &'a TSModuleReference<'a>) -> Self {
         match node {
@@ -2289,6 +2308,7 @@ impl SiblingNode<'_> {
             Self::TSInferType(n) => n.span(),
             Self::TSTypeQuery(n) => n.span(),
             Self::TSImportType(n) => n.span(),
+            Self::TSImportTypeQualifiedName(n) => n.span(),
             Self::TSFunctionType(n) => n.span(),
             Self::TSConstructorType(n) => n.span(),
             Self::TSMappedType(n) => n.span(),
@@ -2483,6 +2503,7 @@ impl<'a> AstNodes<'a> {
             Self::TSInferType(n) => n.span(),
             Self::TSTypeQuery(n) => n.span(),
             Self::TSImportType(n) => n.span(),
+            Self::TSImportTypeQualifiedName(n) => n.span(),
             Self::TSFunctionType(n) => n.span(),
             Self::TSConstructorType(n) => n.span(),
             Self::TSMappedType(n) => n.span(),
@@ -2675,6 +2696,7 @@ impl<'a> AstNodes<'a> {
             Self::TSInferType(n) => n.parent,
             Self::TSTypeQuery(n) => n.parent,
             Self::TSImportType(n) => n.parent,
+            Self::TSImportTypeQualifiedName(n) => n.parent,
             Self::TSFunctionType(n) => n.parent,
             Self::TSConstructorType(n) => n.parent,
             Self::TSMappedType(n) => n.parent,
@@ -2867,6 +2889,7 @@ impl<'a> AstNodes<'a> {
             Self::TSInferType(n) => SiblingNode::from(n.inner),
             Self::TSTypeQuery(n) => SiblingNode::from(n.inner),
             Self::TSImportType(n) => SiblingNode::from(n.inner),
+            Self::TSImportTypeQualifiedName(n) => SiblingNode::from(n.inner),
             Self::TSFunctionType(n) => SiblingNode::from(n.inner),
             Self::TSConstructorType(n) => SiblingNode::from(n.inner),
             Self::TSMappedType(n) => SiblingNode::from(n.inner),
@@ -3059,6 +3082,7 @@ impl<'a> AstNodes<'a> {
             Self::TSInferType(_) => "TSInferType",
             Self::TSTypeQuery(_) => "TSTypeQuery",
             Self::TSImportType(_) => "TSImportType",
+            Self::TSImportTypeQualifiedName(_) => "TSImportTypeQualifiedName",
             Self::TSFunctionType(_) => "TSFunctionType",
             Self::TSConstructorType(_) => "TSConstructorType",
             Self::TSMappedType(_) => "TSMappedType",
@@ -5030,7 +5054,7 @@ impl<'a> AstNode<'a, ArrayAssignmentTarget<'a>> {
     #[inline]
     pub fn elements(&self) -> &AstNode<'a, Vec<'a, Option<AssignmentTargetMaybeDefault<'a>>>> {
         let following_node =
-            self.inner.rest.as_ref().map(SiblingNode::from).or(self.following_node);
+            self.inner.rest.as_deref().map(SiblingNode::from).or(self.following_node);
         self.allocator.alloc(AstNode {
             inner: &self.inner.elements,
             allocator: self.allocator,
@@ -5044,7 +5068,7 @@ impl<'a> AstNode<'a, ArrayAssignmentTarget<'a>> {
         let following_node = self.following_node;
         self.allocator
             .alloc(self.inner.rest.as_ref().map(|inner| AstNode {
-                inner,
+                inner: inner.as_ref(),
                 allocator: self.allocator,
                 parent: self.allocator.alloc(AstNodes::ArrayAssignmentTarget(transmute_self(self))),
                 following_node,
@@ -5077,7 +5101,7 @@ impl<'a> AstNode<'a, ObjectAssignmentTarget<'a>> {
     #[inline]
     pub fn properties(&self) -> &AstNode<'a, Vec<'a, AssignmentTargetProperty<'a>>> {
         let following_node =
-            self.inner.rest.as_ref().map(SiblingNode::from).or(self.following_node);
+            self.inner.rest.as_deref().map(SiblingNode::from).or(self.following_node);
         self.allocator.alloc(AstNode {
             inner: &self.inner.properties,
             allocator: self.allocator,
@@ -5091,7 +5115,7 @@ impl<'a> AstNode<'a, ObjectAssignmentTarget<'a>> {
         let following_node = self.following_node;
         self.allocator
             .alloc(self.inner.rest.as_ref().map(|inner| AstNode {
-                inner,
+                inner: inner.as_ref(),
                 allocator: self.allocator,
                 parent:
                     self.allocator.alloc(AstNodes::ObjectAssignmentTarget(transmute_self(self))),
@@ -6108,7 +6132,7 @@ impl<'a> AstNode<'a, IfStatement<'a>> {
 
     #[inline]
     pub fn alternate(&self) -> Option<&AstNode<'a, Statement<'a>>> {
-        let following_node = self.following_node;
+        let following_node = None;
         self.allocator
             .alloc(self.inner.alternate.as_ref().map(|inner| AstNode {
                 inner,
@@ -6571,7 +6595,7 @@ impl<'a> GetSpan for AstNode<'a, BreakStatement<'a>> {
 impl<'a> AstNode<'a, ReturnStatement<'a>> {
     #[inline]
     pub fn argument(&self) -> Option<&AstNode<'a, Expression<'a>>> {
-        let following_node = self.following_node;
+        let following_node = None;
         self.allocator
             .alloc(self.inner.argument.as_ref().map(|inner| AstNode {
                 inner,
@@ -6798,7 +6822,7 @@ impl<'a> GetSpan for AstNode<'a, LabeledStatement<'a>> {
 impl<'a> AstNode<'a, ThrowStatement<'a>> {
     #[inline]
     pub fn argument(&self) -> &AstNode<'a, Expression<'a>> {
-        let following_node = self.following_node;
+        let following_node = None;
         self.allocator.alloc(AstNode {
             inner: &self.inner.argument,
             allocator: self.allocator,
@@ -8737,21 +8761,8 @@ impl<'a> GetSpan for AstNode<'a, ImportNamespaceSpecifier<'a>> {
 
 impl<'a> AstNode<'a, WithClause<'a>> {
     #[inline]
-    pub fn attributes_keyword(&self) -> &AstNode<'a, IdentifierName<'a>> {
-        let following_node = self
-            .inner
-            .with_entries
-            .first()
-            .as_ref()
-            .copied()
-            .map(SiblingNode::from)
-            .or(self.following_node);
-        self.allocator.alloc(AstNode {
-            inner: &self.inner.attributes_keyword,
-            allocator: self.allocator,
-            parent: self.allocator.alloc(AstNodes::WithClause(transmute_self(self))),
-            following_node,
-        })
+    pub fn keyword(&self) -> WithClauseKeyword {
+        self.inner.keyword
     }
 
     #[inline]
@@ -8960,17 +8971,6 @@ impl<'a> GetSpan for AstNode<'a, ExportNamedDeclaration<'a>> {
 }
 
 impl<'a> AstNode<'a, ExportDefaultDeclaration<'a>> {
-    #[inline]
-    pub fn exported(&self) -> &AstNode<'a, ModuleExportName<'a>> {
-        let following_node = Some(SiblingNode::from(&self.inner.declaration));
-        self.allocator.alloc(AstNode {
-            inner: &self.inner.exported,
-            allocator: self.allocator,
-            parent: self.allocator.alloc(AstNodes::ExportDefaultDeclaration(transmute_self(self))),
-            following_node,
-        })
-    }
-
     #[inline]
     pub fn declaration(&self) -> &AstNode<'a, ExportDefaultDeclarationKind<'a>> {
         let following_node = self.following_node;
@@ -13241,7 +13241,7 @@ impl<'a> AstNode<'a, TSImportType<'a>> {
     }
 
     #[inline]
-    pub fn qualifier(&self) -> Option<&AstNode<'a, TSTypeName<'a>>> {
+    pub fn qualifier(&self) -> Option<&AstNode<'a, TSImportTypeQualifier<'a>>> {
         let following_node =
             self.inner.type_arguments.as_deref().map(SiblingNode::from).or(self.following_node);
         self.allocator
@@ -13282,6 +13282,83 @@ impl<'a> AstNode<'a, TSImportType<'a>> {
 }
 
 impl<'a> GetSpan for AstNode<'a, TSImportType<'a>> {
+    #[inline]
+    fn span(&self) -> oxc_span::Span {
+        self.inner.span()
+    }
+}
+
+impl<'a> AstNode<'a, TSImportTypeQualifier<'a>> {
+    #[inline]
+    pub fn as_ast_nodes(&self) -> &AstNodes<'a> {
+        let parent = self.parent;
+        let node = match self.inner {
+            TSImportTypeQualifier::Identifier(s) => {
+                AstNodes::IdentifierName(self.allocator.alloc(AstNode {
+                    inner: s.as_ref(),
+                    parent,
+                    allocator: self.allocator,
+                    following_node: self.following_node,
+                }))
+            }
+            TSImportTypeQualifier::QualifiedName(s) => {
+                AstNodes::TSImportTypeQualifiedName(self.allocator.alloc(AstNode {
+                    inner: s.as_ref(),
+                    parent,
+                    allocator: self.allocator,
+                    following_node: self.following_node,
+                }))
+            }
+        };
+        self.allocator.alloc(node)
+    }
+}
+
+impl<'a> GetSpan for AstNode<'a, TSImportTypeQualifier<'a>> {
+    #[inline]
+    fn span(&self) -> oxc_span::Span {
+        self.inner.span()
+    }
+}
+
+impl<'a> AstNode<'a, TSImportTypeQualifiedName<'a>> {
+    #[inline]
+    pub fn left(&self) -> &AstNode<'a, TSImportTypeQualifier<'a>> {
+        let following_node = Some(SiblingNode::from(&self.inner.right));
+        self.allocator.alloc(AstNode {
+            inner: &self.inner.left,
+            allocator: self.allocator,
+            parent: self.allocator.alloc(AstNodes::TSImportTypeQualifiedName(transmute_self(self))),
+            following_node,
+        })
+    }
+
+    #[inline]
+    pub fn right(&self) -> &AstNode<'a, IdentifierName<'a>> {
+        let following_node = self.following_node;
+        self.allocator.alloc(AstNode {
+            inner: &self.inner.right,
+            allocator: self.allocator,
+            parent: self.allocator.alloc(AstNodes::TSImportTypeQualifiedName(transmute_self(self))),
+            following_node,
+        })
+    }
+
+    pub fn format_leading_comments(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+        format_leading_comments(self.span()).fmt(f)
+    }
+
+    pub fn format_trailing_comments(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+        format_trailing_comments(
+            &self.parent.as_sibling_node(),
+            &SiblingNode::from(self.inner),
+            self.following_node.as_ref(),
+        )
+        .fmt(f)
+    }
+}
+
+impl<'a> GetSpan for AstNode<'a, TSImportTypeQualifiedName<'a>> {
     #[inline]
     fn span(&self) -> oxc_span::Span {
         self.inner.span()
