@@ -4,6 +4,49 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
+## [1.11.2] - 2025-08-12
+
+### 🐛 Bug Fixes
+
+- c461a86 oxlint: Fix type-aware linting crash when Vue files are present (#13007) (Copilot)
+- 2936545 linter/tsgolint: Report an error if tsgolint executable failed to spawn (#12984) (camc314)
+- a13b3ee oxlint: Run `tsgolint.CMD` under windows (#12932) (Sysix)
+
+### 🚜 Refactor
+
+- 69303de oxlint: Pass `DiagnosticService` as a parameter for `TsGoLintState.lint()` (#13004) (Sysix)
+
+### 🧪 Testing
+
+- fb8cbbf oxlint: Enable tsgolint test with config parameter for windows (#13001) (Alexander S.)
+- d59f3bb oxlint: Match `x.ys` when replacing var (#12990) (camc314)
+- d7cca12 linter: Add test for extended configs and overrides for tsgolint (#12924) (camchenry)
+
+
+## [1.11.1] - 2025-08-09
+
+### 🐛 Bug Fixes
+
+- 7fc907f linter: Resolve configured rules for every file linted by `tsgolint` (#12886) (camchenry)
+
+### 🚜 Refactor
+
+- c072e01 all: Add missing lifetimes in function return types (#12895) (overlookmotel)
+
+### 🧪 Testing
+
+- 9d946aa oxlint: Skip `--type--aware` test for `big-endian` (#12911) (Sysix)
+- 695fbdd oxlint: Fix `--type-aware` test on `big-endian` and skip for `windows` (#12910) (Sysix)
+- 38118ab oxlint: Fix `--type-aware` snapshot + add non tsgolint rule (#12909) (Sysix)
+
+
+## [1.11.0] - 2025-08-07
+
+### 🚀 Features
+
+- ac46347 oxlint: Add `tsgolint` integration (#12485) (camchenry)
+
+
 ## [1.10.0] - 2025-08-06
 
 ### 🚀 Features

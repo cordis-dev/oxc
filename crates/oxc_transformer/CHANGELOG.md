@@ -4,6 +4,34 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
+## [0.82.1] - 2025-08-13
+
+### 🐛 Bug Fixes
+
+- 6fe0bb5 transformer/react: Spread props optimization breaks __self and __source injection (#13009) (#13020) (Dunqing)
+
+
+## [0.82.0] - 2025-08-12
+
+### 🚜 Refactor
+
+- 0c5bffc ecmascript: Change `IsGlobalReference` to `GlobalContext` (#12952) (Boshen)
+- c072e01 all: Add missing lifetimes in function return types (#12895) (overlookmotel)
+- 65e2112 transformer: Use to `@babel/plugin-transform-explicit-resource-management` (#12874) (Copilot)
+
+### 📚 Documentation
+
+- ed40581 transformer: Improve doc comment formatting (#12899) (overlookmotel)
+- d14b8b8 transformer/styled-components: Remove duplicate backtick (#12897) (camc314)
+
+
+## [0.81.0] - 2025-08-06
+
+### 💥 BREAKING CHANGES
+
+- 2cc1001 ast: [**BREAKING**] Remove `ExportDefaultDeclaration` `exported` field (#12808) (overlookmotel)
+
+
 ## [0.80.0] - 2025-08-03
 
 ### 💥 BREAKING CHANGES

@@ -10,8 +10,11 @@ use oxc_span::{GetSpan, Span};
 use oxc_syntax::identifier::{is_line_terminator, is_white_space_single_line};
 
 use super::{
-    Argument, Arguments, Buffer, GroupId, TextSize, TokenText, VecBuffer, format_element,
-    format_element::tag::{Condition, Tag},
+    Argument, Arguments, Buffer, Comments, GroupId, TextSize, TokenText, VecBuffer,
+    format_element::{
+        self,
+        tag::{Condition, Tag},
+    },
     prelude::{
         tag::{DedentMode, GroupMode, LabelId},
         *,
@@ -2436,17 +2439,17 @@ where
         });
     }
 
-    // /// Adds an iterator of entries to the output. Each entry is a `(node, content)` tuple.
-    // pub fn entries<F, I>(&mut self, entries: I) -> &mut Self
-    // where
-    // F: Format,
-    // I: IntoIterator<Item = ((), F)>,
-    // {
-    // for (node, content) in entries {
-    // self.entry(node, &content)
-    // }
-    // self
-    // }
+    /// Adds an iterator of entries to the output. Each entry is a `(node, content)` tuple.
+    pub fn entries<'a, F, I>(&mut self, entries: I) -> &mut Self
+    where
+        F: Format<'ast> + GetSpan + 'a,
+        I: IntoIterator<Item = &'a F>,
+    {
+        for content in entries {
+            self.entry(content.span(), &content);
+        }
+        self
+    }
 
     pub fn finish(&mut self) -> FormatResult<()> {
         self.result

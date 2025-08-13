@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - uses: oxc-project/setup-node@f42e3bda950c7454575e78ee4eaac880a077700c # v1.0.0
       - uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
         with:
           save-cache: ${{ github.ref_name == 'main' }}
@@ -28,13 +29,28 @@ jobs:
       - run: cargo test --all-features
       - run: git diff --exit-code # Must commit everything
 
-  # Separate job to save a job on PRs
-  test-mac:
-    name: Test Mac
-    runs-on: macos-latest
+  test-ubuntu-aarch64:
     if: ${{ github.ref_name == 'main' }}
+    name: Test Linux ARM64
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - uses: oxc-project/setup-node@f42e3bda950c7454575e78ee4eaac880a077700c # v1.0.0
+      - uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
+        with:
+          save-cache: ${{ github.ref_name == 'main' }}
+          cache-key: warm-aarch64
+      - run: cargo ck
+      - run: cargo test --all-features
+      - run: git diff --exit-code # Must commit everything
+
+  test-mac: # Separate job to save a job on PRs
+    if: ${{ github.ref_name == 'main' }}
+    name: Test Mac
+    runs-on: macos-latest
+    steps:
+      - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - uses: oxc-project/setup-node@f42e3bda950c7454575e78ee4eaac880a077700c # v1.0.0
       - uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
         with:
           save-cache: ${{ github.ref_name == 'main' }}
@@ -44,14 +60,15 @@ jobs:
       - run: git diff --exit-code # Must commit everything
 
   test-windows:
-    name: Test Windows
     if: ${{ github.ref_name == 'main' }}
+    name: Test Windows
     runs-on: windows-latest
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
-      # Unsung heros of the internet, who led me here to speed up window's slowness:
+      # Unsung heroes of the internet, who led me here to speed up Windows' slowness:
       # https://github.com/actions/cache/issues/752#issuecomment-1847036770
       # https://github.com/astral-sh/uv/blob/502e04200d52de30d3159894833b3db4f0d6644d/.github/workflows/ci.yml#L158
+      - uses: oxc-project/setup-node@f42e3bda950c7454575e78ee4eaac880a077700c # v1.0.0
       - uses: samypr100/setup-dev-drive@750bec535eb7e4833d6a4c86c5738751f9887575 # v3.4.2
         with:
           workspace-copy: true
@@ -86,11 +103,12 @@ jobs:
         shell: bash
 
   test-big-endian:
-    name: Test big-endian # s390x-unknown-linux-gnu is a big-endian
     if: ${{ github.ref_name == 'main' }}
+    name: Test big-endian # s390x-unknown-linux-gnu is a big-endian
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
+      - uses: oxc-project/setup-node@f42e3bda950c7454575e78ee4eaac880a077700c # v1.0.0
       - uses: oxc-project/setup-rust@cd82e1efec7fef815e2c23d296756f31c7cdc03d # v1.0.0
         with:
           save-cache: ${{ github.ref_name == 'main' }}
@@ -184,7 +202,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: taiki-e/checkout-action@b13d20b7cda4e2f325ef19895128f7ff735c0b3d # v1.3.1
-      - uses: crate-ci/typos@a9ccf76b53d1ace194871d216f9ff058599a86db # v1.35.1
+      - uses: crate-ci/typos@a67079b4ae32e18c3f53d75368c52ce53b5fb56b # v1.35.4
         with:
           files: .
 
@@ -332,7 +350,7 @@ jobs:
           save-cache: ${{ github.ref_name == 'main' }}
 
       - name: Restore dprint plugin cache
-        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           key: dprint-${{ hashFiles('dprint.json') }}
           path: ~/.cache/dprint

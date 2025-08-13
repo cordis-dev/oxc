@@ -787,19 +787,13 @@ impl<'a> Format<'a> for AstNode<'a, TryStatement<'a>> {
 
 impl<'a> Format<'a> for AstNode<'a, CatchClause<'a>> {
     fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        self.format_leading_comments(f)?;
-        let result = self.write(f);
-        self.format_trailing_comments(f)?;
-        result
+        self.write(f)
     }
 }
 
 impl<'a> Format<'a> for AstNode<'a, CatchParameter<'a>> {
     fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        self.format_leading_comments(f)?;
-        let result = self.write(f);
-        self.format_trailing_comments(f)?;
-        result
+        self.write(f)
     }
 }
 
@@ -920,10 +914,7 @@ impl<'a> Format<'a> for AstNode<'a, FormalParameter<'a>> {
 
 impl<'a> Format<'a> for AstNode<'a, FunctionBody<'a>> {
     fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        self.format_leading_comments(f)?;
-        let result = self.write(f);
-        self.format_trailing_comments(f)?;
-        result
+        self.write(f)
     }
 }
 
@@ -997,10 +988,7 @@ impl<'a> Format<'a> for AstNode<'a, Class<'a>> {
 
 impl<'a> Format<'a> for AstNode<'a, ClassBody<'a>> {
     fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        self.format_leading_comments(f)?;
-        let result = self.write(f);
-        self.format_trailing_comments(f)?;
-        result
+        self.write(f)
     }
 }
 
@@ -1145,19 +1133,13 @@ impl<'a> Format<'a> for AstNode<'a, ImportAttributeKey<'a>> {
 
 impl<'a> Format<'a> for AstNode<'a, ExportNamedDeclaration<'a>> {
     fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        self.format_leading_comments(f)?;
-        let result = self.write(f);
-        self.format_trailing_comments(f)?;
-        result
+        self.write(f)
     }
 }
 
 impl<'a> Format<'a> for AstNode<'a, ExportDefaultDeclaration<'a>> {
     fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        self.format_leading_comments(f)?;
-        let result = self.write(f);
-        self.format_trailing_comments(f)?;
-        result
+        self.write(f)
     }
 }
 
@@ -1831,10 +1813,7 @@ impl<'a> Format<'a> for AstNode<'a, TSTypeAliasDeclaration<'a>> {
 
 impl<'a> Format<'a> for AstNode<'a, TSClassImplements<'a>> {
     fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        self.format_leading_comments(f)?;
-        let result = self.write(f);
-        self.format_trailing_comments(f)?;
-        result
+        self.write(f)
     }
 }
 
@@ -2153,10 +2132,7 @@ impl<'a> Format<'a> for AstNode<'a, TSNonNullExpression<'a>> {
 
 impl<'a> Format<'a> for AstNode<'a, Decorator<'a>> {
     fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        self.format_leading_comments(f)?;
-        let result = self.write(f);
-        self.format_trailing_comments(f)?;
-        result
+        self.write(f)
     }
 }
 

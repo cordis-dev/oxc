@@ -1,7 +1,7 @@
 use oxc_allocator::Allocator;
 use oxc_ast::ast::{Expression, IdentifierReference, Statement};
 use oxc_ecmascript::{
-    is_global_reference::IsGlobalReference,
+    GlobalContext,
     side_effects::{MayHaveSideEffects, MayHaveSideEffectsContext, PropertyReadSideEffects},
 };
 use oxc_parser::Parser;
@@ -25,9 +25,9 @@ impl Default for Ctx {
         }
     }
 }
-impl<'a> IsGlobalReference<'a> for Ctx {
-    fn is_global_reference(&self, ident: &IdentifierReference<'a>) -> Option<bool> {
-        Some(self.global_variable_names.iter().any(|name| name == ident.name.as_str()))
+impl<'a> GlobalContext<'a> for Ctx {
+    fn is_global_reference(&self, ident: &IdentifierReference<'a>) -> bool {
+        self.global_variable_names.iter().any(|name| name == ident.name.as_str())
     }
 }
 impl MayHaveSideEffectsContext<'_> for Ctx {
@@ -831,4 +831,74 @@ fn test_object_with_to_primitive_related_properties_overridden() {
     test("+{ ...{ toString() { return Symbol() } } }", true);
     test("+{ ...{ valueOf() { return Symbol() } } }", true);
     test("+{ ...{ [Symbol.toPrimitive]() { return Symbol() } } }", true);
+}
+
+#[test]
+fn test_typeof_guard_patterns() {
+    test_with_global_variables("typeof x !== 'undefined' && x", vec!["x".to_string()], false);
+    test_with_global_variables("typeof x != 'undefined' && x", vec!["x".to_string()], false);
+    test_with_global_variables("'undefined' !== typeof x && x", vec!["x".to_string()], false);
+    test_with_global_variables("'undefined' != typeof x && x", vec!["x".to_string()], false);
+    test_with_global_variables("typeof x === 'undefined' || x", vec!["x".to_string()], false);
+    test_with_global_variables("typeof x == 'undefined' || x", vec!["x".to_string()], false);
+    test_with_global_variables("'undefined' === typeof x || x", vec!["x".to_string()], false);
+    test_with_global_variables("'undefined' == typeof x || x", vec!["x".to_string()], false);
+    test_with_global_variables("typeof x < 'u' && x", vec!["x".to_string()], false);
+    test_with_global_variables("typeof x <= 'u' && x", vec!["x".to_string()], false);
+    test_with_global_variables("'u' > typeof x && x", vec!["x".to_string()], false);
+    test_with_global_variables("'u' >= typeof x && x", vec!["x".to_string()], false);
+    test_with_global_variables("typeof x > 'u' || x", vec!["x".to_string()], false);
+    test_with_global_variables("typeof x >= 'u' || x", vec!["x".to_string()], false);
+    test_with_global_variables("'u' < typeof x || x", vec!["x".to_string()], false);
+    test_with_global_variables("'u' <= typeof x || x", vec!["x".to_string()], false);
+
+    test_with_global_variables("typeof x === 'undefined' ? 0 : x", vec!["x".to_string()], false);
+    test_with_global_variables("typeof x == 'undefined' ? 0 : x", vec!["x".to_string()], false);
+    test_with_global_variables("'undefined' === typeof x ? 0 : x", vec!["x".to_string()], false);
+    test_with_global_variables("'undefined' == typeof x ? 0 : x", vec!["x".to_string()], false);
+    test_with_global_variables("typeof x !== 'undefined' ? x : 0", vec!["x".to_string()], false);
+    test_with_global_variables("typeof x != 'undefined' ? x : 0", vec!["x".to_string()], false);
+    test_with_global_variables("'undefined' !== typeof x ? x : 0", vec!["x".to_string()], false);
+    test_with_global_variables("'undefined' != typeof x ? x : 0", vec!["x".to_string()], false);
+
+    test_with_global_variables(
+        "typeof x !== 'undefined' && (x + foo())",
+        vec!["x".to_string()],
+        true,
+    );
+    test_with_global_variables(
+        "typeof x === 'undefined' || (x + foo())",
+        vec!["x".to_string()],
+        true,
+    );
+    test_with_global_variables("typeof x === 'undefined' ? foo() : x", vec!["x".to_string()], true);
+    test_with_global_variables("typeof x !== 'undefined' ? x : foo()", vec!["x".to_string()], true);
+    test_with_global_variables("typeof foo() !== 'undefined' && x", vec!["x".to_string()], true);
+    test_with_global_variables("typeof foo() === 'undefined' || x", vec!["x".to_string()], true);
+    test_with_global_variables("typeof foo() === 'undefined' ? 0 : x", vec!["x".to_string()], true);
+    test_with_global_variables(
+        "typeof y !== 'undefined' && x",
+        vec!["x".to_string(), "y".to_string()],
+        true,
+    );
+    test_with_global_variables(
+        "typeof y === 'undefined' || x",
+        vec!["x".to_string(), "y".to_string()],
+        true,
+    );
+    test_with_global_variables(
+        "typeof y === 'undefined' ? 0 : x",
+        vec!["x".to_string(), "y".to_string()],
+        true,
+    );
+
+    test("typeof localVar !== 'undefined' && localVar", false);
+    test("typeof localVar === 'undefined' || localVar", false);
+    test("typeof localVar === 'undefined' ? 0 : localVar", false);
+
+    test_with_global_variables(
+        "typeof x !== 'undefined' && typeof y !== 'undefined' && x && y",
+        vec!["x".to_string(), "y".to_string()],
+        true, // This can be improved
+    );
 }

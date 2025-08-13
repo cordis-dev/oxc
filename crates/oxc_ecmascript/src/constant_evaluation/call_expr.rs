@@ -16,16 +16,51 @@ use cow_utils::CowUtils;
 
 use crate::{
     StringCharAt, StringCharAtResult, StringCharCodeAt, StringIndexOf, StringLastIndexOf,
-    StringSubstring, ToInt32, ToJsString as ToJsStringTrait, side_effects::MayHaveSideEffects,
+    StringSubstring, ToInt32, ToJsString as ToJsStringTrait,
+    constant_evaluation::url_encoding::{
+        decode_uri_chars, encode_uri_chars, is_uri_always_unescaped,
+    },
+    side_effects::MayHaveSideEffects,
 };
 
 use super::{ConstantEvaluation, ConstantEvaluationCtx, ConstantValue};
+
+fn try_fold_global_functions<'a>(
+    ident: &IdentifierReference<'a>,
+    arguments: &Vec<'a, Argument<'a>>,
+    ctx: &impl ConstantEvaluationCtx<'a>,
+) -> Option<ConstantValue<'a>> {
+    match ident.name.as_str() {
+        "encodeURI" if ctx.is_global_reference(ident) => try_fold_encode_uri(arguments, ctx),
+        "encodeURIComponent" if ctx.is_global_reference(ident) => {
+            try_fold_encode_uri_component(arguments, ctx)
+        }
+        "decodeURI" if ctx.is_global_reference(ident) => try_fold_decode_uri(arguments, ctx),
+        "decodeURIComponent" if ctx.is_global_reference(ident) => {
+            try_fold_decode_uri_component(arguments, ctx)
+        }
+        "isNaN" if ctx.is_global_reference(ident) => try_fold_global_is_nan(arguments, ctx),
+        "isFinite" if ctx.is_global_reference(ident) => try_fold_global_is_finite(arguments, ctx),
+        "parseFloat" if ctx.is_global_reference(ident) => {
+            try_fold_global_parse_float(arguments, ctx)
+        }
+        "parseInt" if ctx.is_global_reference(ident) => try_fold_global_parse_int(arguments, ctx),
+        _ => None,
+    }
+}
 
 pub fn try_fold_known_global_methods<'a>(
     callee: &Expression<'a>,
     arguments: &Vec<'a, Argument<'a>>,
     ctx: &impl ConstantEvaluationCtx<'a>,
 ) -> Option<ConstantValue<'a>> {
+    if let Expression::Identifier(ident) = callee {
+        if let Some(result) = try_fold_global_functions(ident, arguments, ctx) {
+            return Some(result);
+        }
+        return None;
+    }
+
     let (name, object) = match callee {
         Expression::StaticMemberExpression(member) if !member.optional => {
             (member.property.name.as_str(), &member.object)
@@ -265,8 +300,7 @@ fn try_fold_string_from_char_code<'a>(
     object: &Expression<'a>,
     ctx: &impl ConstantEvaluationCtx<'a>,
 ) -> Option<ConstantValue<'a>> {
-    let Expression::Identifier(ident) = object else { return None };
-    if ident.name != "String" || ctx.is_global_reference(ident) != Some(true) {
+    if !ctx.is_global_expr("String", object) {
         return None;
     }
     let mut s = String::with_capacity(args.len());
@@ -324,16 +358,14 @@ fn try_fold_to_string<'a>(
             let result = format_radix(i, radix);
             Some(ConstantValue::String(Cow::Owned(result)))
         }
-        // `null` returns type errors
-        Expression::BooleanLiteral(_)
-        | Expression::NumericLiteral(_)
-        | Expression::BigIntLiteral(_)
-        | Expression::RegExpLiteral(_)
-        | Expression::StringLiteral(_)
-            if args.is_empty() =>
-        {
-            object.to_js_string(ctx).map(ConstantValue::String)
+        Expression::RegExpLiteral(lit) if args.is_empty() => {
+            lit.to_js_string(ctx).map(ConstantValue::String)
         }
+        e if args.is_empty() => e
+            .evaluate_value(ctx)
+            // `null` and `undefined` returns type errors
+            .filter(|v| !v.is_undefined() && !v.is_null())
+            .and_then(|v| v.to_js_string(ctx).map(ConstantValue::String)),
         _ => None,
     }
 }
@@ -352,15 +384,6 @@ fn format_radix(mut x: u32, radix: u32) -> String {
     result.into_iter().rev().collect()
 }
 
-fn validate_global_reference<'a>(
-    expr: &Expression<'a>,
-    target: &str,
-    ctx: &impl ConstantEvaluationCtx<'a>,
-) -> bool {
-    let Expression::Identifier(ident) = expr else { return false };
-    ctx.is_global_reference(ident) == Some(true) && ident.name == target
-}
-
 fn validate_arguments(args: &Vec<'_, Argument<'_>>, expected_len: usize) -> bool {
     (args.len() == expected_len) && args.iter().all(Argument::is_expression)
 }
@@ -371,7 +394,7 @@ fn try_fold_number_methods<'a>(
     name: &str,
     ctx: &impl ConstantEvaluationCtx<'a>,
 ) -> Option<ConstantValue<'a>> {
-    if !validate_global_reference(object, "Number", ctx) {
+    if !ctx.is_global_expr("Number", object) {
         return None;
     }
     if args.len() != 1 {
@@ -402,7 +425,7 @@ fn try_fold_roots<'a>(
     object: &Expression<'a>,
     ctx: &impl ConstantEvaluationCtx<'a>,
 ) -> Option<ConstantValue<'a>> {
-    if !validate_global_reference(object, "Math", ctx) || !validate_arguments(args, 1) {
+    if !ctx.is_global_expr("Math", object) || !validate_arguments(args, 1) {
         return None;
     }
     let arg_val = args[0].to_expression().get_side_free_number_value(ctx)?;
@@ -426,7 +449,7 @@ fn try_fold_math_unary<'a>(
     object: &Expression<'a>,
     ctx: &impl ConstantEvaluationCtx<'a>,
 ) -> Option<ConstantValue<'a>> {
-    if !validate_global_reference(object, "Math", ctx) || !validate_arguments(args, 1) {
+    if !ctx.is_global_expr("Math", object) || !validate_arguments(args, 1) {
         return None;
     }
     let arg_val = args[0].to_expression().get_side_free_number_value(ctx)?;
@@ -467,7 +490,7 @@ fn try_fold_math_variadic<'a>(
     object: &Expression<'a>,
     ctx: &impl ConstantEvaluationCtx<'a>,
 ) -> Option<ConstantValue<'a>> {
-    if !validate_global_reference(object, "Math", ctx) {
+    if !ctx.is_global_expr("Math", object) {
         return None;
     }
     let mut numbers = std::vec::Vec::new();
@@ -500,4 +523,359 @@ fn try_fold_math_variadic<'a>(
         }
     };
     Some(ConstantValue::Number(result))
+}
+
+fn try_fold_encode_uri<'a>(
+    args: &Vec<'a, Argument<'a>>,
+    ctx: &impl ConstantEvaluationCtx<'a>,
+) -> Option<ConstantValue<'a>> {
+    if args.is_empty() {
+        return Some(ConstantValue::String(Cow::Borrowed("undefined")));
+    }
+    if args.len() != 1 {
+        return None;
+    }
+    let arg = args.first()?;
+    let expr = arg.as_expression()?;
+    let string_value = expr.get_side_free_string_value(ctx)?;
+
+    // SAFETY: should_encode only returns false for ascii chars
+    let encoded = unsafe {
+        encode_uri_chars(
+            string_value,
+            #[inline(always)]
+            |c| match c {
+                c if is_uri_always_unescaped(c) => false,
+                b';' | b'/' | b'?' | b':' | b'@' | b'&' | b'=' | b'+' | b'$' | b',' | b'#' => false,
+                _ => true,
+            },
+        )
+    };
+    Some(ConstantValue::String(encoded))
+}
+
+fn try_fold_encode_uri_component<'a>(
+    args: &Vec<'a, Argument<'a>>,
+    ctx: &impl ConstantEvaluationCtx<'a>,
+) -> Option<ConstantValue<'a>> {
+    if args.is_empty() {
+        return Some(ConstantValue::String(Cow::Borrowed("undefined")));
+    }
+    if args.len() != 1 {
+        return None;
+    }
+    let arg = args.first()?;
+    let expr = arg.as_expression()?;
+    let string_value = expr.get_side_free_string_value(ctx)?;
+
+    // SAFETY: should_encode only returns false for ascii chars
+    let encoded = unsafe {
+        encode_uri_chars(
+            string_value,
+            #[inline(always)]
+            |c| !is_uri_always_unescaped(c),
+        )
+    };
+    Some(ConstantValue::String(encoded))
+}
+
+fn try_fold_decode_uri<'a>(
+    args: &Vec<'a, Argument<'a>>,
+    ctx: &impl ConstantEvaluationCtx<'a>,
+) -> Option<ConstantValue<'a>> {
+    if args.is_empty() {
+        return Some(ConstantValue::String(Cow::Borrowed("undefined")));
+    }
+    if args.len() != 1 {
+        return None;
+    }
+    let arg = args.first()?;
+    let expr = arg.as_expression()?;
+    let string_value = expr.get_side_free_string_value(ctx)?;
+
+    let decoded = decode_uri_chars(
+        string_value,
+        #[inline(always)]
+        |c| matches!(c, b';' | b',' | b'/' | b'?' | b':' | b'@' | b'&' | b'=' | b'+' | b'$' | b'#'),
+    )?;
+    Some(ConstantValue::String(decoded))
+}
+
+fn try_fold_decode_uri_component<'a>(
+    args: &Vec<'a, Argument<'a>>,
+    ctx: &impl ConstantEvaluationCtx<'a>,
+) -> Option<ConstantValue<'a>> {
+    if args.is_empty() {
+        return Some(ConstantValue::String(Cow::Borrowed("undefined")));
+    }
+    if args.len() != 1 {
+        return None;
+    }
+    let arg = args.first()?;
+    let expr = arg.as_expression()?;
+    let string_value = expr.get_side_free_string_value(ctx)?;
+
+    // decodeURIComponent decodes all percent-encoded sequences
+    let decoded = decode_uri_chars(
+        string_value,
+        #[inline(always)]
+        |_| false,
+    )?;
+    Some(ConstantValue::String(decoded))
+}
+
+fn try_fold_global_is_nan<'a>(
+    args: &Vec<'a, Argument<'a>>,
+    ctx: &impl ConstantEvaluationCtx<'a>,
+) -> Option<ConstantValue<'a>> {
+    if args.is_empty() {
+        return Some(ConstantValue::Boolean(true));
+    }
+    if args.len() != 1 {
+        return None;
+    }
+    let arg = args.first().unwrap();
+    let expr = arg.as_expression()?;
+    let num = expr.get_side_free_number_value(ctx)?;
+    Some(ConstantValue::Boolean(num.is_nan()))
+}
+
+fn try_fold_global_is_finite<'a>(
+    args: &Vec<'a, Argument<'a>>,
+    ctx: &impl ConstantEvaluationCtx<'a>,
+) -> Option<ConstantValue<'a>> {
+    if args.is_empty() {
+        return Some(ConstantValue::Boolean(false));
+    }
+    if args.len() != 1 {
+        return None;
+    }
+    let arg = args.first().unwrap();
+    let expr = arg.as_expression()?;
+    let num = expr.get_side_free_number_value(ctx)?;
+    Some(ConstantValue::Boolean(num.is_finite()))
+}
+
+fn try_fold_global_parse_float<'a>(
+    args: &Vec<'a, Argument<'a>>,
+    ctx: &impl ConstantEvaluationCtx<'a>,
+) -> Option<ConstantValue<'a>> {
+    if args.is_empty() {
+        return Some(ConstantValue::Number(f64::NAN));
+    }
+    if args.len() != 1 {
+        return None;
+    }
+    let arg = args.first().unwrap();
+    let expr = arg.as_expression()?;
+    let input_string = expr.get_side_free_string_value(ctx)?;
+    let trimmed = input_string.trim_start();
+    let Some(trimmed_prefix) = find_str_decimal_literal_prefix(trimmed) else {
+        return Some(ConstantValue::Number(f64::NAN));
+    };
+
+    let parsed = trimmed_prefix.cow_replace('_', "").parse::<f64>().unwrap_or_else(|_| {
+        unreachable!(
+            "StrDecimalLiteral should be parse-able with Rust FromStr for f64: {trimmed_prefix}"
+        )
+    });
+    Some(ConstantValue::Number(parsed))
+}
+
+/// Find the longest prefix of a string that satisfies the syntax of a `StrDecimalLiteral`.
+/// Returns None when not found.
+///
+/// This function implements step 4 of `parseFloat`.
+/// <https://tc39.es/ecma262/2025/multipage/global-object.html#sec-parsefloat-string>
+fn find_str_decimal_literal_prefix(input: &str) -> Option<&str> {
+    fn match_decimal_digits(s: &str) -> Option<usize> {
+        let bytes = s.as_bytes();
+        if bytes.first().is_none_or(|b| !b.is_ascii_digit()) {
+            // must have at least one digit
+            return None;
+        }
+        let mut iter = bytes.iter().enumerate().skip(1);
+        while let Some((i, &b)) = iter.next() {
+            match b {
+                b'0'..=b'9' => {}
+                b'_' => {
+                    let Some((i, &b)) = iter.next() else {
+                        // must have at least one digit after _
+                        return Some(i); // without _
+                    };
+                    if !b.is_ascii_digit() {
+                        // must have at least one digit after _
+                        return Some(i); // without _
+                    }
+                }
+                _ => return Some(i),
+            }
+        }
+        Some(s.len())
+    }
+    fn match_exponent_part(mut s: &str) -> Option<usize> {
+        if !s.starts_with(['e', 'E']) {
+            return None;
+        }
+        let mut last_index = 1;
+        s = &s[1..];
+        if s.starts_with(['+', '-']) {
+            last_index += 1;
+            s = &s[1..];
+        }
+        let end_of_decimal_digits = match_decimal_digits(s)?;
+        last_index += end_of_decimal_digits;
+        Some(last_index)
+    }
+
+    let mut s = input;
+    let mut last_index: usize = 0;
+    if s.starts_with(['+', '-']) {
+        s = &s[1..];
+        last_index += 1;
+    }
+    if s.starts_with("Infinity") {
+        last_index += "Infinity".len();
+        return Some(&input[..last_index]);
+    }
+    // . DecimalDigits ExponentPart
+    if s.starts_with('.') {
+        last_index += 1;
+        s = &s[1..];
+        let end_of_decimal_digits = match_decimal_digits(s)?;
+        last_index += end_of_decimal_digits;
+        s = &s[end_of_decimal_digits..];
+        let Some(end_of_exponent_part) = match_exponent_part(s) else {
+            return Some(&input[..last_index]);
+        };
+        last_index += end_of_exponent_part;
+        return Some(&input[..last_index]);
+    }
+
+    let end_of_decimal_digits = match_decimal_digits(s)?;
+    last_index += end_of_decimal_digits;
+    s = &s[end_of_decimal_digits..];
+
+    // DecimalDigits . DecimalDigits ExponentPart
+    if s.starts_with('.') {
+        last_index += 1;
+        s = &s[1..];
+        let Some(end_of_decimal_digits) = match_decimal_digits(s) else {
+            return Some(&input[..last_index - 1]); // without .
+        };
+        last_index += end_of_decimal_digits;
+        s = &s[end_of_decimal_digits..];
+        let Some(end_of_exponent_part) = match_exponent_part(s) else {
+            return Some(&input[..last_index]);
+        };
+        last_index += end_of_exponent_part;
+        return Some(&input[..last_index]);
+    }
+
+    // DecimalDigits ExponentPart
+    let Some(end_of_exponent_part) = match_exponent_part(s) else {
+        return Some(&input[..last_index]);
+    };
+    last_index += end_of_exponent_part;
+    Some(&input[..last_index])
+}
+
+fn try_fold_global_parse_int<'a>(
+    args: &Vec<'a, Argument<'a>>,
+    ctx: &impl ConstantEvaluationCtx<'a>,
+) -> Option<ConstantValue<'a>> {
+    if args.is_empty() {
+        return Some(ConstantValue::Number(f64::NAN));
+    }
+    if args.len() > 2
+        || args
+            .iter()
+            .any(|arg| arg.as_expression().is_none_or(|arg| arg.may_have_side_effects(ctx)))
+    {
+        return None;
+    }
+    let string_arg = args.first().unwrap();
+    let string_expr = string_arg.as_expression()?;
+    let string_value = string_expr.evaluate_value_to_string(ctx)?;
+    let mut string_value = string_value.trim_start();
+
+    let mut sign = 1;
+    if string_value.starts_with('-') {
+        sign = -1;
+    }
+    if string_value.starts_with(['+', '-']) {
+        string_value = &string_value[1..];
+    }
+
+    let mut strip_prefix = true;
+    let mut radix = if let Some(arg) = args.get(1) {
+        let expr = arg.as_expression()?;
+        let mut radix = expr.evaluate_value_to_number(ctx)?.to_int_32();
+        if radix == 0 {
+            radix = 10;
+        } else if !(2..=36).contains(&radix) {
+            return Some(ConstantValue::Number(f64::NAN));
+        } else if radix != 16 {
+            strip_prefix = false;
+        }
+        radix as u32
+    } else {
+        10
+    };
+
+    if !matches!(radix, 2 | 4 | 8 | 10 | 16 | 32) {
+        // implementation can approximate the values. bail out to be safe
+        return None;
+    }
+
+    if strip_prefix && (string_value.starts_with("0x") || string_value.starts_with("0X")) {
+        string_value = &string_value[2..];
+        radix = 16;
+    }
+
+    if let Some(non_radix_digit_pos) = string_value.chars().position(|c| !c.is_digit(radix)) {
+        string_value = &string_value[..non_radix_digit_pos];
+    }
+
+    if string_value.is_empty() {
+        return Some(ConstantValue::Number(f64::NAN));
+    }
+
+    if radix == 10 && string_value.len() > 20 {
+        // implementation can approximate the values. bail out to be safe
+        return None;
+    }
+
+    let Ok(math_int) = i32::from_str_radix(string_value, radix) else {
+        // ignore values that cannot be represented as i32 to avoid precision issues
+        return None;
+    };
+    if math_int == 0 {
+        return Some(ConstantValue::Number(if sign == -1 { -0.0 } else { 0.0 }));
+    }
+    Some(ConstantValue::Number((math_int as f64) * sign as f64))
+}
+
+#[test]
+fn test_find_str_decimal_literal_prefix() {
+    assert_eq!(find_str_decimal_literal_prefix("Infinitya"), Some("Infinity"));
+    assert_eq!(find_str_decimal_literal_prefix("+Infinitya"), Some("+Infinity"));
+    assert_eq!(find_str_decimal_literal_prefix("-Infinitya"), Some("-Infinity"));
+    assert_eq!(find_str_decimal_literal_prefix("0a"), Some("0"));
+    assert_eq!(find_str_decimal_literal_prefix("+0a"), Some("+0"));
+    assert_eq!(find_str_decimal_literal_prefix("-0a"), Some("-0"));
+    assert_eq!(find_str_decimal_literal_prefix("0."), Some("0"));
+    assert_eq!(find_str_decimal_literal_prefix("0.e"), Some("0"));
+    assert_eq!(find_str_decimal_literal_prefix("0.e1"), Some("0"));
+    assert_eq!(find_str_decimal_literal_prefix("0.1"), Some("0.1"));
+    assert_eq!(find_str_decimal_literal_prefix("0.1."), Some("0.1"));
+    assert_eq!(find_str_decimal_literal_prefix("0.1e"), Some("0.1"));
+    assert_eq!(find_str_decimal_literal_prefix("0.1e1"), Some("0.1e1"));
+    assert_eq!(find_str_decimal_literal_prefix(".1"), Some(".1"));
+    assert_eq!(find_str_decimal_literal_prefix(".1."), Some(".1"));
+    assert_eq!(find_str_decimal_literal_prefix(".1e"), Some(".1"));
+    assert_eq!(find_str_decimal_literal_prefix(".1e1"), Some(".1e1"));
+    assert_eq!(find_str_decimal_literal_prefix("1_"), Some("1"));
+    assert_eq!(find_str_decimal_literal_prefix("1_1"), Some("1_1"));
+    assert_eq!(find_str_decimal_literal_prefix("1_1_"), Some("1_1"));
 }

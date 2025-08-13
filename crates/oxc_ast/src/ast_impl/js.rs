@@ -91,6 +91,7 @@ impl<'a> Expression<'a> {
     /// Returns `true` for [string literals](StringLiteral) matching the
     /// expected value. Note that [non-substitution template
     /// literals](TemplateLiteral) are not considered.
+    #[inline]
     pub fn is_specific_string_literal(&self, string: &str) -> bool {
         match self {
             Self::StringLiteral(s) => s.value == string,
@@ -786,7 +787,7 @@ impl CallExpression<'_> {
     /// require() // => false
     /// require(123) // => false
     /// ```
-    pub fn common_js_require(&self) -> Option<&StringLiteral> {
+    pub fn common_js_require(&self) -> Option<&StringLiteral<'_>> {
         if !(self.callee.is_specific_id("require") && self.arguments.len() == 1) {
             return None;
         }
@@ -1166,6 +1167,11 @@ impl VariableDeclarationKind {
     /// Returns `true` if declared using `let`, `const` or `using` (such as `let x` or `const x`)
     pub fn is_lexical(self) -> bool {
         matches!(self, Self::Const | Self::Let | Self::Using | Self::AwaitUsing)
+    }
+
+    /// Returns `true` if declared with `using` (such as `using x` or `await using x`)
+    pub fn is_using(self) -> bool {
+        self == Self::Using || self == Self::AwaitUsing
     }
 
     /// Returns `true` if declared using `await using` (such as `await using x`)

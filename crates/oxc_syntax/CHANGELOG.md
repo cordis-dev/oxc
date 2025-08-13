@@ -4,6 +4,21 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
+
+## [0.82.0] - 2025-08-12
+
+### 🚀 Features
+
+- 33c0e9f ecmascript: Add global `isNaN`, `isFinite`, `parseFloat`, `parseInt` functions support to constant evaluation (#12954) (Copilot)
+
+
+## [0.81.0] - 2025-08-06
+
+### ⚡ Performance
+
+- 2c4369a syntax,codegen: Replace `ryu_js` with `dragonbox_ecma` for floating point formatting (#12821) (Copilot)
+
+
 ## [0.80.0] - 2025-08-03
 
 ### 📚 Documentation

@@ -476,7 +476,7 @@ impl Rule for NewCap {
                     || is_cap_allowed_expression(
                         short_name,
                         name,
-                        &self.new_is_cap_exceptions,
+                        self.new_is_cap_exceptions.iter().map(CompactStr::as_str),
                         self.new_is_cap_exception_pattern.as_ref(),
                     )
                     || (!self.properties && short_name != name);
@@ -498,14 +498,14 @@ impl Rule for NewCap {
 
                 let capitalization = &get_cap(short_name);
 
-                let mut caps_is_new_exceptions = self.cap_is_new_exceptions.clone();
-                caps_is_new_exceptions.append(&mut caps_allowed_vec());
-
                 let allowed = *capitalization != GetCapResult::Upper
                     || is_cap_allowed_expression(
                         short_name,
                         name,
-                        &caps_is_new_exceptions,
+                        self.cap_is_new_exceptions
+                            .iter()
+                            .map(CompactStr::as_str)
+                            .chain(CAPS_ALLOWED),
                         self.cap_is_new_exception_pattern.as_ref(),
                     )
                     || (!self.properties && short_name != name);
@@ -628,14 +628,19 @@ fn extract_name_from_expression(expression: &Expression) -> Option<CompactStr> {
     }
 }
 
-fn is_cap_allowed_expression(
+fn is_cap_allowed_expression<'a, I>(
     short_name: &CompactStr,
     name: &CompactStr,
-    exceptions: &[CompactStr],
+    exceptions: I,
     patterns: Option<&Regex>,
-) -> bool {
-    if exceptions.contains(name) || exceptions.contains(short_name) {
-        return true;
+) -> bool
+where
+    I: Iterator<Item = &'a str>,
+{
+    for exception in exceptions {
+        if exception == name.as_str() || exception == short_name.as_str() {
+            return true;
+        }
     }
 
     if name == "Date.UTC" {
@@ -750,6 +755,10 @@ fn test() {
         ("Date?.UTC();", None),   // { "ecmaVersion": 2020 },
         ("(Date?.UTC)();", None), // { "ecmaVersion": 2020 }
         (r#"expect(1)[""](1);"#, None),
+        (
+            "let tz = Intl.DateTimeFormat().resolvedOptions().timezone()",
+            Some(serde_json::json!([{ "capIsNewExceptions": ["Intl.DateTimeFormat"] }])),
+        ),
     ];
 
     let fail = vec![
