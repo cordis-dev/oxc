@@ -31,7 +31,7 @@ use crate::{
 };
 
 #[cfg(feature = "language_server")]
-use crate::fixer::MessageWithPosition;
+use crate::MessageWithPosition;
 
 use super::LintServiceOptions;
 
@@ -173,15 +173,103 @@ impl RuntimeFileSystem for OsFileSystem {
     }
 }
 
+/// [`MessageCloner`] is a wrapper around an `&Allocator` which allows it to be safely shared across threads,
+/// in order to clone [`Message`]s into it.
+///
+/// `Allocator` is not thread safe (it is not `Sync`), so cannot be shared across threads.
+/// It would be undefined behavior to allocate into an `Allocator` from multiple threads simultaneously.
+///
+/// `MessageCloner` ensures only one thread at a time can utilize the `Allocator`, by taking an
+/// exclusive `&mut Allocator` to start with, and synchronising access to the `Allocator` with a `Mutex`.
+///
+/// This type is wrapped in a module so that other code cannot access the inner `UnsafeAllocatorRef`
+/// directly, and must go via the [`MessageCloner::clone_message`] method.
+#[cfg(any(feature = "language_server", test))]
+mod message_cloner {
+    use std::sync::Mutex;
+
+    use oxc_allocator::{Allocator, CloneIn};
+
+    use crate::Message;
+
+    /// Unsafe wrapper around an `&Allocator` which makes it `Send`.
+    struct UnsafeAllocatorRef<'a>(&'a Allocator);
+
+    // SAFETY: It is sound to implement `Send` for `UnsafeAllocatorRef` because:
+    // * The only way to construct an `UnsafeAllocatorRef` is via `MessageCloner::new`, which takes
+    //   an exclusive `&mut Allocator`, ensuring no other references to the same `Allocator` exist.
+    // * The lifetime `'a` ensures that the reference to the `Allocator` cannot outlive the original
+    //   mutable borrow, preventing aliasing or concurrent mutation.
+    // * All access to the `Allocator` via `UnsafeAllocatorRef` is synchronized by a `Mutex` inside
+    //   `MessageCloner`, so only one thread can access the allocator at a time.
+    // * The module encapsulation prevents direct access to `UnsafeAllocatorRef`, so it cannot be
+    //   misused outside of the intended, synchronized context.
+    //
+    // Therefore, although `Allocator` is not `Sync`, it is safe to send `UnsafeAllocatorRef` between
+    // threads as long as it is only accessed via the `Mutex` in `MessageCloner`.
+    unsafe impl Send for UnsafeAllocatorRef<'_> {}
+
+    /// Wrapper around an [`Allocator`] which allows safely using it on multiple threads to
+    /// clone [`Message`]s into.
+    pub struct MessageCloner<'a>(Mutex<UnsafeAllocatorRef<'a>>);
+
+    impl<'a> MessageCloner<'a> {
+        /// Wrap an [`Allocator`] in a [`MessageCloner`].
+        ///
+        /// This method takes a `&mut Allocator`, to ensure that no other references to the `Allocator`
+        /// can exist, which guarantees no other threads can allocate with the `Allocator` while this
+        /// `MessageCloner` exists.
+        #[inline]
+        #[expect(clippy::needless_pass_by_ref_mut)]
+        pub fn new(allocator: &'a mut Allocator) -> Self {
+            Self(Mutex::new(UnsafeAllocatorRef(allocator)))
+        }
+
+        /// Clone a [`Message`] into the [`Allocator`] held by this [`MessageCloner`].
+        ///
+        /// # Panics
+        /// Panics if the underlying `Mutex` is poisoned.
+        pub fn clone_message(&self, message: &Message) -> Message<'a> {
+            // Obtain an exclusive lock on the `Mutex` during `clone_in` operation,
+            // to ensure no other thread can be simultaneously using the `Allocator`
+            let guard = self.0.lock().unwrap();
+            let allocator = guard.0;
+            message.clone_in(allocator)
+        }
+    }
+}
+#[cfg(any(feature = "language_server", test))]
+use message_cloner::MessageCloner;
+
 impl Runtime {
-    pub(super) fn new(
-        linter: Linter,
-        allocator_pool: AllocatorPool,
-        options: LintServiceOptions,
-    ) -> Self {
+    pub(super) fn new(linter: Linter, options: LintServiceOptions) -> Self {
+        // If global thread pool wasn't already initialized, do it now.
+        // This "locks" config for the thread pool, which ensures `rayon::current_num_threads()`
+        // cannot change from now on.
+        //
+        // Initializing the thread pool without specifying `num_threads` produces a threadpool size
+        // based on `std::thread::available_parallelism`. However, Rayon's docs state that:
+        // > In the future, the default behavior may change to dynamically add or remove threads as needed.
+        // https://docs.rs/rayon/1.11.0/rayon/struct.ThreadPoolBuilder.html#method.num_threads
+        //
+        // However, I (@overlookmotel) assume that would be considered a breaking change,
+        // so we don't have to worry about it until Rayon v2.
+        // When Rayon v2 is released and we upgrade to it, we'll need to revisit this and make sure
+        // we still guarantee that thread count is locked.
+        //
+        // If thread pool was already initialized, this won't do anything.
+        // `build_global` will return `Err` in that case, but we can ignore it.
+        // That just means the config (and so number of threads) is already locked.
+        // https://docs.rs/rayon/1.11.0/rayon/struct.ThreadPoolBuilder.html#method.build_global
+        let _ = rayon::ThreadPoolBuilder::new().build_global();
+
+        let thread_count = rayon::current_num_threads();
+        let allocator_pool = AllocatorPool::new(thread_count);
+
         let resolver = options.cross_module.then(|| {
             Self::get_resolver(options.tsconfig.or_else(|| Some(options.cwd.join("tsconfig.json"))))
         });
+
         Self {
             allocator_pool,
             cwd: options.cwd,
@@ -403,10 +491,10 @@ impl Runtime {
                         let dep_path = &request.resolved_requested_path;
                         if encountered_paths.insert(Arc::clone(dep_path)) {
                             scope.spawn({
-                                let tx_resolve_output = tx_process_output.clone();
+                                let tx_process_output = tx_process_output.clone();
                                 let dep_path = Arc::clone(dep_path);
                                 move |_| {
-                                    tx_resolve_output
+                                    tx_process_output
                                         .send(me.process_path(
                                             &dep_path,
                                             check_syntax_errors,
@@ -579,40 +667,22 @@ impl Runtime {
         });
     }
 
-    // clippy: the source field is checked and assumed to be less than 4GB, and
-    // we assume that the fix offset will not exceed 2GB in either direction
     // language_server: the language server needs line and character position
     // the struct not using `oxc_diagnostic::Error, because we are just collecting information
     // and returning it to the client to let him display it.
-    #[expect(clippy::cast_possible_truncation)]
     #[cfg(feature = "language_server")]
     pub(super) fn run_source<'a>(
         &mut self,
-        allocator: &'a oxc_allocator::Allocator,
+        allocator: &'a mut oxc_allocator::Allocator,
     ) -> Vec<MessageWithPosition<'a>> {
-        use oxc_allocator::CloneIn;
-        use oxc_data_structures::rope::Rope;
         use std::sync::Mutex;
 
-        use crate::{
-            FixWithPosition,
-            fixer::{Fix, PossibleFixesWithPosition},
-            service::offset_to_position::{SpanPositionMessage, offset_to_position},
-        };
+        use oxc_data_structures::rope::Rope;
 
-        fn fix_to_fix_with_position<'a>(
-            fix: &Fix<'a>,
-            rope: &Rope,
-            source_text: &str,
-        ) -> FixWithPosition<'a> {
-            let start_position = offset_to_position(rope, fix.span.start, source_text);
-            let end_position = offset_to_position(rope, fix.span.end, source_text);
-            FixWithPosition {
-                content: fix.content.clone(),
-                span: SpanPositionMessage::new(start_position, end_position)
-                    .with_message(fix.message.as_ref().map(|label| Cow::Owned(label.to_string()))),
-            }
-        }
+        use crate::lsp::message_to_message_with_position;
+
+        // Wrap allocator in `MessageCloner` so can clone `Message`s into it
+        let message_cloner = MessageCloner::new(allocator);
 
         let messages = Mutex::new(Vec::<MessageWithPosition<'a>>::new());
         let (sender, _receiver) = mpsc::channel();
@@ -655,67 +725,9 @@ impl Runtime {
 
                             messages.lock().unwrap().extend(section_messages.iter().map(
                                 |message| {
-                                    let message = message.clone_in(allocator);
+                                    let message = message_cloner.clone_message(message);
 
-                                    let labels = &message.error.labels.clone().map(|labels| {
-                                        labels
-                                            .into_iter()
-                                            .map(|labeled_span| {
-                                                let offset = labeled_span.offset() as u32;
-                                                let start_position =
-                                                    offset_to_position(rope, offset, source_text);
-                                                let end_position = offset_to_position(
-                                                    rope,
-                                                    offset + labeled_span.len() as u32,
-                                                    source_text,
-                                                );
-                                                let message = labeled_span
-                                                    .label()
-                                                    .map(|label| Cow::Owned(label.to_string()));
-
-                                                SpanPositionMessage::new(
-                                                    start_position,
-                                                    end_position,
-                                                )
-                                                .with_message(message)
-                                            })
-                                            .collect::<Vec<_>>()
-                                    });
-
-                                    MessageWithPosition {
-                                        message: message.error.message.clone(),
-                                        severity: message.error.severity,
-                                        help: message.error.help.clone(),
-                                        url: message.error.url.clone(),
-                                        code: message.error.code.clone(),
-                                        labels: labels.clone(),
-                                        fixes: match &message.fixes {
-                                            PossibleFixes::None => PossibleFixesWithPosition::None,
-                                            PossibleFixes::Single(fix) => {
-                                                PossibleFixesWithPosition::Single(
-                                                    fix_to_fix_with_position(
-                                                        fix,
-                                                        rope,
-                                                        source_text,
-                                                    ),
-                                                )
-                                            }
-                                            PossibleFixes::Multiple(fixes) => {
-                                                PossibleFixesWithPosition::Multiple(
-                                                    fixes
-                                                        .iter()
-                                                        .map(|fix| {
-                                                            fix_to_fix_with_position(
-                                                                fix,
-                                                                rope,
-                                                                source_text,
-                                                            )
-                                                        })
-                                                        .collect(),
-                                                )
-                                            }
-                                        },
-                                    }
+                                    message_to_message_with_position(&message, source_text, rope)
                                 },
                             ));
                         }
@@ -742,12 +754,14 @@ impl Runtime {
     #[cfg(test)]
     pub(super) fn run_test_source<'a>(
         &mut self,
-        allocator: &'a Allocator,
+        allocator: &'a mut Allocator,
         check_syntax_errors: bool,
         tx_error: &DiagnosticSender,
     ) -> Vec<Message<'a>> {
-        use oxc_allocator::CloneIn;
         use std::sync::Mutex;
+
+        // Wrap allocator in `MessageCloner` so can clone `Message`s into it
+        let message_cloner = MessageCloner::new(allocator);
 
         let messages = Mutex::new(Vec::<Message<'a>>::new());
         rayon::scope(|scope| {
@@ -773,13 +787,13 @@ impl Runtime {
                                         .map(|err| Message::new(err, PossibleFixes::None))
                                         .collect(),
                                 }
-                                .into_iter()
-                                .map(|mut message| {
+                                .iter_mut()
+                                .map(|message| {
                                     if section.source.start != 0 {
                                         message.move_offset(section.source.start)
                                         .move_fix_offset(section.source.start);
                                     }
-                                    message.clone_in(allocator)
+                                    message_cloner.clone_message(message)
                                 }),
                             );
                         }
@@ -796,29 +810,35 @@ impl Runtime {
         check_syntax_errors: bool,
         tx_error: &DiagnosticSender,
     ) -> ModuleProcessOutput<'_> {
-        let default_output = || ModuleProcessOutput {
-            path: Arc::clone(path),
-            processed_module: ProcessedModule::default(),
-        };
+        let processed_module =
+            self.process_path_to_module(path, check_syntax_errors, tx_error).unwrap_or_default();
+        ModuleProcessOutput { path: Arc::clone(path), processed_module }
+    }
 
-        let Some(ext) = Path::new(path).extension().and_then(OsStr::to_str) else {
-            return default_output();
-        };
+    fn process_path_to_module(
+        &self,
+        path: &Arc<OsStr>,
+        check_syntax_errors: bool,
+        tx_error: &DiagnosticSender,
+    ) -> Option<ProcessedModule<'_>> {
+        let ext = Path::new(path).extension().and_then(OsStr::to_str)?;
 
         if SourceType::from_path(Path::new(path))
             .as_ref()
             .is_err_and(|_| !LINT_PARTIAL_LOADER_EXTENSIONS.contains(&ext))
         {
-            return default_output();
+            return None;
         }
 
-        let mut records = SmallVec::<[Result<ResolvedModuleRecord, Vec<OxcDiagnostic>>; 1]>::new();
-        let mut module_content: Option<ModuleContent> = None;
+        let allocator_guard = self.allocator_pool.get();
 
         if self.paths.contains(path) {
-            let allocator_guard = self.allocator_pool.get();
+            let mut records =
+                SmallVec::<[Result<ResolvedModuleRecord, Vec<OxcDiagnostic>>; 1]>::new();
 
-            let build = ModuleContent::try_new(allocator_guard, |allocator| {
+            let module_content = ModuleContent::try_new(allocator_guard, |allocator_guard| {
+                let allocator = &**allocator_guard;
+
                 let Some(stt) = self.get_source_type_and_text(Path::new(path), ext, allocator)
                 else {
                     return Err(());
@@ -845,28 +865,23 @@ impl Runtime {
 
                 Ok(ModuleContentDependent { source_text, section_contents })
             });
+            let module_content = module_content.ok()?;
 
-            module_content = match build {
-                Ok(mc) => Some(mc),
-                Err(()) => return default_output(),
-            };
+            Some(ProcessedModule { section_module_records: records, content: Some(module_content) })
         } else {
-            let allocator_guard = self.allocator_pool.get();
             let allocator = &*allocator_guard;
 
-            let Some(stt) = self.get_source_type_and_text(Path::new(path), ext, allocator) else {
-                return default_output();
-            };
+            let stt = self.get_source_type_and_text(Path::new(path), ext, allocator)?;
 
             let (source_type, source_text) = match stt {
                 Ok(v) => v,
                 Err(e) => {
                     tx_error.send((Path::new(path).to_path_buf(), vec![e])).unwrap();
-                    return default_output();
+                    return None;
                 }
             };
 
-            records = self.process_source(
+            let records = self.process_source(
                 Path::new(path),
                 ext,
                 check_syntax_errors,
@@ -875,14 +890,8 @@ impl Runtime {
                 allocator,
                 None,
             );
-        }
 
-        ModuleProcessOutput {
-            path: Arc::clone(path),
-            processed_module: ProcessedModule {
-                section_module_records: records,
-                content: module_content,
-            },
+            Some(ProcessedModule { section_module_records: records, content: None })
         }
     }
 

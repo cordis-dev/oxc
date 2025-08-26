@@ -4,6 +4,44 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
+## [0.82.3] - 2025-08-20
+
+### 🐛 Bug Fixes
+
+- f490d27 allocator: Remove unsound `Send` impl and tighten `Sync` requirement for `HashMap` (#13203) (overlookmotel)
+- 0815a89 allocator: Remove unsound `Send` impl and tighten `Sync` requirements for `Vec` (#13041) (overlookmotel)
+- af3b98e allocator: Remove `Vec::bump` method (#13039) (overlookmotel)
+- 9ac418d allocator: Remove `Clone` impl from `Vec` (#13040) (overlookmotel)
+- d2e8cb6 allocator: Remove unsound `impl Sync for Allocator` (#13033) (overlookmotel)
+- 8264664 allocator: Fix soundness hole in `Allocator::alloc_bytes_start` (#13141) (overlookmotel)
+
+### 🚜 Refactor
+
+- 93eaf5f allocator: Replace `AtomicUsize` with `Cell<usize>` in `AllocationStats` (#13043) (overlookmotel)
+
+### 🧪 Testing
+
+- 792ae31 estree, allocator: Use `default` to create `ESTreeSerializer`s (#13211) (overlookmotel)
+
+
+## [0.82.2] - 2025-08-17
+
+### 🚀 Features
+
+- 7cf6186 allocator: Add `data_end_ptr` and `set_cursor_ptr` methods to `Allocator` (#13134) (overlookmotel)
+
+### 🚜 Refactor
+
+- f6ac2e6 allocator, napi/parser: Use `usize::is_multiple_of` (#13142) (overlookmotel)
+- 51f6c84 allocator: Rename vars and comments in `AllocatorPool` (#13129) (overlookmotel)
+- 152f1f9 allocator: Remove `Default` impl for `AllocatorPool` (#13128) (overlookmotel)
+- 18ad3c0 allocator: Harden safety of `FixedSizeAllocator::new` (#13124) (overlookmotel)
+
+### 📚 Documentation
+
+- 3048302 allocator: Document all cargo features (#13104) (overlookmotel)
+
+
 
 ## [0.82.0] - 2025-08-12
 

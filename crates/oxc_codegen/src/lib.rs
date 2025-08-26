@@ -197,6 +197,7 @@ impl<'a> Codegen<'a> {
     pub fn build(mut self, program: &Program<'a>) -> CodegenReturn {
         self.quote = if self.options.single_quote { Quote::Single } else { Quote::Double };
         self.source_text = Some(program.source_text);
+        self.indent = self.options.initial_indent;
         self.code.reserve(program.source_text.len());
         self.build_comments(&program.comments);
         if let Some(path) = &self.options.source_map_path {
@@ -513,7 +514,6 @@ impl<'a> Codegen<'a> {
             self.dedent();
             self.print_indent();
         }
-        self.add_source_mapping_end(span);
         self.print_ascii_byte(b'}');
     }
 
@@ -524,10 +524,9 @@ impl<'a> Codegen<'a> {
         self.indent();
     }
 
-    fn print_block_end(&mut self, span: Span) {
+    fn print_block_end(&mut self, _span: Span) {
         self.dedent();
         self.print_indent();
-        self.add_source_mapping_end(span);
         self.print_ascii_byte(b'}');
     }
 
@@ -840,14 +839,6 @@ impl<'a> Codegen<'a> {
         if let Some(sourcemap_builder) = self.sourcemap_builder.as_mut() {
             if !span.is_empty() {
                 sourcemap_builder.add_source_mapping(self.code.as_bytes(), span.start, None);
-            }
-        }
-    }
-
-    fn add_source_mapping_end(&mut self, span: Span) {
-        if let Some(sourcemap_builder) = self.sourcemap_builder.as_mut() {
-            if !span.is_empty() {
-                sourcemap_builder.add_source_mapping(self.code.as_bytes(), span.end, None);
             }
         }
     }

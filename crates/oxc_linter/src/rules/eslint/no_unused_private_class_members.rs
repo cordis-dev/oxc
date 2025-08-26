@@ -215,13 +215,25 @@ fn is_value_context(kind: &AstNode, semantic: &Semantic<'_>) -> bool {
         | AstKind::UnaryExpression(_)
         | AstKind::IfStatement(_)
         | AstKind::LogicalExpression(_) => true,
+        AstKind::ExpressionStatement(_) => {
+            let parent_node = semantic.nodes().parent_node(kind.id());
+            if let AstKind::FunctionBody(_) = parent_node.kind()
+                && let AstKind::ArrowFunctionExpression(arrow) =
+                    semantic.nodes().parent_kind(parent_node.id())
+                && arrow.expression
+            {
+                return true;
+            }
+            false
+        }
         AstKind::ParenthesizedExpression(_)
         | AstKind::TSAsExpression(_)
         | AstKind::TSSatisfiesExpression(_)
         | AstKind::TSInstantiationExpression(_)
         | AstKind::TSNonNullExpression(_)
         | AstKind::TSTypeAssertion(_)
-        | AstKind::UpdateExpression(_) => {
+        | AstKind::UpdateExpression(_)
+        | AstKind::AwaitExpression(_) => {
             is_value_context(semantic.nodes().parent_node(kind.id()), semantic)
         }
 
@@ -435,6 +447,13 @@ fn test() {
         "class Foo { #d; constructor(d) { this.#d = d || kDefaultD; } get getD(): string { return this.#d!; } }",
         "class F { #o; initialize(output) { this.#o = output; } text(e) { return this.#o!.text(e); } }",
         "class Foo { #a; constructor(a) { this.#a = a; }; b(b?: string): this { this.#a!.setB(b); return this; } resetA() { this.#a = undefined; } }",
+        // Test for static block - issue #13179
+        r"let getPrivate; class C { #private; constructor(v) { this.#private = v; } static { getPrivate = klass => klass.#private; } }",
+        r"let getPrivate; class C { #private; constructor(v) { this.#private = v; } static { getPrivate = klass => { return klass.#private; } } }",
+        r"class C { #field = 1; static { const obj = new C(); console.log(obj.#field); } }",
+        r"class C { #method() { return 42; } static { const obj = new C(); obj.#method(); } }",
+        r"class C { #field = 1; static { const getField = obj => { return obj.#field; }; } }",
+        r"export class Database<const S extends idb.DBSchema> { readonly #db: Promise<idb.IDBPDatabase<S>>; constructor(name: string, version: number, hooks: idb.OpenDBCallbacks<S>) { this.#db = idb.openDB<S>(name, version, hooks); }  async read() { let db = await this.#db; } }",
     ];
 
     let fail = vec![
@@ -580,6 +599,7 @@ fn test() {
 			        }
 			    }
 			}",
+        r"class Foo { #awaitedMember; async method() { await this.#awaitedMember; } }",
     ];
 
     Tester::new(NoUnusedPrivateClassMembers::NAME, NoUnusedPrivateClassMembers::PLUGIN, pass, fail)

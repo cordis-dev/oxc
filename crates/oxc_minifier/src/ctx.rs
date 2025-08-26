@@ -13,6 +13,7 @@ use oxc_syntax::{
     identifier::{is_identifier_part, is_identifier_start},
     reference::ReferenceId,
 };
+use oxc_traverse::Ancestor;
 
 use crate::{options::CompressOptions, state::MinifierState, symbol_value::SymbolValue};
 
@@ -252,5 +253,16 @@ impl<'a> Ctx<'a, '_> {
         let mut chars = s.chars();
         chars.next().is_some_and(is_identifier_start)
             && chars.all(|c| is_identifier_part(c) && c != '・' && c != '･')
+    }
+
+    /// Whether the closest function scope is created by an async generator
+    pub fn is_closest_function_scope_an_async_generator(&self) -> bool {
+        self.ancestors()
+            .find_map(|ancestor| match ancestor {
+                Ancestor::FunctionBody(body) => Some(*body.r#async() && *body.generator()),
+                Ancestor::ArrowFunctionExpressionBody(_) => Some(false),
+                _ => None,
+            })
+            .unwrap_or_default()
     }
 }

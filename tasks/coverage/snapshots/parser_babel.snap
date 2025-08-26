@@ -1,9 +1,9 @@
-commit: 98d18aa4
+commit: 41d96516
 
 parser_babel Summary:
-AST Parsed     : 2403/2419 (99.34%)
-Positive Passed: 2381/2419 (98.43%)
-Negative Passed: 1640/1756 (93.39%)
+AST Parsed     : 2407/2423 (99.34%)
+Positive Passed: 2385/2423 (98.43%)
+Negative Passed: 1642/1755 (93.56%)
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/categorized/invalid-startindex-and-startline-specified-without-startcolumn/input.js
 
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/categorized/startline-and-startcolumn-specified/input.js
@@ -69,10 +69,6 @@ Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/estree/class-private-property/typescript-invalid-abstract/input.ts
 
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/estree/class-private-property/typescript-invalid-abstract-babel-7/input.ts
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/flow/expect-plugin/export-interface/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/flow/expect-plugin/export-type/input.js
 
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/typescript/arrow-function/arrow-like-in-conditional-2/input.ts
 
@@ -229,8 +225,6 @@ Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/ty
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/typescript/types/invalid-import-type-options-with-computed-properties/input.ts
 
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/typescript/types/invalid-import-type-options-with-spread-element/input.ts
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/typescript/types/invalid-import-type-options-with-trailing-comma/input.ts
 
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/typescript/types/tuple-optional-invalid/input.ts
 
@@ -12077,10 +12071,22 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ╰────
 
   × Unexpected token
-   ╭─[babel/packages/babel-parser/test/fixtures/flow/expect-plugin/export-type-named/input.js:2:13]
+   ╭─[babel/packages/babel-parser/test/fixtures/flow/expect-plugin/export-interface/input.js:1:8]
+ 1 │ export interface Foo {}
+   ·        ─────────
+   ╰────
+
+  × Unexpected token
+   ╭─[babel/packages/babel-parser/test/fixtures/flow/expect-plugin/export-type/input.js:1:8]
+ 1 │ export type Foo = number;
+   ·        ────
+   ╰────
+
+  × Unexpected token
+   ╭─[babel/packages/babel-parser/test/fixtures/flow/expect-plugin/export-type-named/input.js:2:8]
  1 │ var Foo;
  2 │ export type { Foo };
-   ·             ─
+   ·        ────
    ╰────
 
   × Unexpected token

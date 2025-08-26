@@ -298,7 +298,7 @@ impl<'a> PeepholeOptimizations {
         };
     }
 
-    pub fn try_fold_sequence_expression(expr: &mut Expression<'a>, ctx: &mut Ctx<'a, '_>) {
+    pub fn remove_sequence_expression(expr: &mut Expression<'a>, ctx: &mut Ctx<'a, '_>) {
         let Expression::SequenceExpression(e) = expr else { return };
         let should_keep_as_sequence_expr = e
             .expressions
@@ -559,7 +559,7 @@ mod test {
         test("a: { break a; }", "");
 
         test("a: { break a; console.log('unreachable'); }", "");
-        test("a: { break a; var x = 1; } x = 2;", "var x; x = 2;");
+        test("a: { break a; var x = 1; } x = 2;", "var x = 2;");
 
         test("b: { var x = 1; } x = 2;", "b: var x = 1; x = 2;");
         test("a: b: { var x = 1; } x = 2;", "a: b: var x = 1; x = 2;");

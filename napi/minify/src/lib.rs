@@ -15,7 +15,7 @@ use napi::Either;
 use napi_derive::napi;
 
 use oxc_allocator::Allocator;
-use oxc_codegen::{Codegen, CodegenOptions};
+use oxc_codegen::Codegen;
 use oxc_diagnostics::OxcDiagnostic;
 use oxc_minifier::Minifier;
 use oxc_napi::OxcError;
@@ -23,7 +23,10 @@ use oxc_parser::Parser;
 use oxc_sourcemap::napi::SourceMap;
 use oxc_span::SourceType;
 
-pub use crate::options::MinifyOptions;
+pub use crate::options::{
+    CodegenOptions, CompressOptions, CompressOptionsKeepNames, MangleOptions,
+    MangleOptionsKeepNames, MinifyOptions,
+};
 
 #[derive(Default)]
 #[napi(object)]
@@ -40,6 +43,7 @@ pub fn minify(
     source_text: String,
     options: Option<MinifyOptions>,
 ) -> MinifyResult {
+    use oxc_codegen::CodegenOptions;
     let options = options.unwrap_or_default();
 
     let minifier_options = match oxc_minifier::MinifierOptions::try_from(&options) {

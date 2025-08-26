@@ -4,6 +4,39 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
+## [0.82.3] - 2025-08-20
+
+### 🐛 Bug Fixes
+
+- 8f533aa codegen: Correct `CRLF` handling in comment processing (#13169) (copilot-swe-agent)
+- f10ac33 codegen: Remove end sourcemaps for `}`, `]`, `)` (#13180) (Boshen)
+
+### 🚜 Refactor
+
+- 51ca0ad codegen: Reduce repeated code (#13191) (overlookmotel)
+- 3548cf4 sourcemap: Improve sourcemap visualization code (#13177) (Boshen)
+
+### ⚡ Performance
+
+- e3bfff1 codegen: Faster splitting comments into lines (#13190) (overlookmotel)
+
+
+## [0.82.2] - 2025-08-17
+
+### 🚀 Features
+
+- df3829c oxc_codegen: Support configure initial indent when using `oxc_codegen` (#13091) (IWANABETHATGUY)
+
+### 🚜 Refactor
+
+- 5223562 codegen: Adjust some source mappings (#13084) (Boshen)
+
+### ⚡ Performance
+
+- 1385c71 codegen: Further reduce memory allocations in `generate_line_offset_tables` (#13056) (overlookmotel)
+- ab685bd codegen: Reduce memory allocations in `generate_line_offset_tables` (#13054) (Boshen)
+
+
 ## [0.82.1] - 2025-08-13
 
 ### 🚀 Features

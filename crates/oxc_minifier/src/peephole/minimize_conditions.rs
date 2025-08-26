@@ -4,6 +4,7 @@ use oxc_ecmascript::{
     constant_evaluation::{ConstantEvaluation, ConstantValue, DetermineValueType},
     side_effects::MayHaveSideEffects,
 };
+use oxc_semantic::ReferenceFlags;
 use oxc_span::GetSpan;
 use oxc_syntax::es_target::ESTarget;
 
@@ -66,7 +67,7 @@ impl<'a> PeepholeOptimizations {
     //  ^^^^^^^^^^^^^^ `ctx.expression_value_type(&e.left).is_boolean()` is `true`.
     // `x >> +y !== 0` -> `x >> +y`
     //  ^^^^^^^ ctx.expression_value_type(&e.left).is_number()` is `true`.
-    pub fn try_minimize_binary(expr: &mut Expression<'a>, ctx: &mut Ctx<'a, '_>) {
+    pub fn minimize_binary(expr: &mut Expression<'a>, ctx: &mut Ctx<'a, '_>) {
         let Expression::BinaryExpression(e) = expr else { return };
         if !e.operator.is_equality() {
             return;
@@ -123,7 +124,7 @@ impl<'a> PeepholeOptimizations {
     ///
     /// In `IsLooselyEqual`, `true` and `false` are converted to `1` and `0` first.
     /// <https://tc39.es/ecma262/multipage/abstract-operations.html#sec-islooselyequal>
-    pub fn try_compress_is_loose_boolean(e: &mut Expression<'a>, ctx: &mut Ctx<'a, '_>) {
+    pub fn minimize_loose_boolean(e: &mut Expression<'a>, ctx: &mut Ctx<'a, '_>) {
         let Expression::BinaryExpression(e) = e else { return };
         if !matches!(e.operator, BinaryOperator::Equality | BinaryOperator::Inequality) {
             return;
@@ -170,7 +171,7 @@ impl<'a> PeepholeOptimizations {
     /// Compress `a = a || b` to `a ||= b`
     ///
     /// This can only be done for resolved identifiers as this would avoid setting `a` when `a` is truthy.
-    pub fn try_compress_normal_assignment_to_combined_logical_assignment(
+    pub fn minimize_normal_assignment_to_combined_logical_assignment(
         expr: &mut AssignmentExpression<'a>,
         ctx: &mut Ctx<'a, '_>,
     ) {
@@ -200,6 +201,9 @@ impl<'a> PeepholeOptimizations {
             return;
         }
 
+        let reference = ctx.scoping_mut().get_reference_mut(write_id_ref.reference_id());
+        reference.flags_mut().insert(ReferenceFlags::Read);
+
         let new_op = logical_expr.operator.to_assignment_operator();
         expr.operator = new_op;
         expr.right = logical_expr.right.take_in(ctx.ast);
@@ -207,7 +211,7 @@ impl<'a> PeepholeOptimizations {
     }
 
     /// Compress `a = a + b` to `a += b`
-    pub fn try_compress_normal_assignment_to_combined_assignment(
+    pub fn minimize_normal_assignment_to_combined_assignment(
         expr: &mut AssignmentExpression<'a>,
         ctx: &mut Ctx<'a, '_>,
     ) {
@@ -220,6 +224,9 @@ impl<'a> PeepholeOptimizations {
         {
             return;
         }
+
+        Self::mark_assignment_target_as_read(&expr.left, ctx);
+
         expr.operator = new_op;
         expr.right = binary_expr.right.take_in(ctx.ast);
         ctx.state.changed = true;
@@ -227,7 +234,7 @@ impl<'a> PeepholeOptimizations {
 
     /// Compress `a -= 1` to `--a` and `a -= -1` to `++a`
     #[expect(clippy::float_cmp)]
-    pub fn try_compress_assignment_to_update_expression(
+    pub fn minimize_assignment_to_update_expression(
         expr: &mut Expression<'a>,
         ctx: &mut Ctx<'a, '_>,
     ) {
@@ -258,7 +265,7 @@ impl<'a> PeepholeOptimizations {
 mod test {
     use crate::{
         CompressOptions,
-        tester::{test, test_same, test_same_options},
+        tester::{test, test_options, test_same, test_same_options},
     };
     use oxc_syntax::es_target::ESTarget;
 
@@ -1425,7 +1432,7 @@ mod test {
 
         let target = ESTarget::ES2019;
         let options = CompressOptions { target, ..CompressOptions::default() };
-        test_same_options("var x; x = x || 1", &options);
+        test_options("var x; x = x || 1", "var x = x || 1", &options);
     }
 
     #[test]

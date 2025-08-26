@@ -16,6 +16,7 @@ use tower_lsp_server::UriExt;
 use crate::linter::{
     error_with_position::DiagnosticReport,
     isolated_lint_handler::{IsolatedLintHandler, IsolatedLintHandlerOptions},
+    tsgo_linter::TsgoLinter,
 };
 use crate::options::UnusedDisableDirectives;
 use crate::{ConcurrentHashMap, OXC_CONFIG_FILE, Options};
@@ -24,6 +25,7 @@ use super::config_walker::ConfigWalker;
 
 pub struct ServerLinter {
     isolated_linter: Arc<Mutex<IsolatedLintHandler>>,
+    tsgo_linter: Arc<Option<TsgoLinter>>,
     gitignore_glob: Vec<Gitignore>,
     pub extended_paths: Vec<PathBuf>,
 }
@@ -49,10 +51,10 @@ impl ServerLinter {
             Oxlintrc::default()
         };
 
-        // clone because we are returning it for ignore builder
-        let config_builder = ConfigStoreBuilder::from_oxlintrc(
+        let config_builder = ConfigStoreBuilder::from_base_oxlintrc(
+            &root_path,
             false,
-            oxlintrc.clone(),
+            oxlintrc,
             None,
             &mut ExternalPluginStore::default(),
         )
@@ -98,7 +100,7 @@ impl ServerLinter {
 
         let isolated_linter = IsolatedLintHandler::new(
             lint_options,
-            config_store,
+            config_store.clone(), // clone because tsgo linter needs it
             &IsolatedLintHandlerOptions {
                 use_cross_module,
                 root_path: root_path.to_path_buf(),
@@ -111,8 +113,13 @@ impl ServerLinter {
 
         Self {
             isolated_linter: Arc::new(Mutex::new(isolated_linter)),
-            gitignore_glob: Self::create_ignore_glob(&root_path, &oxlintrc),
+            gitignore_glob: Self::create_ignore_glob(&root_path),
             extended_paths,
+            tsgo_linter: if options.type_aware {
+                Arc::new(Some(TsgoLinter::new(&root_path, config_store)))
+            } else {
+                Arc::new(None)
+            },
         }
     }
 
@@ -164,7 +171,7 @@ impl ServerLinter {
     }
 
     #[expect(clippy::filetype_is_file)]
-    fn create_ignore_glob(root_path: &Path, oxlintrc: &Oxlintrc) -> Vec<Gitignore> {
+    fn create_ignore_glob(root_path: &Path) -> Vec<Gitignore> {
         let walk = ignore::WalkBuilder::new(root_path)
             .ignore(true)
             .hidden(false)
@@ -194,20 +201,6 @@ impl ServerLinter {
             }
         }
 
-        if oxlintrc.ignore_patterns.is_empty() {
-            return gitignore_globs;
-        }
-
-        let Some(oxlintrc_dir) = oxlintrc.path.parent() else {
-            warn!("Oxlintrc path has no parent, skipping inline ignore patterns");
-            return gitignore_globs;
-        };
-
-        let mut builder = ignore::gitignore::GitignoreBuilder::new(oxlintrc_dir);
-        for entry in &oxlintrc.ignore_patterns {
-            builder.add_line(None, entry).expect("Failed to add ignore line");
-        }
-        gitignore_globs.push(builder.build().unwrap());
         gitignore_globs
     }
 
@@ -235,7 +228,19 @@ impl ServerLinter {
             return None;
         }
 
-        self.isolated_linter.lock().await.run_single(uri, content)
+        // when `IsolatedLintHandler` returns `None`, it means it does not want to lint.
+        // Do not try `tsgolint` because it could be ignored or is not supported.
+        let mut reports = self.isolated_linter.lock().await.run_single(uri, content.clone())?;
+
+        let Some(tsgo_linter) = &*self.tsgo_linter else {
+            return Some(reports);
+        };
+
+        if let Some(tsgo_reports) = tsgo_linter.lint_file(uri, content) {
+            reports.extend(tsgo_reports);
+        }
+
+        Some(reports)
     }
 }
 
@@ -409,8 +414,9 @@ mod test {
 
     #[test]
     fn test_root_ignore_patterns() {
-        Tester::new("fixtures/linter/root_ignore_patterns", None)
-            .test_and_snapshot_single_file("ignored-file.ts");
+        let tester = Tester::new("fixtures/linter/ignore_patterns", None);
+        tester.test_and_snapshot_single_file("ignored-file.ts");
+        tester.test_and_snapshot_single_file("another_config/not-ignored-file.ts");
     }
 
     #[test]
@@ -423,5 +429,14 @@ mod test {
             }),
         )
         .test_and_snapshot_single_file("deep/src/dep-a.ts");
+    }
+
+    #[test]
+    fn test_tsgo_lint() {
+        let tester = Tester::new(
+            "fixtures/linter/tsgolint",
+            Some(Options { type_aware: true, ..Default::default() }),
+        );
+        tester.test_and_snapshot_single_file("no-floating-promises/index.ts");
     }
 }
