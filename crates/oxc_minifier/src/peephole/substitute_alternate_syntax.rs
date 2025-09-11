@@ -4,6 +4,7 @@ use oxc_allocator::{CloneIn, TakeIn, Vec};
 use oxc_ast::{NONE, ast::*};
 use oxc_ecmascript::constant_evaluation::{ConstantEvaluation, ConstantValue, DetermineValueType};
 use oxc_ecmascript::{ToJsString, ToNumber, side_effects::MayHaveSideEffects};
+use oxc_semantic::ReferenceFlags;
 use oxc_span::GetSpan;
 use oxc_span::SPAN;
 use oxc_syntax::{
@@ -431,7 +432,7 @@ impl<'a> PeepholeOptimizations {
             return None;
         }
 
-        let mut new_left_expr = typeof_binary_expr.clone_in(ctx.ast.allocator);
+        let mut new_left_expr = typeof_binary_expr.clone_in_with_semantic_ids(ctx.ast.allocator);
         if let Expression::BinaryExpression(new_left_expr_binary) = &mut new_left_expr {
             new_left_expr_binary.operator =
                 if inversed { BinaryOperator::Inequality } else { BinaryOperator::Equality };
@@ -1088,7 +1089,12 @@ impl<'a> PeepholeOptimizations {
                     .as_member_expression()
                     .is_some_and(|mem_expr| mem_expr.is_specific_member_access("window", "Object"))
             {
-                call_expr.callee = ctx.ast.expression_identifier(call_expr.callee.span(), "Object");
+                let reference_id = ctx.create_unbound_reference("Object", ReferenceFlags::Read);
+                call_expr.callee = ctx.ast.expression_identifier_with_reference_id(
+                    call_expr.callee.span(),
+                    "Object",
+                    reference_id,
+                );
                 ctx.state.changed = true;
             }
         }
@@ -1818,7 +1824,7 @@ mod test {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "TODO: Function.bind to Function.call optimization not yet implemented"]
     fn test_bind_to_call() {
         test("((function(){}).bind())()", "((function(){}))()");
         test("((function(){}).bind(a))()", "((function(){})).call(a)");
@@ -2185,7 +2191,7 @@ mod test {
         test_same("try { foo } catch(e) { bar(e) }");
         test_same("try { foo } catch([e]) {}");
         test_same("try { foo } catch({e}) {}");
-        test_same("try { foo } catch(e) { var e = 2; bar(e) }");
+        test_same("try { foo } catch(e) { var e = baz; bar(e) }");
         test("try { foo } catch(e) { var e = 2 }", "try { foo } catch { var e = 2 }");
         test_same("try { foo } catch(e) { var e = 2 } bar(e)");
 

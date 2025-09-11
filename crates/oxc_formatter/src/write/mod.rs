@@ -17,8 +17,10 @@ mod member_expression;
 mod object_like;
 mod object_pattern_like;
 mod parameter_list;
+mod program;
 mod return_or_throw_statement;
 mod semicolon;
+mod sequence_expression;
 mod switch_statement;
 mod template;
 mod try_statement;
@@ -37,8 +39,7 @@ use cow_utils::CowUtils;
 
 use oxc_allocator::{Address, Box, FromIn, StringBuilder, Vec};
 use oxc_ast::{AstKind, ast::*};
-use oxc_span::{GetSpan, SPAN};
-use oxc_syntax::identifier::{ZWNBSP, is_identifier_name, is_line_terminator};
+use oxc_span::GetSpan;
 
 use crate::{
     format_args,
@@ -85,69 +86,6 @@ pub trait FormatWrite<'ast, T = ()> {
     fn write(&self, f: &mut Formatter<'_, 'ast>) -> FormatResult<()>;
     fn write_with_options(&self, options: T, f: &mut Formatter<'_, 'ast>) -> FormatResult<()> {
         unreachable!("Please implement it first.");
-    }
-}
-
-impl<'a> FormatWrite<'a> for AstNode<'a, Program<'a>> {
-    fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        // Print BOM
-        if f.source_text().chars().next().is_some_and(|c| c == ZWNBSP) {
-            write!(f, "\u{feff}");
-        }
-        write!(f, [self.hashbang(), self.directives(), self.body(), hard_line_break()])
-    }
-}
-
-impl<'a> Format<'a> for AstNode<'a, Vec<'a, Directive<'a>>> {
-    fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        if self.is_empty() {
-            return Ok(());
-        }
-        let source_text = f.context().source_text();
-        f.join_nodes_with_hardline().entries(self).finish()?;
-        // if next_sibling's first leading_trivia has more than one new_line, we should add an extra empty line at the end of
-        // JsDirectiveList, for example:
-        //```js
-        // "use strict"; <- first leading new_line
-        //  			 <- second leading new_line
-        // function foo() {
-
-        // }
-        //```
-        // so we should keep an extra empty line after JsDirectiveList
-        let mut chars = f.source_text()[self.last().unwrap().span().end as usize..].chars();
-        let mut count = 0;
-        for c in chars.by_ref() {
-            if is_line_terminator(c) {
-                count += 1;
-            } else {
-                break;
-            }
-        }
-        // Skip printing newlines if the file has only directives.
-        if chars.next().is_none() {
-            return Ok(());
-        }
-        let need_extra_empty_line = count > 1;
-        write!(f, if need_extra_empty_line { empty_line() } else { hard_line_break() })
-    }
-}
-
-impl<'a> FormatWrite<'a> for AstNode<'a, Directive<'a>> {
-    fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        write!(
-            f,
-            [
-                FormatLiteralStringToken::new(
-                    self.expression().span().source_text(f.source_text()),
-                    self.expression().span(),
-                    /* jsx */
-                    false,
-                    StringLiteralParentKind::Directive,
-                ),
-                OptionalSemicolon
-            ]
-        )
     }
 }
 
@@ -441,21 +379,6 @@ impl<'a> FormatWrite<'a> for AstNode<'a, AssignmentTargetPropertyProperty<'a>> {
     }
 }
 
-impl<'a> FormatWrite<'a> for AstNode<'a, SequenceExpression<'a>> {
-    fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        let format_inner = format_with(|f| {
-            for (i, expr) in self.expressions().iter().enumerate() {
-                if i != 0 {
-                    write!(f, [",", line_suffix_boundary(), soft_line_break_or_space()])?;
-                }
-                write!(f, expr)?;
-            }
-            Ok(())
-        });
-        write!(f, group(&format_inner))
-    }
-}
-
 impl<'a> FormatWrite<'a> for AstNode<'a, Super> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
         write!(f, "super")
@@ -514,59 +437,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ChainExpression<'a>> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, ParenthesizedExpression<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        self.expression().fmt(f)
-    }
-}
-
-impl<'a> Format<'a> for AstNode<'a, Vec<'a, Statement<'a>>> {
-    fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        let mut join = f.join_nodes_with_hardline();
-        for stmt in
-            self.iter().filter(|stmt| !matches!(stmt.as_ref(), Statement::EmptyStatement(_)))
-        {
-            let span = match stmt.as_ref() {
-                // `@decorator export class A {}`
-                // Get the span of the decorator.
-                Statement::ExportNamedDeclaration(export) => {
-                    if let Some(Declaration::ClassDeclaration(decl)) = &export.declaration
-                        && let Some(decorator) = decl.decorators.first()
-                        && decorator.span().start < export.span.start
-                    {
-                        decorator.span()
-                    } else {
-                        export.span
-                    }
-                }
-                // `@decorator export default class A {}`
-                // Get the span of the decorator.
-                Statement::ExportDefaultDeclaration(export) => {
-                    if let ExportDefaultDeclarationKind::ClassDeclaration(decl) =
-                        &export.declaration
-                        && let Some(decorator) = decl.decorators.first()
-                        && decorator.span().start < export.span.start
-                    {
-                        decorator.span()
-                    } else {
-                        export.span
-                    }
-                }
-                _ => stmt.span(),
-            };
-
-            join.entry(span, stmt);
-        }
-        join.finish()
-    }
-}
-
-impl<'a> FormatWrite<'a> for AstNode<'a, Hashbang<'a>> {
-    fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        write!(f, ["#!", dynamic_text(self.value().as_str())])?;
-        let count = f.source_text()[self.span().end as usize..]
-            .chars()
-            .take_while(|&c| is_line_terminator(c))
-            .count();
-        write!(f, if count <= 1 { hard_line_break() } else { empty_line() })
+        unreachable!("No `ParenthesizedExpression` as we disabled `preserve_parens` in the parser")
     }
 }
 
@@ -845,9 +716,17 @@ impl<'a> FormatWrite<'a> for AstNode<'a, IfStatement<'a>> {
             ))
         )?;
         if let Some(alternate) = alternate {
-            let comments = f.context().comments().comments_before(alternate.span().start);
-            let has_dangling_comments = !comments.is_empty();
+            let alternate_start = alternate.span().start;
+            let comments = f.context().comments().comments_before(alternate_start);
+
             let has_line_comment = comments.iter().any(|comment| comment.kind == CommentKind::Line);
+            let has_dangling_comments = has_line_comment
+                || comments.last().is_some_and(|last_comment| {
+                    // Ensure the comments are placed before the else keyword or on a new line
+                    let gap_str =
+                        &f.source_text()[last_comment.span.end as usize..alternate_start as usize];
+                    gap_str.contains("else") || gap_str.contains('\n')
+                });
 
             let else_on_same_line =
                 matches!(consequent.as_ref(), Statement::BlockStatement(_)) && !has_line_comment;
@@ -924,6 +803,9 @@ impl<'a> FormatWrite<'a> for AstNode<'a, WithStatement<'a>> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, LabeledStatement<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+        let comments = f.context().comments().comments_before(self.body.span().start);
+        FormatLeadingComments::Comments(comments).fmt(f)?;
+
         let label = self.label();
         let body = self.body();
         write!(f, [label, ":"])?;

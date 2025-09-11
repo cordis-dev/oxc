@@ -25,6 +25,7 @@ use crate::{
     output_formatter::{LintCommandInfo, OutputFormatter},
     walk::Walk,
 };
+use oxc_linter::LintIgnoreMatcher;
 
 #[derive(Debug)]
 pub struct LintRunner {
@@ -178,6 +179,8 @@ impl LintRunner {
             // as the passed config file takes absolute precedence.
             basic_options.config.is_none();
 
+        let mut nested_ignore_patterns = Vec::new();
+
         let nested_configs = if search_for_nested_configs {
             match Self::get_nested_configs(
                 stdout,
@@ -186,12 +189,17 @@ impl LintRunner {
                 &paths,
                 external_linter,
                 &mut external_plugin_store,
+                &mut nested_ignore_patterns,
             ) {
                 Ok(v) => v,
                 Err(v) => return v,
             }
         } else {
             FxHashMap::default()
+        };
+
+        let ignore_matcher = {
+            LintIgnoreMatcher::new(&oxlintrc.ignore_patterns, &self.cwd, nested_ignore_patterns)
         };
 
         {
@@ -205,8 +213,8 @@ impl LintRunner {
         } else {
             None
         };
-        let config_builder = match ConfigStoreBuilder::from_base_oxlintrc(
-            &self.cwd,
+
+        let config_builder = match ConfigStoreBuilder::from_oxlintrc(
             false,
             oxlintrc,
             external_linter,
@@ -225,6 +233,12 @@ impl LintRunner {
             }
         }
         .with_filters(&filters);
+
+        // If no external rules, discard `ExternalLinter`
+        let mut external_linter = self.external_linter;
+        if external_plugin_store.is_empty() {
+            external_linter = None;
+        }
 
         if let Some(basic_config_file) = oxlintrc_for_print {
             let config_file = config_builder.resolve_final_config_file(basic_config_file);
@@ -294,22 +308,29 @@ impl LintRunner {
 
         let files_to_lint = paths
             .into_iter()
-            .filter(|path| !config_store.should_ignore(Path::new(path)))
+            .filter(|path| !ignore_matcher.should_ignore(Path::new(path)))
             .collect::<Vec<Arc<OsStr>>>();
 
         // Run type-aware linting through tsgolint
         // TODO: Add a warning message if `tsgolint` cannot be found, but type-aware rules are enabled
         if self.options.type_aware {
-            if let Err(err) = TsGoLintState::new(options.cwd(), config_store.clone())
-                .with_silent(misc_options.silent)
-                .lint(&files_to_lint, tx_error.clone())
+            let state = match TsGoLintState::try_new(options.cwd(), config_store.clone()) {
+                Ok(state) => state,
+                Err(err) => {
+                    print_and_flush_stdout(stdout, &err);
+                    return CliRunResult::TsGoLintError;
+                }
+            };
+
+            if let Err(err) =
+                state.with_silent(misc_options.silent).lint(&files_to_lint, tx_error.clone())
             {
                 print_and_flush_stdout(stdout, &err);
                 return CliRunResult::TsGoLintError;
             }
         }
 
-        let linter = Linter::new(LintOptions::default(), config_store, self.external_linter)
+        let linter = Linter::new(LintOptions::default(), config_store, external_linter)
             .with_fix(fix_options.fix_kind())
             .with_report_unused_directives(report_unused_directives);
 
@@ -338,13 +359,14 @@ impl LintRunner {
 
         // Spawn linting in another thread so diagnostics can be printed immediately from diagnostic_service.run.
         rayon::spawn(move || {
+            let has_external_linter = linter.has_external_linter();
+
             let mut lint_service = LintService::new(linter, options);
             lint_service.with_paths(files_to_lint);
 
-            // Use `RawTransferFileSystem` if `oxlint2` feature is enabled.
+            // Use `RawTransferFileSystem` if `ExternalLinter` exists.
             // This reads the source text into start of allocator, instead of the end.
-            #[cfg(all(feature = "oxlint2", not(feature = "disable_oxlint2")))]
-            {
+            if has_external_linter {
                 use crate::raw_fs::RawTransferFileSystem;
                 lint_service.with_file_system(Box::new(RawTransferFileSystem));
             }
@@ -446,6 +468,7 @@ impl LintRunner {
         paths: &Vec<Arc<OsStr>>,
         external_linter: Option<&ExternalLinter>,
         external_plugin_store: &mut ExternalPluginStore,
+        nested_ignore_patterns: &mut Vec<(Vec<String>, PathBuf)>,
     ) -> Result<FxHashMap<PathBuf, Config>, CliRunResult> {
         // TODO(perf): benchmark whether or not it is worth it to store the configurations on a
         // per-file or per-directory basis, to avoid calling `.parent()` on every path.
@@ -485,6 +508,11 @@ impl LintRunner {
 
         // iterate over each config and build the ConfigStore
         for (dir, oxlintrc) in nested_oxlintrc {
+            // Collect ignore patterns and their root
+            nested_ignore_patterns.push((
+                oxlintrc.ignore_patterns.clone(),
+                oxlintrc.path.parent().unwrap().to_path_buf(),
+            ));
             // TODO(refactor): clean up all of the error handling in this function
             let builder = match ConfigStoreBuilder::from_oxlintrc(
                 false,
@@ -501,7 +529,6 @@ impl LintRunner {
                             render_report(handler, &OxcDiagnostic::error(e.to_string()))
                         ),
                     );
-
                     return Err(CliRunResult::InvalidOptionConfig);
                 }
             }
@@ -675,6 +702,42 @@ mod test {
         let args2 = &["."];
         Tester::new()
             .with_cwd("fixtures/ignore_pattern_non_glob_syntax".into())
+            .test_and_snapshot_multiple(&[args1, args2]);
+    }
+
+    #[test]
+    fn ignore_patterns_empty_nested() {
+        let args1 = &[];
+        let args2 = &["."];
+        Tester::new()
+            .with_cwd("fixtures/ignore_patterns_empty_nested".into())
+            .test_and_snapshot_multiple(&[args1, args2]);
+    }
+
+    #[test]
+    fn ignore_patterns_relative() {
+        let args1 = &[];
+        let args2 = &["."];
+        Tester::new()
+            .with_cwd("fixtures/ignore_patterns_relative".into())
+            .test_and_snapshot_multiple(&[args1, args2]);
+    }
+
+    #[test]
+    fn ignore_patterns_with_symlink() {
+        let args1 = &[];
+        let args2 = &["."];
+        Tester::new()
+            .with_cwd("fixtures/ignore_patterns_symlink".into())
+            .test_and_snapshot_multiple(&[args1, args2]);
+    }
+
+    #[test]
+    fn ignore_patterns_whitelist() {
+        let args1 = &[];
+        let args2 = &["."];
+        Tester::new()
+            .with_cwd("fixtures/ignore_patterns_whitelist".into())
             .test_and_snapshot_multiple(&[args1, args2]);
     }
 
@@ -1208,6 +1271,14 @@ mod test {
     fn test_tsgolint_config() {
         // TODO: test with other rules as well once diagnostics are more stable
         let args = &["--type-aware", "no-floating-promises", "-c", "config-test.json"];
+        Tester::new().with_cwd("fixtures/tsgolint".into()).test_and_snapshot(args);
+    }
+
+    #[test]
+    #[cfg(not(target_endian = "big"))]
+    fn test_tsgolint_no_typescript_files() {
+        // tsgolint shouldn't run when no files need type aware linting
+        let args = &["--type-aware", "test.svelte"];
         Tester::new().with_cwd("fixtures/tsgolint".into()).test_and_snapshot(args);
     }
 }

@@ -30,7 +30,8 @@ mod worker;
 use capabilities::Capabilities;
 use code_actions::CODE_ACTION_KIND_SOURCE_FIX_ALL_OXC;
 use commands::{FIX_ALL_COMMAND_ID, FixAllCommandArgs};
-use options::{Options, Run, WorkspaceOption};
+use linter::server_linter::ServerLinterRun;
+use options::{Options, WorkspaceOption};
 use worker::WorkspaceWorker;
 
 type ConcurrentHashMap<K, V> = papaya::HashMap<K, V, FxBuildHasher>;
@@ -375,7 +376,7 @@ impl LanguageServer for Backend {
             else {
                 continue;
             };
-            cleared_diagnostics.extend(worker.get_clear_diagnostics());
+            cleared_diagnostics.extend(worker.get_clear_diagnostics().await);
             removed_registrations.push(Unregistration {
                 id: format!("watcher-{}", worker.get_root_uri().as_str()),
                 method: "workspace/didChangeWatchedFiles".to_string(),
@@ -441,10 +442,7 @@ impl LanguageServer for Backend {
         let Some(worker) = workers.iter().find(|worker| worker.is_responsible_for_uri(uri)) else {
             return;
         };
-        if !worker.should_lint_on_run_type(Run::OnSave).await {
-            return;
-        }
-        if let Some(diagnostics) = worker.lint_file(uri, None).await {
+        if let Some(diagnostics) = worker.lint_file(uri, None, ServerLinterRun::OnSave).await {
             self.client
                 .publish_diagnostics(
                     uri.clone(),
@@ -463,11 +461,8 @@ impl LanguageServer for Backend {
         let Some(worker) = workers.iter().find(|worker| worker.is_responsible_for_uri(uri)) else {
             return;
         };
-        if !worker.should_lint_on_run_type(Run::OnType).await {
-            return;
-        }
         let content = params.content_changes.first().map(|c| c.text.clone());
-        if let Some(diagnostics) = worker.lint_file(uri, content).await {
+        if let Some(diagnostics) = worker.lint_file(uri, content, ServerLinterRun::OnType).await {
             self.client
                 .publish_diagnostics(
                     uri.clone(),
@@ -486,7 +481,9 @@ impl LanguageServer for Backend {
         };
 
         let content = params.text_document.text;
-        if let Some(diagnostics) = worker.lint_file(uri, Some(content)).await {
+        if let Some(diagnostics) =
+            worker.lint_file(uri, Some(content), ServerLinterRun::Always).await
+        {
             self.client
                 .publish_diagnostics(
                     uri.clone(),
@@ -503,7 +500,7 @@ impl LanguageServer for Backend {
         let Some(worker) = workers.iter().find(|worker| worker.is_responsible_for_uri(uri)) else {
             return;
         };
-        worker.remove_diagnostics(&params.text_document.uri);
+        worker.remove_diagnostics(&params.text_document.uri).await;
     }
 
     async fn code_action(&self, params: CodeActionParams) -> Result<Option<CodeActionResponse>> {
@@ -601,8 +598,9 @@ impl Backend {
     // clears all diagnostics for workspace folders
     async fn clear_all_diagnostics(&self) {
         let mut cleared_diagnostics = vec![];
-        for worker in self.workspace_workers.read().await.iter() {
-            cleared_diagnostics.extend(worker.get_clear_diagnostics());
+        let workers = &*self.workspace_workers.read().await;
+        for worker in workers {
+            cleared_diagnostics.extend(worker.get_clear_diagnostics().await);
         }
         self.publish_all_diagnostics(&cleared_diagnostics).await;
     }

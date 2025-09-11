@@ -4,6 +4,50 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
+## [0.87.0] - 2025-09-08
+
+### 🚀 Features
+
+- f00adbe semantic: Add ability to lookup if AST contains any node kinds (#13137) (camchenry)
+
+### 🐛 Bug Fixes
+
+- d6b2e57 semantic: Correct comment on `AstTypesBitset` (#13572) (overlookmotel)
+- dc9645f semantic: Allow super in object literal method inside a class (#13463) (Boshen)
+
+### ⚡ Performance
+
+- 5648b31 semantic: Speed up `Scoping::clone_in_with_semantic_ids_with_another_arena` (#13563) (overlookmotel)
+
+
+
+
+## [0.84.0] - 2025-08-30
+
+### 🐛 Bug Fixes
+
+- fd3233c semantic: Flag `super` in function inside `ObjectExpression` (#13325) (overlookmotel)
+
+### 🚜 Refactor
+
+- 84a584c semantic: Clarify logic when checking `super` (#13324) (overlookmotel)
+
+
+## [0.83.0] - 2025-08-29
+
+### 🚀 Features
+
+- 9a828de semantic: Derive `Default` for `Semantic` (#13343) (overlookmotel)
+
+### 🐛 Bug Fixes
+
+- 8a43068 semantic: Allow `super` in object method in js but not in ts (#13318) (Boshen)
+
+### 🚜 Refactor
+
+- d787517 semantic: Store comments as a slice instead of `&Vec` (#13336) (overlookmotel)
+
+
 ## [0.82.3] - 2025-08-20
 
 ### 🚜 Refactor

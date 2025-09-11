@@ -1473,6 +1473,7 @@ impl Gen for ArrayExpression<'_> {
             p.print_indent();
         }
         p.print_ascii_byte(b']');
+        p.add_source_mapping_end(self.span);
     }
 }
 
@@ -1515,6 +1516,7 @@ impl GenExpr for ObjectExpression<'_> {
                 p.print_soft_space();
             }
             p.print_ascii_byte(b'}');
+            p.add_source_mapping_end(self.span);
         });
     }
 }
@@ -1603,19 +1605,18 @@ impl Gen for ObjectProperty<'_> {
             }
         }
 
-        if computed {
-            p.print_ascii_byte(b'[');
-        }
         if !shorthand {
+            if computed {
+                p.print_ascii_byte(b'[');
+            }
             self.key.print(p, ctx);
-        }
-        if computed {
-            p.print_ascii_byte(b']');
-        }
-        if !shorthand {
+            if computed {
+                p.print_ascii_byte(b']');
+            }
             p.print_colon();
             p.print_soft_space();
         }
+
         self.value.print_expr(p, Precedence::Comma, Context::empty());
     }
 }
@@ -1993,6 +1994,15 @@ impl Gen for AssignmentTargetPropertyProperty<'_> {
                 }
                 PropertyKey::PrivateIdentifier(ident) => {
                     ident.print(p, ctx);
+                }
+                PropertyKey::StringLiteral(s) => {
+                    if self.computed {
+                        p.print_ascii_byte(b'[');
+                    }
+                    p.print_string_literal(s, /* allow_backtick */ false);
+                    if self.computed {
+                        p.print_ascii_byte(b']');
+                    }
                 }
                 key => {
                     if self.computed {
@@ -2789,10 +2799,6 @@ impl Gen for ObjectPattern<'_> {
 
 impl Gen for BindingProperty<'_> {
     fn r#gen(&self, p: &mut Codegen, ctx: Context) {
-        if self.computed {
-            p.print_ascii_byte(b'[');
-        }
-
         let mut shorthand = false;
         if let PropertyKey::StaticIdentifier(key) = &self.key {
             match &self.value.kind {
@@ -2815,15 +2821,17 @@ impl Gen for BindingProperty<'_> {
         }
 
         if !shorthand {
+            if self.computed {
+                p.print_ascii_byte(b'[');
+            }
             self.key.print(p, ctx);
-        }
-        if self.computed {
-            p.print_ascii_byte(b']');
-        }
-        if !shorthand {
+            if self.computed {
+                p.print_ascii_byte(b']');
+            }
             p.print_colon();
             p.print_soft_space();
         }
+
         self.value.print(p, ctx);
     }
 }

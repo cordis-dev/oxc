@@ -2,6 +2,8 @@ use memchr::memmem::Finder;
 
 use oxc_span::SourceType;
 
+use crate::frameworks::FrameworkOptions;
+
 use super::{JavaScriptSource, SCRIPT_END, SCRIPT_START, find_script_closing_angle};
 
 pub struct VuePartialLoader<'a> {
@@ -20,7 +22,7 @@ impl<'a> VuePartialLoader<'a> {
     /// Each *.vue file can contain at most
     ///  * one `<script>` block (excluding `<script setup>`).
     ///  * one `<script setup>` block (excluding normal `<script>`).
-    /// <https://vuejs.org/api/sfc-spec.html#script>
+    ///    <https://vuejs.org/api/sfc-spec.html#script>
     fn parse_scripts(&self) -> Vec<JavaScriptSource<'a>> {
         let mut pointer = 0;
         let Some(result1) = self.parse_script(&mut pointer) else {
@@ -52,6 +54,7 @@ impl<'a> VuePartialLoader<'a> {
 
         // parse `lang`
         let lang = Self::extract_lang_attribute(content);
+        let is_setup = content.contains("setup"); // check if "setup" is present, does not check if its inside an attribute
 
         let Ok(mut source_type) = SourceType::from_extension(lang) else { return None };
         if !lang.contains('x') {
@@ -70,7 +73,12 @@ impl<'a> VuePartialLoader<'a> {
         let source_text = &self.source_text[js_start..js_end];
         // NOTE: loader checked that source_text.len() is less than u32::MAX
         #[expect(clippy::cast_possible_truncation)]
-        Some(JavaScriptSource::partial(source_text, source_type, js_start as u32))
+        Some(JavaScriptSource::partial_with_framework_options(
+            source_text,
+            source_type,
+            if is_setup { FrameworkOptions::VueSetup } else { FrameworkOptions::Default },
+            js_start as u32,
+        ))
     }
 
     fn extract_lang_attribute(content: &str) -> &str {

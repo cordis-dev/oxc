@@ -1,5 +1,6 @@
 mod command;
 mod format;
+mod reporter;
 mod result;
 mod service;
 mod walk;
@@ -22,6 +23,7 @@ static GLOBAL: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 
 pub fn format() -> CliRunResult {
     init_tracing();
+    init_miette();
 
     let mut args = std::env::args_os();
     // If first arg is `node`, also skip script path (`node script.js ...`).
@@ -31,13 +33,16 @@ pub fn format() -> CliRunResult {
     }
     let args = args.collect::<Vec<_>>();
 
+    // Parse command line arguments
     let command = match format_command().run_inner(&*args) {
         Ok(cmd) => cmd,
         Err(e) => {
             e.print_message(100);
             return if e.exit_code() == 0 {
-                CliRunResult::FormatSucceeded
+                // e.g. `-V` and `--help`
+                CliRunResult::None
             } else {
+                // e.g. Unknown options
                 CliRunResult::InvalidOptionConfig
             };
         }
@@ -67,4 +72,9 @@ fn init_tracing() {
         ))
         .with(tracing_subscriber::fmt::layer())
         .init();
+}
+
+// Initialize the data which relies on `is_atty` system calls so they don't block subsequent threads.
+fn init_miette() {
+    miette::set_hook(Box::new(|_| Box::new(miette::MietteHandlerOpts::new().build()))).unwrap();
 }

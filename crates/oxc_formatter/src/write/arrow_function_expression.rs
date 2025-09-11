@@ -1,3 +1,5 @@
+use std::iter;
+
 use oxc_ast::ast::*;
 use oxc_span::GetSpan;
 
@@ -307,10 +309,7 @@ impl<'a, 'b> ArrowFunctionLayout<'a, 'b> {
                         if matches!(
                             options.call_arg_layout,
                             None | Some(GroupedCallArgumentLayout::GroupedLastArgument)
-                        )
-                        // TODO: Unsupported yet
-                        //  && !comments.is_suppressed(next.span())
-                        {
+                        ) {
                             should_break = should_break || Self::should_break_chain(current);
 
                             should_break = should_break || Self::should_break_chain(next);
@@ -685,7 +684,7 @@ impl<'a> Format<'a> for ArrowChain<'a, '_> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum ExpressionLeftSide<'a, 'b> {
     Expression(&'b AstNode<'a, Expression<'a>>),
     AssignmentTarget(&'b AstNode<'a, AssignmentTarget<'a>>),
@@ -770,6 +769,22 @@ impl<'a, 'b> ExpressionLeftSide<'a, 'b> {
                 Self::get_left_side_of_assignment(target.as_ast_nodes())
             }
         }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = ExpressionLeftSide<'a, 'b>> {
+        iter::successors(Some(*self), |f| match f {
+            ExpressionLeftSide::Expression(expression) => {
+                Self::Expression(expression).left_expression()
+            }
+            _ => None,
+        })
+    }
+
+    pub fn iter_expression(&self) -> impl Iterator<Item = &AstNode<'_, Expression<'_>>> {
+        self.iter().filter_map(|left| match left {
+            ExpressionLeftSide::Expression(expression) => Some(expression),
+            _ => None,
+        })
     }
 
     pub fn span(&self) -> Span {

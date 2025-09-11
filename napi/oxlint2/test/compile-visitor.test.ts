@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // TODO(camc314): we need to generate `.d.ts` file for this module.
 // @ts-expect-error
-import { NODE_TYPE_IDS_MAP } from '../../parser/generated/lazy/types.js';
+import { NODE_TYPE_IDS_MAP } from '../../parser/generated/lazy/types.mjs';
 import {
   addVisitorToCompiled,
   compiledVisitor,
   finalizeCompiledVisitor,
   initCompiledVisitor,
-} from '../src-js/visitor.js';
+} from '../src-js/plugins/visitor.js';
 
-import type { EnterExit, VisitFn } from '../src-js/types.ts';
+import type { EnterExit, VisitFn } from '../src-js/plugins/types.ts';
 
 const PROGRAM_TYPE_ID = NODE_TYPE_IDS_MAP.get('Program'),
   EMPTY_STMT_TYPE_ID = NODE_TYPE_IDS_MAP.get('EmptyStatement');
