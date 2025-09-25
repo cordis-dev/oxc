@@ -1,7 +1,7 @@
 parser_misc Summary:
 AST Parsed     : 49/49 (100.00%)
 Positive Passed: 49/49 (100.00%)
-Negative Passed: 86/86 (100.00%)
+Negative Passed: 91/91 (100.00%)
 
   × Cannot assign to 'arguments' in strict mode
    ╭─[misc/fail/arguments-eval.ts:1:10]
@@ -309,28 +309,22 @@ Negative Passed: 86/86 (100.00%)
  3 │ }
    ╰────
 
-  × A parameter property is only allowed in a constructor implementation.
+  × TS(1090): 'readonly' modifier cannot appear on a parameter.
    ╭─[misc/fail/oxc-11713-26.ts:1:14]
  1 │ function foo(readonly parameter) {}
-   ·              ──────────────────
+   ·              ────────
    ╰────
 
-  × A parameter property is only allowed in a constructor implementation.
+  × TS(1090): 'readonly' modifier cannot appear on a parameter.
    ╭─[misc/fail/oxc-11713-27.ts:1:20]
  1 │ class Foo { method(readonly parameter) {} }
-   ·                    ──────────────────
+   ·                    ────────
    ╰────
 
   × TS(1090): 'private' modifier cannot appear on a parameter.
    ╭─[misc/fail/oxc-11713-3.ts:1:14]
  1 │ function foo(private parameter) {}
    ·              ───────
-   ╰────
-
-  × A parameter property is only allowed in a constructor implementation.
-   ╭─[misc/fail/oxc-11713-3.ts:1:14]
- 1 │ function foo(private parameter) {}
-   ·              ─────────────────
    ╰────
 
   × 'declare' modifier cannot be used here.
@@ -2832,6 +2826,46 @@ Negative Passed: 86/86 (100.00%)
     ·                      ─────
  17 │ };
     ╰────
+
+  × TS(1099): Type argument list cannot be empty.
+   ╭─[misc/fail/oxc-13617-1.ts:1:4]
+ 1 │ foo<>()
+   ·    ──
+   ╰────
+
+  × TS(1099): Type argument list cannot be empty.
+   ╭─[misc/fail/oxc-13617-2.ts:1:8]
+ 1 │ new Foo<>()
+   ·        ──
+   ╰────
+
+  × TS(1099): Type argument list cannot be empty.
+   ╭─[misc/fail/oxc-13617-3.ts:1:25]
+ 1 │ class Foo {property: Bar<> = 1}
+   ·                         ──
+   ╰────
+
+  × TS(1099): Type argument list cannot be empty.
+   ╭─[misc/fail/oxc-13617-4.ts:1:15]
+ 1 │ const foo: Foo<> = 1
+   ·               ──
+   ╰────
+
+  × Classes may not have a field named 'constructor'
+   ╭─[misc/fail/oxc-14014.ts:2:12]
+ 1 │ class Bar {
+ 2 │   accessor 'constructor'
+   ·            ─────────────
+ 3 │ }
+   ╰────
+
+  × Classes may not have a field named 'constructor'
+   ╭─[misc/fail/oxc-14014.ts:5:12]
+ 4 │ abstract class Baz {
+ 5 │   accessor 'constructor'
+   ·            ─────────────
+ 6 │ }
+   ╰────
 
   × Unexpected token
    ╭─[misc/fail/oxc-169.js:2:1]

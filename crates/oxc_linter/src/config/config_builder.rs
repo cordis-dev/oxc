@@ -162,8 +162,11 @@ impl ConfigStoreBuilder {
         }
 
         if !external_plugins.is_empty() {
-            let external_linter =
-                external_linter.ok_or(ConfigBuilderError::NoExternalLinterConfigured)?;
+            let Some(external_linter) = external_linter else {
+                #[expect(clippy::missing_panics_doc, reason = "infallible")]
+                let plugin_specifier = external_plugins.iter().next().unwrap().clone();
+                return Err(ConfigBuilderError::NoExternalLinterConfigured { plugin_specifier });
+            };
 
             let resolver = Resolver::default();
 
@@ -479,7 +482,7 @@ impl ConfigStoreBuilder {
         let new_rules = self
             .rules
             .iter()
-            .sorted_by_key(|(r, _)| (r.plugin_name(), r.name()))
+            .sorted_unstable_by_key(|(r, _)| (r.plugin_name(), r.name()))
             .map(|(r, severity)| ESLintRule {
                 plugin_name: r.plugin_name().to_string(),
                 rule_name: r.name().to_string(),
@@ -573,7 +576,9 @@ pub enum ConfigBuilderError {
         error: String,
     },
     ExternalRuleLookupError(ExternalRuleLookupError),
-    NoExternalLinterConfigured,
+    NoExternalLinterConfigured {
+        plugin_specifier: String,
+    },
 }
 
 impl Display for ConfigBuilderError {
@@ -594,11 +599,14 @@ impl Display for ConfigBuilderError {
                 write!(f, "invalid config file {file}: {reason}")
             }
             ConfigBuilderError::PluginLoadFailed { plugin_specifier, error } => {
-                write!(f, "Failed to load external plugin: {plugin_specifier}\n  {error}")?;
+                write!(f, "Failed to load JS plugin: {plugin_specifier}\n  {error}")?;
                 Ok(())
             }
-            ConfigBuilderError::NoExternalLinterConfigured => {
-                f.write_str("Failed to load external plugin because no external linter was configured. This means the Oxlint binary was executed directly rather than via napi bindings.")?;
+            ConfigBuilderError::NoExternalLinterConfigured { plugin_specifier } => {
+                write!(
+                    f,
+                    "`plugins` config contains '{plugin_specifier}'. JS plugins are not supported without `--js-plugins` CLI option. Note: JS plugin support is experimental.",
+                )?;
                 Ok(())
             }
             ConfigBuilderError::ExternalRuleLookupError(e) => std::fmt::Display::fmt(&e, f),

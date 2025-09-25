@@ -1,4 +1,8 @@
-use std::{borrow::Cow, ops::Deref};
+use std::{
+    borrow::Cow,
+    fmt::{self, Display},
+    ops::Deref,
+};
 
 use bitflags::bitflags;
 
@@ -279,7 +283,7 @@ impl<'a> Deref for RuleFix<'a> {
 /// A completed, normalized fix ready to be applied to the source code.
 ///
 /// Used internally by this module. Lint rules should use [`RuleFix`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct Fix<'a> {
     pub content: Cow<'a, str>,
@@ -334,7 +338,7 @@ impl<'a> Fix<'a> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PossibleFixes<'a> {
     None,
     Single(Fix<'a>),
@@ -525,20 +529,43 @@ impl<'a> CompositeFix<'a> {
         }
     }
 
-    /// Merges multiple fixes to one, returns an [`Fix::empty`] (which will not fix anything) if:
+    /// Merges multiple fixes to one.
     ///
-    /// 1. `fixes` is empty
-    /// 2. contains overlapped ranges
-    /// 3. contains negative ranges (span.start > span.end)
+    /// Returns a [`Fix::empty`] (which will not fix anything) if any of:
+    /// * `fixes` is empty.
+    /// * Overlapped ranges.
+    /// * Negative ranges (`span.start` > `span.end`).
+    /// * Ranges are out of bounds of `source_text`.
     ///
     /// <https://github.com/eslint/eslint/blob/v9.9.1/lib/linter/report-translator.js#L147-L179>
+    ///
+    /// # Panics
+    /// In debug mode, panics if merging fails.
     pub fn merge_fixes(fixes: Vec<Fix<'a>>, source_text: &str) -> Fix<'a> {
+        Self::merge_fixes_fallible(fixes, source_text).unwrap_or_else(|err| {
+            debug_assert!(false, "{err}");
+            Fix::empty()
+        })
+    }
+
+    /// Merges multiple fixes to one.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`MergeFixesError`] error if any of:
+    /// * Overlapped ranges.
+    /// * Negative ranges (`span.start` > `span.end`).
+    /// * Ranges are out of bounds of `source_text`.
+    pub fn merge_fixes_fallible(
+        fixes: Vec<Fix<'a>>,
+        source_text: &str,
+    ) -> Result<Fix<'a>, MergeFixesError> {
         let mut fixes = fixes;
         if fixes.is_empty() {
             // Do nothing
-            return Fix::empty();
+            return Ok(Fix::empty());
         } else if fixes.len() == 1 {
-            return fixes.pop().unwrap();
+            return Ok(fixes.pop().unwrap());
         }
 
         fixes.sort_unstable_by(|a, b| a.span.cmp(&b.span));
@@ -548,26 +575,24 @@ impl<'a> CompositeFix<'a> {
         let end = fixes[fixes.len() - 1].span.end;
         let mut last_pos = start;
         let mut output = String::new();
+        let mut merged_fix_message = None;
 
         for fix in fixes {
-            let Fix { content, span, .. } = fix;
+            let Fix { content, span, message } = fix;
+            if let Some(message) = message {
+                merged_fix_message.get_or_insert(message);
+            }
+
             // negative range or overlapping ranges is invalid
             if span.start > span.end {
-                debug_assert!(false, "Negative range is invalid: {span:?}");
-                return Fix::empty();
+                return Err(MergeFixesError::NegativeRange(span));
             }
             if last_pos > span.start {
-                debug_assert!(
-                    false,
-                    "Fix must not be overlapped, last_pos: {}, span.start: {}",
-                    last_pos, span.start
-                );
-                return Fix::empty();
+                return Err(MergeFixesError::Overlap(last_pos, span.start));
             }
 
             let Some(before) = source_text.get((last_pos) as usize..span.start as usize) else {
-                debug_assert!(false, "Invalid range: {}, {}", last_pos, span.start);
-                return Fix::empty();
+                return Err(MergeFixesError::InvalidRange(last_pos, span.start));
             };
 
             output.reserve(before.len() + content.len());
@@ -577,25 +602,41 @@ impl<'a> CompositeFix<'a> {
         }
 
         let Some(after) = source_text.get(last_pos as usize..end as usize) else {
-            debug_assert!(false, "Invalid range: {:?}", last_pos as usize..end as usize);
-            return Fix::empty();
+            return Err(MergeFixesError::InvalidRange(last_pos, end));
         };
 
         output.push_str(after);
-        output.shrink_to_fit();
-        Fix::new(output, Span::new(start, end))
+
+        let mut fix = Fix::new(output, Span::new(start, end));
+        if let Some(message) = merged_fix_message {
+            fix = fix.with_message(message);
+        }
+        Ok(fix)
+    }
+}
+
+/// Error returned by [`CompositeFix::merge_fixes_fallible`].
+pub enum MergeFixesError {
+    NegativeRange(Span),
+    Overlap(u32, u32),
+    InvalidRange(u32, u32),
+}
+
+impl Display for MergeFixesError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NegativeRange(span) => write!(f, "Negative range is invalid: {span:?}"),
+            Self::Overlap(last_pos, start) => {
+                write!(f, "Fix must not be overlapped, last_pos: {last_pos}, span.start: {start}")
+            }
+            Self::InvalidRange(start, end) => write!(f, "Invalid range: {:?}", start..end),
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-
-    impl PartialEq for Fix<'_> {
-        fn eq(&self, other: &Self) -> bool {
-            self.span == other.span && self.content == other.content
-        }
-    }
 
     impl Clone for CompositeFix<'_> {
         fn clone(&self) -> Self {

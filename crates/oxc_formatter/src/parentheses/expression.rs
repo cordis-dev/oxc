@@ -3,6 +3,7 @@ use oxc_ast::ast::*;
 use oxc_data_structures::stack;
 use oxc_span::GetSpan;
 use oxc_syntax::{
+    keyword::is_reserved_keyword,
     operator,
     precedence::{GetPrecedence, Precedence},
 };
@@ -84,12 +85,31 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, IdentifierReference<'a>> {
                         AstNodes::ForOfStatement(stmt) => {
                             return stmt.left.span().contains_inclusive(self.span);
                         }
+                        AstNodes::TSSatisfiesExpression(expr) => {
+                            return expr.expression.span() == self.span();
+                        }
                         _ => parent = parent.parent(),
                     }
                 }
                 unreachable!()
             }
-            _ => false,
+            name => {
+                // <https://github.com/prettier/prettier/blob/7584432401a47a26943dd7a9ca9a8e032ead7285/src/language-js/needs-parens.js#L123-L133>
+                matches!(
+                    self.parent,
+                    AstNodes::TSSatisfiesExpression(_) | AstNodes::TSAsExpression(_)
+                ) && matches!(
+                    name,
+                    "await"
+                        | "interface"
+                        | "module"
+                        | "using"
+                        | "yield"
+                        | "component"
+                        | "hook"
+                        | "type"
+                )
+            }
         }
     }
 }
@@ -213,7 +233,7 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, MemberExpression<'a>> {
 
 impl<'a> NeedsParentheses<'a> for AstNode<'a, ComputedMemberExpression<'a>> {
     fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
-        matches!(self.parent, AstNodes::Decorator(_))
+        false
     }
 }
 
@@ -236,26 +256,10 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, PrivateFieldExpression<'a>> {
     }
 }
 
-fn is_identifier_or_static_member_only(callee: &Expression) -> bool {
-    let mut expr = callee;
-    loop {
-        match expr {
-            Expression::Identifier(_) => return true,
-            Expression::StaticMemberExpression(static_member) => {
-                expr = &static_member.object;
-            }
-            _ => break,
-        }
-    }
-
-    false
-}
-
 impl<'a> NeedsParentheses<'a> for AstNode<'a, CallExpression<'a>> {
     fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
         match self.parent {
             AstNodes::NewExpression(_) => true,
-            AstNodes::Decorator(_) => !is_identifier_or_static_member_only(&self.callee),
             AstNodes::ExportDefaultDeclaration(_) => {
                 let callee = &self.callee();
                 let callee_span = callee.span();
@@ -283,15 +287,15 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, NewExpression<'a>> {
 impl<'a> NeedsParentheses<'a> for AstNode<'a, UpdateExpression<'a>> {
     fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
         let parent = self.parent;
-        if self.prefix() {
-            if let AstNodes::UnaryExpression(unary) = parent {
-                let parent_operator = unary.operator();
-                let operator = self.operator();
-                return (parent_operator == UnaryOperator::UnaryPlus
-                    && operator == UpdateOperator::Increment)
-                    || (parent_operator == UnaryOperator::UnaryNegation
-                        && operator == UpdateOperator::Decrement);
-            }
+        if self.prefix()
+            && let AstNodes::UnaryExpression(unary) = parent
+        {
+            let parent_operator = unary.operator();
+            let operator = self.operator();
+            return (parent_operator == UnaryOperator::UnaryPlus
+                && operator == UpdateOperator::Increment)
+                || (parent_operator == UnaryOperator::UnaryNegation
+                    && operator == UpdateOperator::Decrement);
         }
         unary_like_expression_needs_parens(UnaryLike::UpdateExpression(self))
     }
@@ -367,7 +371,7 @@ fn is_in_for_initializer(expr: &AstNode<'_, BinaryExpression<'_>>) -> bool {
 impl<'a> NeedsParentheses<'a> for AstNode<'a, PrivateInExpression<'a>> {
     #[inline]
     fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
-        false
+        is_class_extends(self.span, self.parent)
     }
 }
 
@@ -479,6 +483,8 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, AssignmentExpression<'a>> {
                 }
                 true
             }
+            // `interface { [a = 1]; }` and `class { [a = 1]; }` not need parens
+            AstNodes::TSPropertySignature(_) | AstNodes::PropertyDefinition(_) |
             // Never need parentheses in these contexts:
             // - `a = (b = c)` = nested assignments don't need extra parens
             AstNodes::AssignmentExpression(_) => false,
@@ -535,7 +541,7 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, AwaitExpression<'a>> {
 impl<'a> NeedsParentheses<'a> for AstNode<'a, ChainExpression<'a>> {
     fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
         match self.parent {
-            AstNodes::NewExpression(_) | AstNodes::Decorator(_) => true,
+            AstNodes::NewExpression(_) => true,
             AstNodes::CallExpression(call) => !call.optional,
             AstNodes::StaticMemberExpression(member) => !member.optional,
             AstNodes::ComputedMemberExpression(member) => {
@@ -642,27 +648,56 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, JSXEmptyExpression> {
 
 impl<'a> NeedsParentheses<'a> for AstNode<'a, TSAsExpression<'a>> {
     fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
-        ts_as_or_satisfies_needs_parens(self.parent)
+        ts_as_or_satisfies_needs_parens(self.span(), &self.expression, self.parent)
     }
 }
 
 impl<'a> NeedsParentheses<'a> for AstNode<'a, TSSatisfiesExpression<'a>> {
     fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
-        ts_as_or_satisfies_needs_parens(self.parent)
+        ts_as_or_satisfies_needs_parens(self.span(), &self.expression, self.parent)
     }
 }
 
 impl<'a> NeedsParentheses<'a> for AstNode<'a, TSTypeAssertion<'a>> {
     fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
-        matches!(
-            self.parent,
-            AstNodes::ComputedMemberExpression(_)
-                | AstNodes::StaticMemberExpression(_)
-                | AstNodes::PrivateFieldExpression(_)
-                | AstNodes::IdentifierReference(_)
-                | AstNodes::AssignmentExpression(_)
-                | AstNodes::AssignmentTargetWithDefault(_)
-        )
+        match self.parent {
+            AstNodes::TSAsExpression(_) | AstNodes::TSSatisfiesExpression(_) => true,
+            AstNodes::BinaryExpression(binary) => {
+                matches!(binary.operator, BinaryOperator::ShiftLeft)
+            }
+            _ => type_cast_like_needs_parens(self.span(), self.parent),
+        }
+    }
+}
+
+fn type_cast_like_needs_parens(span: Span, parent: &AstNodes<'_>) -> bool {
+    #[expect(clippy::match_same_arms)] // for better readability
+    match parent {
+        AstNodes::ExportDefaultDeclaration(_)
+        | AstNodes::TSTypeAssertion(_)
+        | AstNodes::UnaryExpression(_)
+        | AstNodes::AwaitExpression(_)
+        | AstNodes::TSNonNullExpression(_)
+        // Callee
+        | AstNodes::CallExpression(_)
+        | AstNodes::NewExpression(_)
+        // template tag
+        | AstNodes::TaggedTemplateExpression(_)
+        // in spread
+        | AstNodes::JSXSpreadChild(_)
+        | AstNodes::SpreadElement(_)
+        | AstNodes::JSXSpreadAttribute(_)
+        // static member
+        | AstNodes::StaticMemberExpression(_) => true,
+        AstNodes::ComputedMemberExpression(member) => {
+            member.object.span() == span
+        }
+        // assignment left hand side
+        AstNodes::UpdateExpression(_) | AstNodes::AssignmentTargetWithDefault(_) => true,
+        AstNodes::AssignmentExpression(assignment) => {
+            assignment.left.span() == span
+        }
+        _ => is_class_extends(span, parent),
     }
 }
 
@@ -752,6 +787,7 @@ fn member_chain_callee_needs_parens(e: &Expression) -> bool {
     std::iter::successors(Some(e), |e| match e {
         Expression::ComputedMemberExpression(e) => Some(&e.object),
         Expression::StaticMemberExpression(e) => Some(&e.object),
+        Expression::TaggedTemplateExpression(e) => Some(&e.tag),
         Expression::TSNonNullExpression(e) => Some(&e.expression),
         _ => None,
     })
@@ -918,7 +954,8 @@ fn await_or_yield_needs_parens(span: Span, node: &AstNodes<'_>) -> bool {
             | AstNodes::TSSatisfiesExpression(_)
             | AstNodes::SpreadElement(_)
             | AstNodes::LogicalExpression(_)
-            | AstNodes::BinaryExpression(_),
+            | AstNodes::BinaryExpression(_)
+            | AstNodes::PrivateInExpression(_),
     ) {
         return true;
     }
@@ -929,15 +966,23 @@ fn await_or_yield_needs_parens(span: Span, node: &AstNodes<'_>) -> bool {
     }
 }
 
-fn ts_as_or_satisfies_needs_parens(parent: &AstNodes<'_>) -> bool {
-    matches!(
-        parent,
-        AstNodes::ComputedMemberExpression(_)
-            | AstNodes::StaticMemberExpression(_)
-            | AstNodes::PrivateFieldExpression(_)
-            | AstNodes::AssignmentExpression(_)
-            | AstNodes::AssignmentTargetWithDefault(_)
-    )
+fn ts_as_or_satisfies_needs_parens(
+    span: Span,
+    inner: &Expression<'_>,
+    parent: &AstNodes<'_>,
+) -> bool {
+    match parent {
+        AstNodes::ConditionalExpression(_)
+        // Binary-like
+        | AstNodes::LogicalExpression(_)
+        | AstNodes::BinaryExpression(_) => true,
+        // `export default (function foo() {} as bar)` and `export default (class {} as bar)`
+        AstNodes::ExportDefaultDeclaration(_) =>
+            matches!(inner, Expression::FunctionExpression(_) | Expression::ClassExpression(_)),
+        _ => {
+            type_cast_like_needs_parens(span, parent)
+        }
+    }
 }
 
 fn is_class_extends(span: Span, parent: &AstNodes<'_>) -> bool {
