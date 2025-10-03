@@ -753,7 +753,6 @@ impl Runtime {
 
                         messages.lock().unwrap().extend(section_messages.iter().map(|message| {
                             let message = message_cloner.clone_message(message);
-
                             message_to_message_with_position(message, source_text, rope)
                         }));
                     },
@@ -993,7 +992,6 @@ impl Runtime {
         let semantic_ret = SemanticBuilder::new()
             .with_cfg(true)
             .with_scope_tree_child_ids(true)
-            .with_build_jsdoc(true)
             .with_check_syntax_error(check_syntax_errors)
             .build(allocator.alloc(ret.program));
 

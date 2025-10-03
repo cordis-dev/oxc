@@ -2,15 +2,41 @@ import type { Context } from './plugins/context.ts';
 import type { CreateOnceRule, Plugin, Rule } from './plugins/load.ts';
 import type { BeforeHook, Visitor, VisitorWithHooks } from './plugins/types.ts';
 
-const { defineProperty, getPrototypeOf, hasOwn, setPrototypeOf, create: ObjectCreate } = Object;
+export type { Context, Diagnostic, DiagnosticBase, DiagnosticWithLoc, DiagnosticWithNode } from './plugins/context.ts';
+export type { Fix, Fixer, FixFn, Range } from './plugins/fix.ts';
+export type { CreateOnceRule, CreateRule, Plugin, Rule } from './plugins/load.ts';
+export type {
+  Definition,
+  DefinitionType,
+  Reference,
+  Scope,
+  ScopeManager,
+  ScopeType,
+  Variable,
+} from './plugins/scope.ts';
+export type { CountOptions, FilterFn, RangeOptions, SkipOptions, SourceCode } from './plugins/source_code.ts';
+export type {
+  AfterHook,
+  BeforeHook,
+  Comment,
+  LineColumn,
+  Location,
+  Node,
+  NodeOrToken,
+  RuleMeta,
+  Token,
+  Visitor,
+  VisitorWithHooks,
+} from './plugins/types.ts';
 
-const dummyOptions: unknown[] = [],
-  dummyReport = () => {};
+const { defineProperty, getPrototypeOf, hasOwn, setPrototypeOf, create: ObjectCreate } = Object;
 
 /**
  * Define a plugin.
  *
- * Converts any rules with `createOnce` method to have an ESLint-compatible `create` method.
+ * If any of the plugin's rules use the Oxlint alternative `createOnce` API,
+ * add ESLint-compatible `create` methods to those rules, which delegate to `createOnce`.
+ * This makes the plugin compatible with ESLint.
  *
  * The `plugin` object passed in is mutated in-place.
  *
@@ -38,8 +64,9 @@ export function definePlugin(plugin: Plugin): Plugin {
 /**
  * Define a rule.
  *
- * If rules does not already have a `create` method, create an ESLint-compatible `create` method
- * which delegates to `createOnce`.
+ * If `rule` uses the Oxlint alternative `createOnce` API, add an ESLint-compatible
+ * `create` method to the rule, which delegates to `createOnce`.
+ * This makes the rule compatible with ESLint.
  *
  * The `rule` object passed in is mutated in-place.
  *
@@ -106,8 +133,8 @@ function createContextAndVisitor(rule: CreateOnceRule): {
   // so should be OK to take this shortcut.
   const context = ObjectCreate(null, {
     id: { value: '', enumerable: true, configurable: true },
-    options: { value: dummyOptions, enumerable: true, configurable: true },
-    report: { value: dummyReport, enumerable: true, configurable: true },
+    options: { value: null, enumerable: true, configurable: true },
+    report: { value: null, enumerable: true, configurable: true },
   });
 
   let { before: beforeHook, after: afterHook, ...visitor } = createOnce.call(rule, context) as VisitorWithHooks;

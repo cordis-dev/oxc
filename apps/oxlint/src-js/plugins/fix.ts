@@ -1,7 +1,7 @@
 import { assertIs } from './utils.js';
 
 import type { Diagnostic, InternalContext } from './context.ts';
-import type { Node } from './types.js';
+import type { NodeOrToken } from './types.ts';
 
 const { prototype: ArrayPrototype, from: ArrayFrom } = Array,
   { getPrototypeOf, hasOwn, prototype: ObjectPrototype } = Object,
@@ -11,15 +11,14 @@ const { prototype: ArrayPrototype, from: ArrayFrom } = Array,
 // Type of `fix` function.
 // `fix` can return a single fix, an array of fixes, or any iterator that yields fixes.
 // e.g. `(function*() { yield fix1; yield fix2; })()`
-export type FixFn = (fixer: typeof FIXER) => Fix | Array<Fix | null> | IterableIterator<Fix | null> | null;
+export type FixFn = (
+  fixer: Fixer,
+) => Fix | Array<Fix | null | undefined> | IterableIterator<Fix | null | undefined> | null | undefined;
 
 // Type of a fix, as returned by `fix` function.
 export type Fix = { range: Range; text: string };
 
-type Range = [number, number];
-
-// Currently we only support `Node`s, but will add support for `Token`s later
-type NodeOrToken = Node;
+export type Range = [number, number];
 
 // Fixer, passed as argument to `fix` function passed to `Context#report()`.
 //
@@ -55,6 +54,8 @@ const FIXER = Object.freeze({
     return { range, text };
   },
 });
+
+export type Fixer = typeof FIXER;
 
 /**
  * Get fixes from a `Diagnostic`.
@@ -102,10 +103,9 @@ export function getFixes(diagnostic: Diagnostic, internal: InternalContext): Fix
     // Check prototype instead of using `Array.isArray()`, to ensure it is a native `Array`,
     // not a subclass which may have overridden `toJSON()` in a way which could make `JSON.stringify()` throw
     if (getPrototypeOf(fixes) !== ArrayPrototype || hasOwn(fixes, 'toJSON')) {
-      fixes = ArrayFrom(fixes as IterableIterator<Fix>);
+      fixes = ArrayFrom(fixes);
       isCloned = true;
     }
-    assertIs<Array<Fix | null>>(fixes);
 
     const fixesLen = fixes.length;
     if (fixesLen === 0) return null;
@@ -139,7 +139,7 @@ export function getFixes(diagnostic: Diagnostic, internal: InternalContext): Fix
 
   // ESLint does not throw this error if `fix` function returns only falsy values.
   // We've already exited if that is the case, so we're reproducing that behavior.
-  if (internal.meta.fixable === null) {
+  if (internal.isFixable === false) {
     throw new Error('Fixable rules must set the `meta.fixable` property to "code" or "whitespace".');
   }
 
