@@ -6,7 +6,7 @@ export interface Visitor {
 }
 */
 
-import type { VisitorObject as Visitor } from '../../dist/generated/visit/visitor.d.ts';
+import type { VisitorObject as Visitor } from '../generated/visitor.d.ts';
 export type { Visitor };
 
 // Hook function that runs before traversal.
@@ -25,29 +25,19 @@ export interface VisitorWithHooks extends Visitor {
 // Visit function for a specific AST node type.
 export type VisitFn = (node: Node) => void;
 
-// Internal interface for any type which has `start` and `end` properties.
-// We'll add `range` and `loc` properties to this later.
-interface Spanned {
+// Range of source offsets.
+export type Range = [number, number];
+
+// Interface for any type which has `range` field
+export interface Ranged {
+  range: Range;
+}
+
+// Interface for any type which has location properties.
+export interface Span extends Ranged {
   start: number;
   end: number;
-}
-
-// AST node type.
-export interface Node extends Spanned {}
-
-// AST token type.
-export interface Token extends Spanned {
-  type: string;
-  value: string;
-}
-
-// Currently we only support `Node`s, but will add support for `Token`s later.
-export type NodeOrToken = Node | Token;
-
-// Comment.
-export interface Comment extends Spanned {
-  type: 'Line' | 'Block';
-  value: string;
+  loc: Location;
 }
 
 // Source code location.
@@ -61,6 +51,24 @@ export interface Location {
 export interface LineColumn {
   line: number;
   column: number;
+}
+
+// AST node type.
+export interface Node extends Span {}
+
+// AST token type.
+export interface Token extends Span {
+  type: string;
+  value: string;
+}
+
+// Currently we only support `Node`s, but will add support for `Token`s later.
+export type NodeOrToken = Node | Token;
+
+// Comment.
+export interface Comment extends Span {
+  type: 'Line' | 'Block';
+  value: string;
 }
 
 // Element of compiled visitor array.
@@ -78,6 +86,7 @@ export interface EnterExit {
 // TODO: Fill in all properties.
 export interface RuleMeta {
   fixable?: 'code' | 'whitespace' | null | undefined;
+  messages?: Record<string, string>;
   [key: string]: unknown;
 }
 

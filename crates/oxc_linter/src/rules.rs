@@ -130,6 +130,7 @@ pub(crate) mod eslint {
     pub mod no_nonoctal_decimal_escape;
     pub mod no_obj_calls;
     pub mod no_object_constructor;
+    pub mod no_param_reassign;
     pub mod no_plusplus;
     pub mod no_proto;
     pub mod no_prototype_builtins;
@@ -544,6 +545,7 @@ pub(crate) mod oxc {
     pub mod bad_min_max_func;
     pub mod bad_object_literal_comparison;
     pub mod bad_replace_all_arg;
+    pub mod branches_sharing_code;
     pub mod const_comparisons;
     pub mod double_comparisons;
     pub mod erasing_op;
@@ -646,9 +648,12 @@ pub(crate) mod vue {
     pub mod define_props_declaration;
     pub mod define_props_destructuring;
     pub mod max_props;
+    pub mod no_export_in_script_setup;
+    pub mod no_import_compiler_macros;
     pub mod no_multiple_slot_args;
     pub mod no_required_prop_with_default;
     pub mod prefer_import_from_vue;
+    pub mod require_default_export;
     pub mod require_typed_ref;
     pub mod valid_define_emits;
     pub mod valid_define_props;
@@ -698,6 +703,7 @@ oxc_macros::declare_all_lint_rules! {
     eslint::no_multi_assign,
     eslint::no_nested_ternary,
     eslint::no_object_constructor,
+    eslint::no_param_reassign,
     eslint::no_restricted_imports,
     eslint::no_unneeded_ternary,
     eslint::no_useless_backreference,
@@ -968,6 +974,7 @@ oxc_macros::declare_all_lint_rules! {
     oxc::bad_min_max_func,
     oxc::bad_object_literal_comparison,
     oxc::bad_replace_all_arg,
+    oxc::branches_sharing_code,
     oxc::const_comparisons,
     oxc::double_comparisons,
     oxc::erasing_op,
@@ -1251,9 +1258,12 @@ oxc_macros::declare_all_lint_rules! {
     vue::define_emits_declaration,
     vue::define_props_declaration,
     vue::max_props,
+    vue::no_import_compiler_macros,
+    vue::no_export_in_script_setup,
     vue::no_multiple_slot_args,
     vue::no_required_prop_with_default,
     vue::prefer_import_from_vue,
+    vue::require_default_export,
     vue::require_typed_ref,
     vue::valid_define_emits,
     vue::valid_define_props,

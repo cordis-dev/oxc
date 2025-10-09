@@ -1,22 +1,25 @@
 import { getFixes } from './fix.js';
-import { getIndexFromLoc, SOURCE_CODE } from './source_code.js';
+import { getOffsetFromLineColumn } from './location.js';
+import { SOURCE_CODE } from './source_code.js';
 
 import type { Fix, FixFn } from './fix.ts';
 import type { SourceCode } from './source_code.ts';
-import type { Location, Node } from './types.ts';
+import type { Location, Ranged } from './types.ts';
 
-const { hasOwn } = Object;
+const { hasOwn, keys: ObjectKeys } = Object;
 
 // Diagnostic in form passed by user to `Context#report()`
 export type Diagnostic = DiagnosticWithNode | DiagnosticWithLoc;
 
 export interface DiagnosticBase {
-  message: string;
+  message?: string | null | undefined;
+  messageId?: string | null | undefined;
+  data?: Record<string, string | number> | null | undefined;
   fix?: FixFn;
 }
 
 export interface DiagnosticWithNode extends DiagnosticBase {
-  node: Node;
+  node: Ranged;
 }
 
 export interface DiagnosticWithLoc extends DiagnosticBase {
@@ -82,6 +85,8 @@ export interface InternalContext {
   options: unknown[];
   // `true` if rule can provide fixes (`meta.fixable` in `RuleMeta` is 'code' or 'whitespace')
   isFixable: boolean;
+  // Message templates for messageId support
+  messages: Record<string, string> | null;
 }
 
 /**
@@ -97,14 +102,17 @@ export class Context {
   /**
    * @class
    * @param fullRuleName - Rule name, in form `<plugin>/<rule>`
+   * @param isFixable - Whether the rule can provide fixes
+   * @param messages - Message templates for `messageId` support (or `null` if none)
    */
-  constructor(fullRuleName: string, isFixable: boolean) {
+  constructor(fullRuleName: string, isFixable: boolean, messages: Record<string, string> | null) {
     this.#internal = {
       id: fullRuleName,
       filePath: '',
       ruleIndex: -1,
       options: [],
       isFixable,
+      messages,
     };
   }
 
@@ -143,31 +151,56 @@ export class Context {
   report(diagnostic: Diagnostic): void {
     const internal = getInternal(this, 'report errors');
 
+    // Get message, resolving message from `messageId` if present
+    let message = getMessage(diagnostic, internal);
+
+    // Interpolate placeholders {{key}} with data values
+    if (hasOwn(diagnostic, 'data')) {
+      const { data } = diagnostic;
+      if (data != null) {
+        message = message.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+          key = key.trim();
+          const value = data[key];
+          return value !== undefined ? String(value) : match;
+        });
+      }
+    }
+
     // TODO: Validate `diagnostic`
     let start: number, end: number, loc: Location;
+
     if (hasOwn(diagnostic, 'loc') && (loc = (diagnostic as DiagnosticWithLoc).loc) != null) {
       // `loc`
       if (typeof loc !== 'object') throw new TypeError('`loc` must be an object');
-      start = getIndexFromLoc(loc.start);
-      end = getIndexFromLoc(loc.end);
+      start = getOffsetFromLineColumn(loc.start);
+      end = getOffsetFromLineColumn(loc.end);
     } else {
       // `node`
       const { node } = diagnostic as DiagnosticWithNode;
       if (node == null) throw new TypeError('Either `node` or `loc` is required');
       if (typeof node !== 'object') throw new TypeError('`node` must be an object');
-      ({ start, end } = node);
+
+      // ESLint uses `loc` here instead of `range`.
+      // We can't do that because AST nodes don't have `loc` property yet. In any case, `range` is preferable,
+      // as otherwise we have to convert `loc` to `range` which is expensive at present.
+      // TODO: Revisit this once we have `loc` support in AST, and a fast translation table to convert `loc` to `range`.
+      const { range } = node;
+      if (range === null || typeof range !== 'object') throw new TypeError('`node.range` must be present');
+      start = range[0];
+      end = range[1];
+
       // Do type validation checks here, to ensure no error in serialization / deserialization.
       // Range validation happens on Rust side.
       if (
         typeof start !== 'number' || typeof end !== 'number' ||
         start < 0 || end < 0 || (start | 0) !== start || (end | 0) !== end
       ) {
-        throw new TypeError('`node.start` and `node.end` must be non-negative integers');
+        throw new TypeError('`node.range[0]` and `node.range[1]` must be non-negative integers');
       }
     }
 
     diagnostics.push({
-      message: diagnostic.message,
+      message,
       start,
       end,
       ruleIndex: internal.ruleIndex,
@@ -189,4 +222,50 @@ export class Context {
       return internal;
     };
   }
+}
+
+/**
+ * Get message from diagnostic.
+ * @param diagnostic - Diagnostic object
+ * @param internal - Internal context object
+ * @returns Message string
+ * @throws {Error|TypeError} If neither `message` nor `messageId` provided, or of wrong type
+ */
+function getMessage(diagnostic: Diagnostic, internal: InternalContext): string {
+  if (hasOwn(diagnostic, 'messageId')) {
+    const { messageId } = diagnostic as { messageId: string | null | undefined };
+    if (messageId != null) return resolveMessageFromMessageId(messageId, internal);
+  }
+
+  if (hasOwn(diagnostic, 'message')) {
+    const { message } = diagnostic;
+    if (typeof message === 'string') return message;
+    if (message != null) throw new TypeError('`message` must be a string');
+  }
+
+  throw new Error('Either `message` or `messageId` is required');
+}
+
+/**
+ * Resolve a message ID to its message string, with optional data interpolation.
+ * @param messageId - The message ID to resolve
+ * @param internal - Internal context containing messages
+ * @returns Resolved message string
+ * @throws {Error} If `messageId` is not found in `messages`
+ */
+function resolveMessageFromMessageId(messageId: string, internal: InternalContext): string {
+  const { messages } = internal;
+  if (messages === null) {
+    throw new Error(`Cannot use messageId '${messageId}' - rule does not define any messages in \`meta.messages\``);
+  }
+
+  if (!hasOwn(messages, messageId)) {
+    throw new Error(
+      `Unknown messageId '${messageId}'. Available \`messageIds\`: ${
+        ObjectKeys(messages).map((msg) => `'${msg}'`).join(', ')
+      }`,
+    );
+  }
+
+  return messages[messageId];
 }

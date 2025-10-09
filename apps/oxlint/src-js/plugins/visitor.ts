@@ -72,16 +72,8 @@
 // for objects created by user code in visitors. If ephemeral user-created objects all fit in new space,
 // it will avoid full GC runs, which should greatly improve performance.
 
-// Lazy implementation
-/*
-// TODO(camc314): we need to generate `.d.ts` file for this module.
-import { LEAF_NODE_TYPES_COUNT, NODE_TYPE_IDS_MAP, NODE_TYPES_COUNT } from '../../dist/generated/lazy/types.js';
-*/
-
-// TODO(camc314): we need to generate `.d.ts` file for this module.
-// @ts-expect-error
-import { LEAF_NODE_TYPES_COUNT, NODE_TYPE_IDS_MAP, NODE_TYPES_COUNT } from '../../dist/generated/visit/types.js';
-import { assertIs } from './utils.js';
+import { LEAF_NODE_TYPES_COUNT, NODE_TYPE_IDS_MAP, NODE_TYPES_COUNT } from '../generated/type_ids.js';
+import { parseSelector, wrapVisitFnWithSelectorMatch } from './selector.js';
 
 import type { CompiledVisitorEntry, EnterExit, Node, VisitFn, Visitor } from './types.ts';
 
@@ -221,7 +213,7 @@ export function addVisitorToCompiled(visitor: Visitor): void {
   for (let i = 0; i < keysLen; i++) {
     let name = keys[i];
 
-    const visitFn = (visitor as { [key: string]: VisitFn })[name];
+    let visitFn = visitor[name];
     if (typeof visitFn !== 'function') {
       throw new TypeError(`'${name}' property of visitor object is not a function`);
     }
@@ -229,66 +221,130 @@ export function addVisitorToCompiled(visitor: Visitor): void {
     const isExit = name.endsWith(':exit');
     if (isExit) name = name.slice(0, -5);
 
-    const typeId = NODE_TYPE_IDS_MAP.get(name);
-    if (typeId === void 0) throw new Error(`Unknown node type '${name}' in visitor object`);
+    // TODO: Combine the two hashmaps `NODE_TYPE_IDS_MAP` and selectors cache into one `Map`
+    // to avoid 2 hashmap lookups for selectors?
+    let typeId = NODE_TYPE_IDS_MAP.get(name);
+    if (typeId !== void 0) {
+      // Single type visit function e.g. `Program`
+      addVisitFn(typeId, isExit, visitFn);
+      continue;
+    }
 
-    const existing = (compiledVisitor as CompilingVisitor)[typeId];
-    if (typeId < LEAF_NODE_TYPES_COUNT) {
-      // Leaf node - store just 1 function, not enter+exit pair
-      assertIs<CompilingLeafVisitorEntry>(existing);
+    // `*` matches any node without any filtering, so no need to wrap it
+    if (name !== '*') {
+      // Selector.
+      // Parse selector.
+      // Wrap `visitFn` so it only executes if the selector matches.
+      // If selector is simple (unconditionally matches certain types e.g. `:matches(X, Y)`), skip wrapping.
+      const selector = parseSelector(name);
+      if (selector.isComplex) visitFn = wrapVisitFnWithSelectorMatch(visitFn, selector.esquerySelector);
 
-      if (existing === null) {
-        compiledVisitor[typeId] = visitFn;
-      } else if (isArray(existing)) {
-        if (isExit) {
-          existing.push(visitFn);
-        } else {
-          // Insert before last in array in case last was enter visit function from the current rule,
-          // to ensure enter is called before exit.
-          // It could also be either an enter or exit visitor function for another rule, but the order
-          // rules are called in doesn't matter. We only need to make sure that a rule's exit visitor
-          // isn't called before enter visitor *for that same rule*.
-          existing.splice(existing.length - 1, 0, visitFn);
+      const { typeIds } = selector;
+      if (typeIds !== null) {
+        // Selector matches a specific set of node types
+        for (let i = 0, len = typeIds.length; i < len; i++) {
+          addVisitFn(typeIds[i], isExit, visitFn);
         }
-      } else {
-        // Same as above, enter visitor is put to front of list to make sure enter is called before exit
-        (compiledVisitor as CompilingVisitor)[typeId] = isExit
-          ? createVisitFnArray(existing, visitFn)
-          : createVisitFnArray(visitFn, existing);
-        mergedLeafVisitorTypeIds.push(typeId);
+        continue;
       }
+    }
+
+    // `*` selector or some other selector that matches all node types
+    for (typeId = 0; typeId < LEAF_NODE_TYPES_COUNT; typeId++) {
+      addLeafVisitFn(typeId, isExit, visitFn);
+    }
+    for (; typeId < NODE_TYPES_COUNT; typeId++) {
+      addNonLeafVisitFn(typeId, isExit, visitFn);
+    }
+  }
+}
+
+/**
+ * Add visit function to compiled visitor.
+ * @param typeId - Node type ID
+ * @param isExit - `true` if is an exit visitor
+ * @param visitFn - Visit function
+ */
+function addVisitFn(typeId: number, isExit: boolean, visitFn: VisitFn): void {
+  if (typeId < LEAF_NODE_TYPES_COUNT) {
+    addLeafVisitFn(typeId, isExit, visitFn);
+  } else {
+    addNonLeafVisitFn(typeId, isExit, visitFn);
+  }
+}
+
+/**
+ * Add visit function for a leaf node to compiled visitor.
+ *
+ * Stored as just 1 function, not enter+exit pair.
+ *
+ * @param typeId - Node type ID
+ * @param isExit - `true` if is an exit visitor
+ * @param visitFn - Visit function
+ */
+function addLeafVisitFn(typeId: number, isExit: boolean, visitFn: VisitFn): void {
+  const existing = compiledVisitor[typeId] as CompilingLeafVisitorEntry;
+
+  if (existing === null) {
+    compiledVisitor[typeId] = visitFn;
+  } else if (isArray(existing)) {
+    if (isExit) {
+      existing.push(visitFn);
     } else {
-      // Not leaf node - store enter+exit pair
-      assertIs<CompilingNonLeafVisitorEntry>(existing);
+      // Insert before last in array in case last was enter visit function from the current rule,
+      // to ensure enter is called before exit.
+      // It could also be either an enter or exit visitor function for another rule, but the order
+      // rules are called in doesn't matter. We only need to make sure that a rule's exit visitor
+      // isn't called before enter visitor *for that same rule*.
+      existing.splice(existing.length - 1, 0, visitFn);
+    }
+  } else {
+    // Same as above, enter visitor is put to front of list to make sure enter is called before exit
+    (compiledVisitor as CompilingVisitor)[typeId] = isExit
+      ? createVisitFnArray(existing, visitFn)
+      : createVisitFnArray(visitFn, existing);
+    mergedLeafVisitorTypeIds.push(typeId);
+  }
+}
 
-      if (existing === null) {
-        const enterExit = compiledVisitor[typeId] = getEnterExitObject();
-        if (isExit) {
-          enterExit.exit = visitFn;
-        } else {
-          enterExit.enter = visitFn;
-        }
-      } else if (isExit) {
-        const { exit } = existing;
-        if (exit === null) {
-          existing.exit = visitFn;
-        } else if (isArray(exit)) {
-          exit.push(visitFn);
-        } else {
-          existing.exit = createVisitFnArray(exit, visitFn);
-          mergedExitVisitorTypeIds.push(typeId);
-        }
-      } else {
-        const { enter } = existing;
-        if (enter === null) {
-          existing.enter = visitFn;
-        } else if (isArray(enter)) {
-          enter.push(visitFn);
-        } else {
-          existing.enter = createVisitFnArray(enter, visitFn);
-          mergedEnterVisitorTypeIds.push(typeId);
-        }
-      }
+/**
+ * Add visit function for a non-leaf node to compiled visitor.
+ *
+ * Stored as enter+exit pair.
+ *
+ * @param typeId - Node type ID
+ * @param isExit - `true` if is an exit visitor
+ * @param visitFn - Visit function
+ */
+function addNonLeafVisitFn(typeId: number, isExit: boolean, visitFn: VisitFn): void {
+  const existing = compiledVisitor[typeId] as CompilingNonLeafVisitorEntry;
+
+  if (existing === null) {
+    const enterExit = compiledVisitor[typeId] = getEnterExitObject();
+    if (isExit) {
+      enterExit.exit = visitFn;
+    } else {
+      enterExit.enter = visitFn;
+    }
+  } else if (isExit) {
+    const { exit } = existing;
+    if (exit === null) {
+      existing.exit = visitFn;
+    } else if (isArray(exit)) {
+      exit.push(visitFn);
+    } else {
+      existing.exit = createVisitFnArray(exit, visitFn);
+      mergedExitVisitorTypeIds.push(typeId);
+    }
+  } else {
+    const { enter } = existing;
+    if (enter === null) {
+      existing.enter = visitFn;
+    } else if (isArray(enter)) {
+      enter.push(visitFn);
+    } else {
+      existing.enter = createVisitFnArray(enter, visitFn);
+      mergedEnterVisitorTypeIds.push(typeId);
     }
   }
 }
@@ -302,6 +358,8 @@ export function addVisitorToCompiled(visitor: Visitor): void {
  */
 export function finalizeCompiledVisitor() {
   if (hasActiveVisitors === false) return false;
+
+  // TODO: Visit functions need to be ordered by specificity of their selectors, with most specific first
 
   // Merge visit functions for node types which have multiple visitors from different rules,
   // or enter+exit functions for leaf nodes

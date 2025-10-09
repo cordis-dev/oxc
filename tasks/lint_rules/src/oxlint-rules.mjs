@@ -51,6 +51,7 @@ const NOT_SUPPORTED_RULE_NAMES = new Set([
   'eslint/no-new-symbol', // Deprecated as of ESLint v9, but for a while disable manually
   'eslint/no-undef-init', // #6456 unicorn/no-useless-undefined covers this case
   'import/no-unresolved', // Will always contain false positives due to module resolution complexity,
+  'promise/no-native', // handled by eslint/no-undef
   'react/jsx-equals-spacing', // stylistic rule
   'react/jsx-curly-spacing', // stylistic rule
   'react/jsx-indent', // stylistic rule
@@ -104,13 +105,16 @@ const NOT_SUPPORTED_RULE_NAMES = new Set([
   'vue/html-comment-indent',
   'vue/html-end-tags',
   'vue/html-indent',
+  'vue/html-quotes',
   'vue/html-self-closing',
   'vue/key-spacing',
   'vue/keyword-spacing',
   'vue/max-attributes-per-line',
   'vue/max-len',
   'vue/max-lines-per-block',
+  'vue/max-template-depth',
   'vue/multiline-html-element-content-newline',
+  'vue/multiline-ternary',
   'vue/mustache-interpolation-spacing',
   'vue/new-line-between-multi-line-property', // stylistic rule
   'vue/no-bare-strings-in-template',
@@ -141,6 +145,8 @@ const NOT_SUPPORTED_RULE_NAMES = new Set([
   'vue/no-multi-spaces',
   'vue/no-multiple-objects-in-class',
   'vue/no-multiple-template-root',
+  'vue/no-negated-condition',
+  'vue/no-negated-v-if-condition',
   'vue/no-parsing-error',
   'vue/no-restricted-block',
   'vue/no-restricted-class',
@@ -194,6 +200,7 @@ const NOT_SUPPORTED_RULE_NAMES = new Set([
   'vue/space-in-parens', // stylistic rule + template parsing
   'vue/space-infix-ops', // stylistic rule + template parsing
   'vue/space-unary-ops', // stylistic rule + template parsing
+  'vue/static-class-names-order',
   'vue/template-curly-spacing', // stylistic rule + template parsing
   'vue/use-v-on-exact',
   'vue/v-bind-style',

@@ -2,8 +2,9 @@ import type { Context } from './plugins/context.ts';
 import type { CreateOnceRule, Plugin, Rule } from './plugins/load.ts';
 import type { BeforeHook, Visitor, VisitorWithHooks } from './plugins/types.ts';
 
+export type * as ESTree from './generated/types.d.ts';
 export type { Context, Diagnostic, DiagnosticBase, DiagnosticWithLoc, DiagnosticWithNode } from './plugins/context.ts';
-export type { Fix, Fixer, FixFn, Range } from './plugins/fix.ts';
+export type { Fix, Fixer, FixFn } from './plugins/fix.ts';
 export type { CreateOnceRule, CreateRule, Plugin, Rule } from './plugins/load.ts';
 export type {
   Definition,
@@ -23,7 +24,10 @@ export type {
   Location,
   Node,
   NodeOrToken,
+  Range,
+  Ranged,
   RuleMeta,
+  Span,
   Token,
   Visitor,
   VisitorWithHooks,

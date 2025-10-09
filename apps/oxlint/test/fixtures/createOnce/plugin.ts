@@ -1,8 +1,16 @@
 import { sep } from 'node:path';
 
-import type { Plugin, Rule } from '../../../dist/index.js';
+import type { Node, Plugin, Rule } from '../../../dist/index.js';
 
-const SPAN = { start: 0, end: 0 };
+const SPAN: Node = {
+  start: 0,
+  end: 0,
+  range: [0, 0],
+  loc: {
+    start: { line: 0, column: 0 },
+    end: { line: 0, column: 0 },
+  },
+};
 
 const DIR_PATH_LEN = import.meta.dirname.length + 1;
 
@@ -109,6 +117,20 @@ const afterOnlyRule: Rule = {
   },
 };
 
+const hooksOnlyRule: Rule = {
+  createOnce(context) {
+    return {
+      // Neither hook should be called, because no AST node visitor functions
+      before() {
+        context.report({ message: 'before hook: should not be output', node: SPAN });
+      },
+      after() {
+        context.report({ message: 'after hook: should not be output', node: SPAN });
+      },
+    };
+  },
+};
+
 const noHooksRule: Rule = {
   createOnce(context) {
     return {
@@ -131,6 +153,7 @@ const plugin: Plugin = {
     'skip-run': skipRunRule,
     'before-only': beforeOnlyRule,
     'after-only': afterOnlyRule,
+    'only-hooks': hooksOnlyRule,
     'no-hooks': noHooksRule,
   },
 };

@@ -1,6 +1,14 @@
-import type { Plugin, Rule } from '../../../dist/index.js';
+import type { Node, Plugin, Rule } from '../../../dist/index.js';
 
-const SPAN = { start: 0, end: 0 };
+const SPAN: Node = {
+  start: 0,
+  end: 0,
+  range: [0, 0],
+  loc: {
+    start: { line: 0, column: 0 },
+    end: { line: 0, column: 0 },
+  },
+};
 
 // Purpose of this test fixture is to ensure that source text and AST are available in `after` hook
 // via `context.sourceCode` when the AST is not traversed
@@ -8,6 +16,7 @@ const SPAN = { start: 0, end: 0 };
 const createOnceRule: Rule = {
   createOnce(context) {
     return {
+      Program(_program) {},
       after() {
         context.report({
           message: 'after:\n' +

@@ -14,6 +14,7 @@ mod generated {
     mod format;
 }
 mod formatter;
+mod ir_transform;
 mod options;
 mod parentheses;
 mod service;
@@ -34,10 +35,11 @@ use rustc_hash::{FxHashMap, FxHashSet};
 use write::FormatWrite;
 
 pub use crate::options::*;
-pub use crate::service::source_type::get_supported_source_type;
+pub use crate::service::{oxfmtrc::Oxfmtrc, source_type::get_supported_source_type};
 use crate::{
     formatter::{FormatContext, Formatted, format_element::document::Document},
     generated::ast_nodes::{AstNode, AstNodes},
+    ir_transform::SortImportsTransform,
 };
 
 use self::formatter::prelude::tag::Label;
@@ -71,19 +73,33 @@ impl<'a> Formatter<'a> {
 
         let source_text = program.source_text;
         self.source_text = source_text;
+
+        let experimental_sort_imports = self.options.experimental_sort_imports;
+
         let context = FormatContext::new(program, self.allocator, self.options);
-        formatter::format(
+        let mut formatted = formatter::format(
             program,
             context,
             formatter::Arguments::new(&[formatter::Argument::new(&program_node)]),
         )
-        .unwrap()
+        .unwrap();
+
+        // Basic formatting and `document.propagate_expand()` are already done here.
+        // Now apply additional transforms if enabled.
+        if let Some(sort_imports_options) = experimental_sort_imports {
+            let sort_imports = SortImportsTransform::new(sort_imports_options);
+            formatted.apply_transform(|doc| sort_imports.transform(doc));
+        }
+
+        formatted
     }
 }
 
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum JsLabels {
     MemberChain,
+    /// For `ir_transform/sort_imports`
+    ImportDeclaration,
 }
 
 impl Label for JsLabels {
@@ -94,6 +110,7 @@ impl Label for JsLabels {
     fn debug_name(&self) -> &'static str {
         match self {
             Self::MemberChain => "MemberChain",
+            Self::ImportDeclaration => "ImportDeclaration",
         }
     }
 }

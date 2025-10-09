@@ -4,6 +4,194 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
+## [1.22.0] - 2025-10-08
+
+### 🐛 Bug Fixes
+
+- 0dcdbd1 oxlint: Bundle esquery (#14450) (camc314)
+
+
+## [1.22.0] - 2025-10-08
+
+### 🐛 Bug Fixes
+
+- 0dcdbd1 oxlint: Bundle esquery (#14450) (camc314)
+
+
+## [1.21.0] - 2025-10-08
+
+### 🚀 Features
+
+- 576be20 linter/plugins: Support selectors DSL (#14435) (overlookmotel)
+- b2de44f linter/plugins: Support interpolation in normal diagnostic `message` (#14419) (overlookmotel)
+- 382c5be linter/plugins: Support placeholders in messageIds (#14416) (camc314)
+- 529e88e linter/plugins: Support `messageId`s (#14415) (camc314)
+- 0ec0847 ci: Run napi tests on windows (#14383) (camc314)
+
+### 🐛 Bug Fixes
+
+- 88ec1bd linter/plugins: Fix error messages (#14423) (overlookmotel)
+- 18616c2 oxlint: Ignore fixtures dir for vitest (#14414) (camc314)
+- ec02fe8 oxlint: Normalize path separators in snapshot tests (#14406) (camc314)
+- 96663fb linter/plugins: Do not call `before` hook if empty visitor (#14401) (overlookmotel)
+- 52f04bd linter: Use `pathToFileURL` for importing plugins to ensure correct URL format (#14394) (camc314)
+- 1ea0d46 oxlint: Resolve tsdown deprecation warning (#14389) (camc314)
+
+### 🚜 Refactor
+
+- 3b26bf3 linter/plugins: Split adding visit function to compiler visitor into multiple functions (#14433) (overlookmotel)
+- af3a75e linter/plugins: Track ancestors while walking AST (#14432) (overlookmotel)
+- f279f0b linter/plugins: Do not lazy-load visitor keys (#14431) (overlookmotel)
+- 5e99ed3 linter/plugins: Allow nullish values as `message` or `messageId` (#14422) (overlookmotel)
+- dc30938 linter/plugins: Remove default value from `Context` constructor (#14421) (overlookmotel)
+- 28cfae0 oxlint: Use `vitest`s built in file snapshot comparison (#14392) (camc314)
+- 06b0e9f linter/plugins: Convert generated files to TS (#14385) (overlookmotel)
+- 52f35c6 napi/parser, linter/plugins: Rename `types.js` to `type_ids.js` (#14384) (overlookmotel)
+
+### ⚡ Performance
+
+- 26435a1 linter/plugins: Small perf optimizations (#14420) (overlookmotel)
+- d8a8be1 linter/plugins: Avoid private methods (#14418) (overlookmotel)
+
+### 🧪 Testing
+
+- d8da4a4 linter/plugins: Clarify tests for message placeholders (#14417) (overlookmotel)
+
+
+## [1.21.0] - 2025-10-08
+
+### 🚀 Features
+
+- 576be20 linter/plugins: Support selectors DSL (#14435) (overlookmotel)
+- b2de44f linter/plugins: Support interpolation in normal diagnostic `message` (#14419) (overlookmotel)
+- 382c5be linter/plugins: Support placeholders in messageIds (#14416) (camc314)
+- 529e88e linter/plugins: Support `messageId`s (#14415) (camc314)
+- 0ec0847 ci: Run napi tests on windows (#14383) (camc314)
+
+### 🐛 Bug Fixes
+
+- 88ec1bd linter/plugins: Fix error messages (#14423) (overlookmotel)
+- 18616c2 oxlint: Ignore fixtures dir for vitest (#14414) (camc314)
+- ec02fe8 oxlint: Normalize path separators in snapshot tests (#14406) (camc314)
+- 96663fb linter/plugins: Do not call `before` hook if empty visitor (#14401) (overlookmotel)
+- 52f04bd linter: Use `pathToFileURL` for importing plugins to ensure correct URL format (#14394) (camc314)
+- 1ea0d46 oxlint: Resolve tsdown deprecation warning (#14389) (camc314)
+
+### 🚜 Refactor
+
+- 3b26bf3 linter/plugins: Split adding visit function to compiler visitor into multiple functions (#14433) (overlookmotel)
+- af3a75e linter/plugins: Track ancestors while walking AST (#14432) (overlookmotel)
+- f279f0b linter/plugins: Do not lazy-load visitor keys (#14431) (overlookmotel)
+- 5e99ed3 linter/plugins: Allow nullish values as `message` or `messageId` (#14422) (overlookmotel)
+- dc30938 linter/plugins: Remove default value from `Context` constructor (#14421) (overlookmotel)
+- 28cfae0 oxlint: Use `vitest`s built in file snapshot comparison (#14392) (camc314)
+- 06b0e9f linter/plugins: Convert generated files to TS (#14385) (overlookmotel)
+- 52f35c6 napi/parser, linter/plugins: Rename `types.js` to `type_ids.js` (#14384) (overlookmotel)
+
+### ⚡ Performance
+
+- 26435a1 linter/plugins: Small perf optimizations (#14420) (overlookmotel)
+- d8a8be1 linter/plugins: Avoid private methods (#14418) (overlookmotel)
+
+### 🧪 Testing
+
+- d8da4a4 linter/plugins: Clarify tests for message placeholders (#14417) (overlookmotel)
+
+
+## [1.20.0] - 2025-10-06
+
+### 🚀 Features
+
+- d16df93 linter: Support disable directives for type aware rules (#14052) (camc314)
+- a2914fe linter/plugins: Add `loc` field getter to all AST nodes (#14355) (overlookmotel)
+- 07193c2 linter/plugins: Implement `SourceCode#getAncestors` (#14346) (overlookmotel)
+- c8de6fe linter/plugins: Add `parent` field to AST nodes (#14345) (overlookmotel)
+- 5505a86 linter/plugins: Include `range` field in AST (#14321) (overlookmotel)
+- 1347de4 linter/plugins: Accept diagnostics with `loc` (#14304) (overlookmotel)
+- aefc8b3 linter/plugins: Implement `SourceCode#getIndexFromLoc` and `getLocFromIndex` (#14303) (overlookmotel)
+- 93807db linter/plugins: Implement `SourceCode#lines` property (#14290) (overlookmotel)
+- 2f8c985 linter/plugins: Implement `SourceCode#visitorKeys` property (#14289) (overlookmotel)
+- b69028f linter/plugins: Implement `SourceCode#ast` property (#14287) (overlookmotel)
+- bdf9010 linter/plugins: Add `SourceCode` API (#14281) (overlookmotel)
+
+### 🐛 Bug Fixes
+
+- 9a902c0 linter/plugins: Make `range` field non-optional on AST types (#14354) (overlookmotel)
+- 46cceb8 linter/rules-of-hooks: Correctly place primary span to fix disable directive (#14237) (camc314)
+
+### 🚜 Refactor
+
+- 1489376 napi/parser, linter/plugins: Minify walker code (#14376) (overlookmotel)
+- c8eeeb5 linter/plugins: Remove build-time dependency on `napi/parser` (#14374) (overlookmotel)
+- fb1a067 linter/plugins: Bundle walker and AST types map (#14373) (overlookmotel)
+- 93d8164 linter/plugins: Export AST types direct from `oxlint` package (#14353) (overlookmotel)
+- 230d996 linter/plugins: `SourceCode#getText` use `range` (#14352) (overlookmotel)
+- 6e52bbd linter/plugins: Move location-related code into separate file (#14350) (overlookmotel)
+- 13f1003 linter/plugins: Share `ast` between files (#14349) (overlookmotel)
+- 79eadf8 linter: Introduce `LintRunner` (#14051) (camc314)
+- 65873ba linter/plugins: Add stubs for all `SourceCode` methods (#14285) (overlookmotel)
+- 989ce2f linter/plugins: Convert `Node` type to interface (#14280) (overlookmotel)
+
+### ⚡ Performance
+
+- e75d42d napi/parser, linter/plugins: Remove runtime `preserveParens` option from raw transfer deserializers (#14338) (overlookmotel)
+- 2e57351 linter/plugins: Initialize `lineStartOffsets` as `[0]` (#14302) (overlookmotel)
+- c27a393 linter/plugins: Deserialize AST on demand (#14288) (overlookmotel)
+- 95a8cc4 linter/plugins: Use singleton for `SourceCode` (#14286) (overlookmotel)
+
+### 🧪 Testing
+
+- 0061ce7 linter: Add more tests for disable directives in partial loadable files (#14371) (camc314)
+- 1387aaa linter/plugins: Test `createOnce` returning no visitor functions (#14279) (overlookmotel)
+
+
+## [1.20.0] - 2025-10-06
+
+### 🚀 Features
+
+- d16df93 linter: Support disable directives for type aware rules (#14052) (camc314)
+- a2914fe linter/plugins: Add `loc` field getter to all AST nodes (#14355) (overlookmotel)
+- 07193c2 linter/plugins: Implement `SourceCode#getAncestors` (#14346) (overlookmotel)
+- c8de6fe linter/plugins: Add `parent` field to AST nodes (#14345) (overlookmotel)
+- 5505a86 linter/plugins: Include `range` field in AST (#14321) (overlookmotel)
+- 1347de4 linter/plugins: Accept diagnostics with `loc` (#14304) (overlookmotel)
+- aefc8b3 linter/plugins: Implement `SourceCode#getIndexFromLoc` and `getLocFromIndex` (#14303) (overlookmotel)
+- 93807db linter/plugins: Implement `SourceCode#lines` property (#14290) (overlookmotel)
+- 2f8c985 linter/plugins: Implement `SourceCode#visitorKeys` property (#14289) (overlookmotel)
+- b69028f linter/plugins: Implement `SourceCode#ast` property (#14287) (overlookmotel)
+- bdf9010 linter/plugins: Add `SourceCode` API (#14281) (overlookmotel)
+
+### 🐛 Bug Fixes
+
+- 9a902c0 linter/plugins: Make `range` field non-optional on AST types (#14354) (overlookmotel)
+- 46cceb8 linter/rules-of-hooks: Correctly place primary span to fix disable directive (#14237) (camc314)
+
+### 🚜 Refactor
+
+- 1489376 napi/parser, linter/plugins: Minify walker code (#14376) (overlookmotel)
+- c8eeeb5 linter/plugins: Remove build-time dependency on `napi/parser` (#14374) (overlookmotel)
+- fb1a067 linter/plugins: Bundle walker and AST types map (#14373) (overlookmotel)
+- 93d8164 linter/plugins: Export AST types direct from `oxlint` package (#14353) (overlookmotel)
+- 230d996 linter/plugins: `SourceCode#getText` use `range` (#14352) (overlookmotel)
+- 6e52bbd linter/plugins: Move location-related code into separate file (#14350) (overlookmotel)
+- 13f1003 linter/plugins: Share `ast` between files (#14349) (overlookmotel)
+- 79eadf8 linter: Introduce `LintRunner` (#14051) (camc314)
+- 65873ba linter/plugins: Add stubs for all `SourceCode` methods (#14285) (overlookmotel)
+- 989ce2f linter/plugins: Convert `Node` type to interface (#14280) (overlookmotel)
+
+### ⚡ Performance
+
+- e75d42d napi/parser, linter/plugins: Remove runtime `preserveParens` option from raw transfer deserializers (#14338) (overlookmotel)
+- 2e57351 linter/plugins: Initialize `lineStartOffsets` as `[0]` (#14302) (overlookmotel)
+- c27a393 linter/plugins: Deserialize AST on demand (#14288) (overlookmotel)
+- 95a8cc4 linter/plugins: Use singleton for `SourceCode` (#14286) (overlookmotel)
+
+### 🧪 Testing
+
+- 0061ce7 linter: Add more tests for disable directives in partial loadable files (#14371) (camc314)
+- 1387aaa linter/plugins: Test `createOnce` returning no visitor functions (#14279) (overlookmotel)
+
+
 ## [1.19.0] - 2025-09-29
 
 ### 🚀 Features

@@ -5,13 +5,13 @@ use std::{
     hash::BuildHasherDefault,
     mem::take,
     path::{Path, PathBuf},
-    sync::{Arc, mpsc},
+    sync::{Arc, Mutex, mpsc},
 };
 
 use indexmap::IndexSet;
 use rayon::iter::ParallelDrainRange;
 use rayon::{Scope, iter::IntoParallelRefIterator, prelude::ParallelIterator};
-use rustc_hash::{FxBuildHasher, FxHashSet, FxHasher};
+use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet, FxHasher};
 use self_cell::self_cell;
 use smallvec::SmallVec;
 
@@ -22,14 +22,13 @@ use oxc_resolver::Resolver;
 use oxc_semantic::{Semantic, SemanticBuilder};
 use oxc_span::{CompactStr, SourceType, VALID_EXTENSIONS};
 
-#[cfg(feature = "language_server")]
-use crate::lsp::MessageWithPosition;
+#[cfg(any(test, feature = "language_server"))]
+use crate::{Message, fixer::PossibleFixes};
 
-#[cfg(test)]
-use crate::fixer::{Message, PossibleFixes};
 use crate::{
     Fixer, Linter,
     context::ContextSubHost,
+    disable_directives::DisableDirectives,
     loader::{JavaScriptSource, LINT_PARTIAL_LOADER_EXTENSIONS, PartialLoader},
     module_record::ModuleRecord,
     utils::read_to_arena_str,
@@ -59,6 +58,8 @@ pub struct Runtime {
     /// To make sure all `ModuleRecord` gets dropped after `Runtime` is dropped,
     /// `modules_by_path` must own `ModuleRecord` with `Arc`, all other references must use `Weak<ModuleRecord>`.
     modules_by_path: ModulesByPath,
+    /// Collected disable directives from linted files
+    disable_directives_map: Arc<Mutex<FxHashMap<PathBuf, DisableDirectives>>>,
 }
 
 /// Output of `Runtime::process_path`
@@ -302,6 +303,7 @@ impl Runtime {
                 .hasher(BuildHasherDefault::default())
                 .resize_mode(papaya::ResizeMode::Blocking)
                 .build(),
+            disable_directives_map: Arc::new(Mutex::new(FxHashMap::default())),
         }
     }
 
@@ -317,6 +319,13 @@ impl Runtime {
         self.modules_by_path.pin().reserve(paths.len());
         self.paths = paths.into_iter().collect();
         self
+    }
+
+    pub fn set_disable_directives_map(
+        &mut self,
+        map: Arc<Mutex<FxHashMap<PathBuf, DisableDirectives>>>,
+    ) {
+        self.disable_directives_map = map;
     }
 
     fn get_resolver(tsconfig_path: Option<PathBuf>) -> Resolver {
@@ -644,7 +653,19 @@ impl Runtime {
                         return;
                     }
 
-                    let mut messages = me.linter.run(path, context_sub_hosts, allocator_guard);
+                    let (mut messages, disable_directives) = me.linter.run_with_disable_directives(
+                        path,
+                        context_sub_hosts,
+                        allocator_guard,
+                    );
+
+                    // Store the disable directives for this file
+                    if let Some(disable_directives) = disable_directives {
+                        me.disable_directives_map
+                            .lock()
+                            .expect("disable_directives_map mutex poisoned")
+                            .insert(path.to_path_buf(), disable_directives);
+                    }
 
                     if me.linter.options().fix.is_some() {
                         let fix_result = Fixer::new(dep.source_text, messages).fix();
@@ -687,29 +708,21 @@ impl Runtime {
     pub(super) fn run_source<'a>(
         &mut self,
         allocator: &'a mut oxc_allocator::Allocator,
-    ) -> Vec<MessageWithPosition<'a>> {
+    ) -> Vec<Message<'a>> {
         use std::sync::Mutex;
-
-        use oxc_data_structures::rope::Rope;
-
-        use crate::lsp::{
-            message_to_message_with_position, oxc_diagnostic_to_message_with_position,
-        };
 
         // Wrap allocator in `MessageCloner` so can clone `Message`s into it
         let message_cloner = MessageCloner::new(allocator);
 
-        let messages = Mutex::new(Vec::<MessageWithPosition<'a>>::new());
+        let messages = Mutex::new(Vec::<Message<'a>>::new());
         rayon::scope(|scope| {
             self.resolve_modules(scope, true, None, |me, mut module_to_lint| {
                 module_to_lint.content.with_dependent_mut(
-                    |allocator_guard, ModuleContentDependent { source_text, section_contents }| {
+                    |allocator_guard, ModuleContentDependent { source_text: _, section_contents }| {
                         assert_eq!(
                             module_to_lint.section_module_records.len(),
                             section_contents.len()
                         );
-
-                        let rope = &Rope::from_str(source_text);
 
                         let context_sub_hosts: Vec<ContextSubHost<'_>> = module_to_lint
                             .section_module_records
@@ -728,11 +741,7 @@ impl Runtime {
                                     if !diagnostics.is_empty() {
                                         messages.lock().unwrap().extend(
                                             diagnostics.into_iter().map(|diagnostic| {
-                                                oxc_diagnostic_to_message_with_position(
-                                                    diagnostic,
-                                                    source_text,
-                                                    rope,
-                                                )
+                                                Message::new(diagnostic, PossibleFixes::None)
                                             }),
                                         );
                                     }
@@ -745,16 +754,23 @@ impl Runtime {
                             return;
                         }
 
-                        let section_messages = me.linter.run(
-                            Path::new(&module_to_lint.path),
-                            context_sub_hosts,
-                            allocator_guard,
-                        );
+                        let path = Path::new(&module_to_lint.path);
+                        let (section_messages, disable_directives) = me
+                            .linter
+                            .run_with_disable_directives(path, context_sub_hosts, allocator_guard);
 
-                        messages.lock().unwrap().extend(section_messages.iter().map(|message| {
-                            let message = message_cloner.clone_message(message);
-                            message_to_message_with_position(message, source_text, rope)
-                        }));
+                        if let Some(disable_directives) = disable_directives {
+                            me.disable_directives_map
+                                .lock()
+                                .expect("disable_directives_map mutex poisoned")
+                                .insert(path.to_path_buf(), disable_directives);
+                        }
+
+                        messages.lock().unwrap().extend(
+                            section_messages
+                                .iter()
+                                .map(|message| message_cloner.clone_message(message)),
+                        );
                     },
                 );
             });

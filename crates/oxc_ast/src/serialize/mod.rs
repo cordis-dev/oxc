@@ -121,43 +121,53 @@ impl Program<'_> {
 /// `Program` span start is 0 (not 5).
 #[ast_meta]
 #[estree(raw_deser = "
-    const body = DESER[Vec<Directive>](POS_OFFSET.directives);
-    body.push(...DESER[Vec<Statement>](POS_OFFSET.body));
+    const start = IS_TS ? 0 : DESER[u32](POS_OFFSET.span.start),
+        end = DESER[u32](POS_OFFSET.span.end);
 
-    /* IF_JS */
-    const start = DESER[u32](POS_OFFSET.span.start);
-    /* END_IF_JS */
-
-    const end = DESER[u32](POS_OFFSET.span.end);
-
-    /* IF_TS */
-    let start;
-    if (body.length > 0) {
-        const first = body[0];
-        start = first.start;
-        if (first.type === 'ExportNamedDeclaration' || first.type === 'ExportDefaultDeclaration') {
-            const { declaration } = first;
-            if (
-                declaration !== null && declaration.type === 'ClassDeclaration'
-                && declaration.decorators.length > 0
-            ) {
-                const decoratorStart = declaration.decorators[0].start;
-                if (decoratorStart < start) start = decoratorStart;
-            }
-        }
-    } else {
-        start = end;
-    }
-    /* END_IF_TS */
-
-    const program = {
+    const program = parent = {
         type: 'Program',
-        body,
+        body: null,
         sourceType: DESER[ModuleKind](POS_OFFSET.source_type.module_kind),
-        hashbang: DESER[Option<Hashbang>](POS_OFFSET.hashbang),
+        hashbang: null,
         start,
         end,
+        ...(RANGE && { range: [start, end] }),
+        ...(PARENT && { parent: null }),
     };
+
+    program.hashbang = DESER[Option<Hashbang>](POS_OFFSET.hashbang);
+
+    const body = program.body = DESER[Vec<Directive>](POS_OFFSET.directives);
+    body.push(...DESER[Vec<Statement>](POS_OFFSET.body));
+
+    if (IS_TS) {
+        let start;
+        if (body.length > 0) {
+            const first = body[0];
+            start = first.start;
+            if (first.type === 'ExportNamedDeclaration' || first.type === 'ExportDefaultDeclaration') {
+                const { declaration } = first;
+                if (
+                    declaration !== null && declaration.type === 'ClassDeclaration'
+                    && declaration.decorators.length > 0
+                ) {
+                    const decoratorStart = declaration.decorators[0].start;
+                    if (decoratorStart < start) start = decoratorStart;
+                }
+            }
+        } else {
+            start = end;
+        }
+
+        if (RANGE) {
+            program.start = program.range[0] = start;
+        } else {
+            program.start = start;
+        }
+    }
+
+    if (PARENT) parent = null;
+
     program
 ")]
 pub struct ProgramConverter<'a, 'b>(pub &'b Program<'a>);

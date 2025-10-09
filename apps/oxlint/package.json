@@ -1,6 +1,6 @@
 {
   "name": "oxlint",
-  "version": "1.19.0",
+  "version": "1.22.0",
   "type": "module",
   "main": "dist/index.js",
   "bin": "dist/cli.js",
@@ -35,11 +35,11 @@
   "files": [
     "dist"
   ],
-  "dependencies": {
-    "@oxc-project/types": "workspace:^"
-  },
   "devDependencies": {
+    "@types/esquery": "^1.5.4",
+    "@types/estree": "^1.0.8",
     "eslint": "^9.36.0",
+    "esquery": "^1.6.0",
     "execa": "^9.6.0",
     "jiti": "^2.6.0",
     "tsdown": "^0.15.5",

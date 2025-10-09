@@ -270,14 +270,13 @@ impl<'a> ParserImpl<'a> {
                 let lit = self.parse_literal_null();
                 Expression::NullLiteral(self.alloc(lit))
             }
+            Kind::DecimalBigInt | Kind::BinaryBigInt | Kind::OctalBigInt | Kind::HexBigInt => {
+                let lit = self.parse_literal_bigint();
+                Expression::BigIntLiteral(self.alloc(lit))
+            }
             kind if kind.is_number() => {
-                if self.cur_src().ends_with('n') {
-                    let lit = self.parse_literal_bigint();
-                    Expression::BigIntLiteral(self.alloc(lit))
-                } else {
-                    let lit = self.parse_literal_number();
-                    Expression::NumericLiteral(self.alloc(lit))
-                }
+                let lit = self.parse_literal_number();
+                Expression::NumericLiteral(self.alloc(lit))
             }
             _ => self.unexpected(),
         }
@@ -305,12 +304,13 @@ impl<'a> ParserImpl<'a> {
         let span = token.span();
         let kind = token.kind();
         let src = self.cur_src();
+        let has_separator = token.has_separator();
         let value = match kind {
             Kind::Decimal | Kind::Binary | Kind::Octal | Kind::Hex => {
-                parse_int(src, kind, token.has_separator())
+                parse_int(src, kind, has_separator)
             }
             Kind::Float | Kind::PositiveExponential | Kind::NegativeExponential => {
-                parse_float(src, token.has_separator())
+                parse_float(src, has_separator)
             }
             _ => unreachable!(),
         };
@@ -340,17 +340,18 @@ impl<'a> ParserImpl<'a> {
     pub(crate) fn parse_literal_bigint(&mut self) -> BigIntLiteral<'a> {
         let token = self.cur_token();
         let kind = token.kind();
-        let base = match kind {
-            Kind::Decimal => BigintBase::Decimal,
-            Kind::Binary => BigintBase::Binary,
-            Kind::Octal => BigintBase::Octal,
-            Kind::Hex => BigintBase::Hex,
+        let has_separator = token.has_separator();
+        let (base, number_kind) = match kind {
+            Kind::DecimalBigInt => (BigintBase::Decimal, Kind::Decimal),
+            Kind::BinaryBigInt => (BigintBase::Binary, Kind::Binary),
+            Kind::OctalBigInt => (BigintBase::Octal, Kind::Octal),
+            Kind::HexBigInt => (BigintBase::Hex, Kind::Hex),
             _ => return self.unexpected(),
         };
         let span = token.span();
         let raw = self.cur_src();
         let src = raw.strip_suffix('n').unwrap();
-        let value = parse_big_int(src, kind, token.has_separator(), self.ast.allocator);
+        let value = parse_big_int(src, number_kind, has_separator, self.ast.allocator);
 
         self.bump_any();
         self.ast.big_int_literal(span, value, Some(Atom::from(raw)), base)

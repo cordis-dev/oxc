@@ -424,6 +424,10 @@ impl RuleRunner for crate::rules::eslint::no_object_constructor::NoObjectConstru
     const NODE_TYPES: Option<&AstTypesBitset> = None;
 }
 
+impl RuleRunner for crate::rules::eslint::no_param_reassign::NoParamReassign {
+    const NODE_TYPES: Option<&AstTypesBitset> = None;
+}
+
 impl RuleRunner for crate::rules::eslint::no_plusplus::NoPlusplus {
     const NODE_TYPES: Option<&AstTypesBitset> =
         Some(&AstTypesBitset::from_types(&[AstType::UpdateExpression]));
@@ -1457,6 +1461,11 @@ impl RuleRunner for crate::rules::oxc::bad_replace_all_arg::BadReplaceAllArg {
         Some(&AstTypesBitset::from_types(&[AstType::CallExpression]));
 }
 
+impl RuleRunner for crate::rules::oxc::branches_sharing_code::BranchesSharingCode {
+    const NODE_TYPES: Option<&AstTypesBitset> =
+        Some(&AstTypesBitset::from_types(&[AstType::IfStatement]));
+}
+
 impl RuleRunner for crate::rules::oxc::const_comparisons::ConstComparisons {
     const NODE_TYPES: Option<&AstTypesBitset> = None;
 }
@@ -2407,7 +2416,8 @@ impl RuleRunner for crate::rules::unicorn::no_instanceof_builtins::NoInstanceofB
 }
 
 impl RuleRunner for crate::rules::unicorn::no_invalid_fetch_options::NoInvalidFetchOptions {
-    const NODE_TYPES: Option<&AstTypesBitset> = None;
+    const NODE_TYPES: Option<&AstTypesBitset> =
+        Some(&AstTypesBitset::from_types(&[AstType::CallExpression, AstType::NewExpression]));
 }
 
 impl RuleRunner
@@ -2911,6 +2921,15 @@ impl RuleRunner for crate::rules::vue::max_props::MaxProps {
     const NODE_TYPES: Option<&AstTypesBitset> = None;
 }
 
+impl RuleRunner for crate::rules::vue::no_export_in_script_setup::NoExportInScriptSetup {
+    const NODE_TYPES: Option<&AstTypesBitset> = None;
+}
+
+impl RuleRunner for crate::rules::vue::no_import_compiler_macros::NoImportCompilerMacros {
+    const NODE_TYPES: Option<&AstTypesBitset> =
+        Some(&AstTypesBitset::from_types(&[AstType::ImportDeclaration]));
+}
+
 impl RuleRunner for crate::rules::vue::no_multiple_slot_args::NoMultipleSlotArgs {
     const NODE_TYPES: Option<&AstTypesBitset> =
         Some(&AstTypesBitset::from_types(&[AstType::CallExpression]));
@@ -2921,6 +2940,10 @@ impl RuleRunner for crate::rules::vue::no_required_prop_with_default::NoRequired
 }
 
 impl RuleRunner for crate::rules::vue::prefer_import_from_vue::PreferImportFromVue {
+    const NODE_TYPES: Option<&AstTypesBitset> = None;
+}
+
+impl RuleRunner for crate::rules::vue::require_default_export::RequireDefaultExport {
     const NODE_TYPES: Option<&AstTypesBitset> = None;
 }
 

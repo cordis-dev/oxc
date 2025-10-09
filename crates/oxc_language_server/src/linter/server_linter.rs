@@ -4,21 +4,21 @@ use std::sync::Arc;
 
 use ignore::gitignore::Gitignore;
 use log::{debug, warn};
-use oxc_linter::LintIgnoreMatcher;
+use oxc_linter::{AllowWarnDeny, LintIgnoreMatcher};
 use rustc_hash::{FxBuildHasher, FxHashMap};
 use tokio::sync::Mutex;
 use tower_lsp_server::lsp_types::Uri;
 
 use oxc_linter::{
-    AllowWarnDeny, Config, ConfigStore, ConfigStoreBuilder, ExternalPluginStore, LintOptions,
-    Oxlintrc,
+    Config, ConfigStore, ConfigStoreBuilder, ExternalPluginStore, LintOptions, Oxlintrc,
 };
 use tower_lsp_server::UriExt;
 
+use crate::linter::options::UnusedDisableDirectives;
 use crate::linter::{
     error_with_position::DiagnosticReport,
     isolated_lint_handler::{IsolatedLintHandler, IsolatedLintHandlerOptions},
-    options::{LintOptions as LSPLintOptions, Run, UnusedDisableDirectives},
+    options::{LintOptions as LSPLintOptions, Run},
     tsgo_linter::TsgoLinter,
 };
 use crate::{ConcurrentHashMap, OXC_CONFIG_FILE};
@@ -109,13 +109,10 @@ impl ServerLinter {
 
         let base_patterns = oxlintrc.ignore_patterns.clone();
 
-        let config_builder = ConfigStoreBuilder::from_oxlintrc(
-            false,
-            oxlintrc,
-            None,
-            &mut ExternalPluginStore::default(),
-        )
-        .unwrap_or_default();
+        let mut external_plugin_store = ExternalPluginStore::new(false);
+        let config_builder =
+            ConfigStoreBuilder::from_oxlintrc(false, oxlintrc, None, &mut external_plugin_store)
+                .unwrap_or_default();
 
         // TODO(refactor): pull this into a shared function, because in oxlint we have the same functionality.
         let use_nested_config = options.use_nested_configs();
@@ -125,7 +122,6 @@ impl ServerLinter {
                 && nested_configs.pin().values().any(|config| config.plugins().has_import()));
 
         extended_paths.extend(config_builder.extended_paths.clone());
-        let external_plugin_store = ExternalPluginStore::default();
         let base_config = config_builder.build(&external_plugin_store).unwrap_or_else(|err| {
             warn!("Failed to build config: {err}");
             ConfigStoreBuilder::empty().build(&external_plugin_store).unwrap()
@@ -140,7 +136,6 @@ impl ServerLinter {
             },
             ..Default::default()
         };
-
         let config_store = ConfigStore::new(
             base_config,
             if use_nested_config {
@@ -152,7 +147,7 @@ impl ServerLinter {
             } else {
                 FxHashMap::default()
             },
-            ExternalPluginStore::default(),
+            external_plugin_store,
         );
 
         let isolated_linter = IsolatedLintHandler::new(
@@ -216,17 +211,17 @@ impl ServerLinter {
             };
             // Collect ignore patterns and their root
             nested_ignore_patterns.push((oxlintrc.ignore_patterns.clone(), dir_path.to_path_buf()));
+            let mut external_plugin_store = ExternalPluginStore::new(false);
             let Ok(config_store_builder) = ConfigStoreBuilder::from_oxlintrc(
                 false,
                 oxlintrc,
                 None,
-                &mut ExternalPluginStore::default(),
+                &mut external_plugin_store,
             ) else {
                 warn!("Skipping config (builder failed): {}", file_path.display());
                 continue;
             };
             extended_paths.extend(config_store_builder.extended_paths.clone());
-            let external_plugin_store = ExternalPluginStore::default();
             let config = config_store_builder.build(&external_plugin_store).unwrap_or_else(|err| {
                 warn!("Failed to build nested config for {}: {:?}", dir_path.display(), err);
                 ConfigStoreBuilder::empty().build(&external_plugin_store).unwrap()
@@ -673,5 +668,14 @@ mod test {
             Some(LintOptions { type_aware: true, run: Run::OnSave, ..Default::default() }),
         );
         tester.test_and_snapshot_single_file("no-floating-promises/index.ts");
+    }
+
+    #[test]
+    fn test_ignore_js_plugins() {
+        let tester = Tester::new(
+            "fixtures/linter/js_plugins",
+            Some(LintOptions { run: Run::OnSave, ..Default::default() }),
+        );
+        tester.test_and_snapshot_single_file("index.js");
     }
 }

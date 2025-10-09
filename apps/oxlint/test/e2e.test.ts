@@ -49,6 +49,22 @@ describe('oxlint CLI', () => {
     await testFixture('basic_custom_plugin');
   });
 
+  it('should support message placeholder interpolation', async () => {
+    await testFixture('message_interpolation');
+  });
+
+  it('should support messageId', async () => {
+    await testFixture('message_id_plugin');
+  });
+
+  it('should support messageId placeholder interpolation', async () => {
+    await testFixture('message_id_interpolation');
+  });
+
+  it('should report an error for unknown messageId', async () => {
+    await testFixture('message_id_error');
+  });
+
   it('should load a custom plugin with various import styles', async () => {
     await testFixture('load_paths');
   });
@@ -123,6 +139,10 @@ describe('oxlint CLI', () => {
     await testFixture('estree');
   });
 
+  it('should receive AST with all nodes having `parent` property', async () => {
+    await testFixture('parent');
+  });
+
   it('should receive data via `context`', async () => {
     await testFixture('context_properties');
   });
@@ -137,6 +157,10 @@ describe('oxlint CLI', () => {
 
   it('should get source text and AST from `context.sourceCode` when accessed in `after` hook only', async () => {
     await testFixture('sourceCode_late_access_after_only');
+  });
+
+  it('should support selectors', async () => {
+    await testFixture('selector');
   });
 
   it('should support `createOnce`', async () => {

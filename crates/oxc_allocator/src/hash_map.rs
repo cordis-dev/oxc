@@ -49,7 +49,7 @@ type FxHashMap<'alloc, K, V> = hashbrown::HashMap<K, V, FxBuildHasher, &'alloc B
 ///
 /// [`FxHasher`]: rustc_hash::FxHasher
 #[derive(Debug)]
-pub struct HashMap<'alloc, K, V>(ManuallyDrop<FxHashMap<'alloc, K, V>>);
+pub struct HashMap<'alloc, K, V>(pub(crate) ManuallyDrop<FxHashMap<'alloc, K, V>>);
 
 /// SAFETY: Even though `Bump` is not `Sync`, we can make `HashMap<K, V>` `Sync` if both `K` and `V`
 /// are `Sync` because:
@@ -127,6 +127,42 @@ impl<'alloc, K, V> HashMap<'alloc, K, V> {
         let inner =
             FxHashMap::with_capacity_and_hasher_in(capacity, FxBuildHasher, allocator.bump());
         Self(ManuallyDrop::new(inner))
+    }
+
+    /// Create a new [`HashMap`] whose elements are taken from an iterator and
+    /// allocated in the given `allocator`.
+    ///
+    /// This is behaviorally identical to [`FromIterator::from_iter`].
+    #[inline]
+    pub fn from_iter_in<I: IntoIterator<Item = (K, V)>>(
+        iter: I,
+        allocator: &'alloc Allocator,
+    ) -> Self
+    where
+        K: Eq + Hash,
+    {
+        const { Self::ASSERT_K_AND_V_ARE_NOT_DROP };
+
+        let iter = iter.into_iter();
+
+        // Use the iterator's lower size bound.
+        // This follows `hashbrown::HashMap`'s `from_iter` implementation.
+        //
+        // This is a trade-off:
+        // * Negative: If lower bound is too low, the `HashMap` may have to grow and reallocate during `for_each` loop.
+        // * Positive: Avoids potential large over-allocation for iterators where upper bound may be a large over-estimate
+        //   e.g. filter iterators.
+        let capacity = iter.size_hint().0;
+        let map = FxHashMap::with_capacity_and_hasher_in(capacity, FxBuildHasher, allocator.bump());
+        // Wrap in `ManuallyDrop` *before* calling `for_each`, so compiler doesn't insert unnecessary code
+        // to drop the `FxHashMap` in case of a panic in iterator's `next` method
+        let mut map = ManuallyDrop::new(map);
+
+        iter.for_each(|(k, v)| {
+            map.insert(k, v);
+        });
+
+        Self(map)
     }
 
     /// Creates a consuming iterator visiting all the keys in arbitrary order.
@@ -249,14 +285,3 @@ where
 }
 
 // Note: `Index` and `Extend` are implemented via `Deref`
-
-/*
-// Uncomment once we also provide `oxc_allocator::HashSet`
-impl<'alloc, T> From<HashMap<'alloc, T, ()>> for HashSet<'alloc, T> {
-    fn from(map: HashMap<'alloc, T, ()>) -> Self {
-        let inner_map = ManuallyDrop::into_inner(map.0);
-        let inner_set = FxHashSet::from(inner_map);
-        Self(ManuallyDrop::new(inner_set))
-    }
-}
-*/

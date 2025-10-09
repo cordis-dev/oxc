@@ -3,6 +3,7 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
+use oxc_data_structures::rope::Rope;
 use oxc_linter::{
     ConfigStore, LINTABLE_EXTENSIONS, TsGoLintState, loader::LINT_PARTIAL_LOADER_EXTENSIONS,
     read_to_string,
@@ -11,7 +12,8 @@ use rustc_hash::FxHashSet;
 use tower_lsp_server::{UriExt, lsp_types::Uri};
 
 use crate::linter::error_with_position::{
-    DiagnosticReport, generate_inverted_diagnostics, message_with_position_to_lsp_diagnostic_report,
+    DiagnosticReport, generate_inverted_diagnostics, message_to_message_with_position,
+    message_with_position_to_lsp_diagnostic_report,
 };
 
 pub struct TsgoLinter {
@@ -32,12 +34,20 @@ impl TsgoLinter {
         }
 
         let source_text = content.or_else(|| read_to_string(&path).ok())?;
+        let rope = Rope::from_str(&source_text);
 
-        let messages = self.state.lint_source(&Arc::from(path.as_os_str()), source_text).ok()?;
+        // TODO: Avoid cloning the source text
+        let messages =
+            self.state.lint_source(&Arc::from(path.as_os_str()), source_text.clone()).ok()?;
 
         let mut diagnostics: Vec<DiagnosticReport> = messages
-            .iter()
-            .map(|e| message_with_position_to_lsp_diagnostic_report(e, uri))
+            .into_iter()
+            .map(|e| {
+                message_with_position_to_lsp_diagnostic_report(
+                    &message_to_message_with_position(e, &source_text, &rope),
+                    uri,
+                )
+            })
             .collect();
 
         let mut inverted_diagnostics = generate_inverted_diagnostics(&diagnostics, uri);

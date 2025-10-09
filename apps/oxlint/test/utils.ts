@@ -1,4 +1,3 @@
-import fs from 'node:fs/promises';
 import { join as pathJoin } from 'node:path';
 
 import { execa } from 'execa';
@@ -52,17 +51,7 @@ export async function testFixtureWithCommand(options: TestFixtureOptions): Promi
     }
   }
 
-  let expectedSnapshot = null;
-  try {
-    expectedSnapshot = await fs.readFile(snapshotPath, 'utf8');
-  } catch (err) {
-    if (err?.code !== 'ENOENT') throw err;
-  }
-
-  if (snapshot !== expectedSnapshot) {
-    await fs.writeFile(snapshotPath, snapshot);
-    if (expectedSnapshot !== null) expect(snapshot).toBe(expectedSnapshot);
-  }
+  await expect(snapshot).toMatchFileSnapshot(snapshotPath);
 }
 
 /**
@@ -103,10 +92,12 @@ function normalizeStdout(stdout: string): string {
       match = line.match(/^(\s*\|\s+File path: )(.+)$/);
       if (match) {
         const [, preamble, path] = match;
-        if (path.startsWith(REPO_ROOT_PATH)) return [`${preamble}<root>/${path.slice(REPO_ROOT_PATH.length)}`];
+        if (path.startsWith(REPO_ROOT_PATH)) {
+          return [`${preamble}<root>/${path.slice(REPO_ROOT_PATH.length).replace(/\\/g, '/')}`];
+        }
       }
     }
-    if (line.startsWith(REPO_ROOT_PATH)) line = `<root>/${line.slice(REPO_ROOT_PATH.length)}`;
+    if (line.startsWith(REPO_ROOT_PATH)) line = `<root>/${line.slice(REPO_ROOT_PATH.length).replace(/\\/g, '/')}`;
     return [line];
   });
 

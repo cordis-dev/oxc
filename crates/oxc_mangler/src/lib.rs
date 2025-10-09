@@ -2,13 +2,14 @@ use std::iter::{self, repeat_with};
 
 use itertools::Itertools;
 use keep_names::collect_name_symbols;
+use oxc_index::IndexVec;
+use oxc_syntax::class::ClassId;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use base54::base54;
 use oxc_allocator::{Allocator, BitSet, Vec};
 use oxc_ast::ast::{Declaration, Program, Statement};
 use oxc_data_structures::inline_string::InlineString;
-use oxc_index::Idx;
 use oxc_semantic::{AstNodes, Scoping, Semantic, SemanticBuilder, SymbolId};
 use oxc_span::{Atom, CompactStr};
 
@@ -60,7 +61,7 @@ pub struct ManglerReturn {
     pub scoping: Scoping,
     /// A vector where each element corresponds to a class in declaration order.
     /// Each element is a mapping from original private member names to their mangled names.
-    pub class_private_mappings: std::vec::Vec<FxHashMap<String, CompactStr>>,
+    pub class_private_mappings: IndexVec<ClassId, FxHashMap<String, CompactStr>>,
 }
 
 /// # Name Mangler / Symbol Minification
@@ -267,20 +268,25 @@ impl<'t> Mangler<'t> {
     pub fn build(self, program: &Program<'_>) -> ManglerReturn {
         let mut semantic =
             SemanticBuilder::new().with_scope_tree_child_ids(true).build(program).semantic;
-        let class_private_mappings = Self::collect_private_members_from_semantic(&semantic);
-        self.build_with_semantic(&mut semantic, program);
+        let class_private_mappings = self.build_with_semantic(&mut semantic, program);
         ManglerReturn { scoping: semantic.into_scoping(), class_private_mappings }
     }
 
     /// # Panics
     ///
     /// Panics if the child_ids does not exist in scope_tree.
-    pub fn build_with_semantic(self, semantic: &mut Semantic<'_>, program: &Program<'_>) {
+    pub fn build_with_semantic(
+        self,
+        semantic: &mut Semantic<'_>,
+        program: &Program<'_>,
+    ) -> IndexVec<ClassId, FxHashMap<String, CompactStr>> {
+        let class_private_mappings = Self::collect_private_members_from_semantic(semantic);
         if self.options.debug {
             self.build_with_semantic_impl(semantic, program, debug_name);
         } else {
             self.build_with_semantic_impl(semantic, program, base54);
         }
+        class_private_mappings
     }
 
     fn build_with_semantic_impl<const CAPACITY: usize, G: Fn(u32) -> InlineString<CAPACITY, u8>>(
@@ -421,7 +427,7 @@ impl<'t> Mangler<'t> {
                 count += 1;
                 // Do not mangle keywords and unresolved references
                 let n = name.as_str();
-                if !is_keyword(n)
+                if !oxc_syntax::keyword::is_reserved_keyword(n)
                     && !is_special_name(n)
                     && !root_unresolved_references.contains_key(n)
                     && !(root_bindings.contains_key(n)
@@ -561,13 +567,42 @@ impl<'t> Mangler<'t> {
     /// Returns a Vec where each element corresponds to a class in declaration order
     fn collect_private_members_from_semantic(
         semantic: &Semantic<'_>,
-    ) -> std::vec::Vec<FxHashMap<String, CompactStr>> {
+    ) -> IndexVec<ClassId, FxHashMap<String, CompactStr>> {
         let classes = semantic.classes();
-        classes
+
+        let private_member_count: IndexVec<ClassId, usize> = classes
             .elements
             .iter()
             .map(|class_elements| {
-                assert!(u32::try_from(class_elements.len()).is_ok(), "too many class elements");
+                class_elements
+                    .iter()
+                    .filter_map(|element| {
+                        if element.is_private { Some(element.name.to_string()) } else { None }
+                    })
+                    .count()
+            })
+            .collect();
+        let parent_private_member_count: IndexVec<ClassId, usize> = classes
+            .declarations
+            .iter_enumerated()
+            .map(|(class_id, _)| {
+                classes
+                    .ancestors(class_id)
+                    .skip(1)
+                    .map(|id| private_member_count[id])
+                    .sum::<usize>()
+            })
+            .collect();
+
+        classes
+            .elements
+            .iter_enumerated()
+            .map(|(class_id, class_elements)| {
+                let parent_private_member_count = parent_private_member_count[class_id];
+                assert!(
+                    u32::try_from(class_elements.len() + parent_private_member_count).is_ok(),
+                    "too many class elements"
+                );
                 class_elements
                     .iter()
                     .filter_map(|element| {
@@ -579,7 +614,13 @@ impl<'t> Mangler<'t> {
                             clippy::cast_possible_truncation,
                             reason = "checked above with assert"
                         )]
-                        let mangled = CompactStr::new(base54(i as u32).as_str());
+                        let mangled = CompactStr::new(
+                            // Avoid reusing the same mangled name in parent classes.
+                            // We can improve this by reusing names that are not used in child classes,
+                            // but nesting a class inside another class is not common
+                            // and that would require liveness analysis.
+                            base54((parent_private_member_count + i) as u32).as_str(),
+                        );
                         (name, mangled)
                     })
                     .collect::<FxHashMap<_, _>>()
@@ -603,14 +644,6 @@ impl<'t> SlotFrequency<'t> {
     fn new(temp_allocator: &'t Allocator) -> Self {
         Self { slot: 0, frequency: 0, symbol_ids: Vec::new_in(temp_allocator) }
     }
-}
-
-#[rustfmt::skip]
-fn is_keyword(s: &str) -> bool {
-    matches!(s, "as" | "do" | "if" | "in" | "is" | "of" | "any" | "for" | "get"
-            | "let" | "new" | "out" | "set" | "try" | "var" | "case" | "else"
-            | "enum" | "from" | "meta" | "null" | "this" | "true" | "type"
-            | "void" | "with")
 }
 
 // Maximum length of string is 15 (`slot_4294967295` for `u32::MAX`).

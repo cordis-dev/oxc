@@ -105,6 +105,12 @@ pub enum Kind {
     Public,
     Static,
     Yield,
+    // 12.9.1 Null Literals
+    // 12.9.2 Boolean Literals
+    // Moved here to make all keywords contiguous for range check optimization
+    True,
+    False,
+    Null,
     // 12.8 punctuators
     Amp, // &
     Amp2,
@@ -164,11 +170,6 @@ pub enum Kind {
     Tilde,
     // arrow function
     Arrow,
-    // 12.9.1 Null Literals
-    Null,
-    // 12.9.2 Boolean Literals
-    True,
-    False,
     // 12.9.3 Numeric Literals
     Decimal,
     Float,
@@ -179,6 +180,11 @@ pub enum Kind {
     PositiveExponential,
     // for `1e-10`
     NegativeExponential,
+    // BigInt Literals (numeric literals with 'n' suffix)
+    DecimalBigInt,
+    BinaryBigInt,
+    OctalBigInt,
+    HexBigInt,
     // 12.9.4 String Literals
     /// String Type
     Str,
@@ -206,12 +212,10 @@ impl Kind {
         self == Eof
     }
 
+    /// All numeric literals are contiguous from Decimal..=HexBigInt in the enum.
     #[inline]
     pub fn is_number(self) -> bool {
-        matches!(
-            self,
-            Float | Decimal | Binary | Octal | Hex | PositiveExponential | NegativeExponential
-        )
+        matches!(self as u8, x if x >= Decimal as u8 && x <= HexBigInt as u8)
     }
 
     #[inline] // Inline into `read_non_decimal` - see comment there as to why
@@ -266,9 +270,10 @@ impl Kind {
     }
 
     /// `IdentifierName`
+    /// All identifier names are either `Ident` or keywords (Await..=Null in the enum).
     #[inline]
     pub fn is_identifier_name(self) -> bool {
-        self == Ident || self.is_any_keyword()
+        self == Ident || matches!(self as u8, x if x >= Await as u8 && x <= Null as u8)
     }
 
     /// Check the succeeding token of a `let` keyword.
@@ -349,12 +354,10 @@ impl Kind {
     }
 
     /// [Keywords and Reserved Words](https://tc39.es/ecma262/#sec-keywords-and-reserved-words)
+    /// All keywords are contiguous from Await..=Null in the enum for optimal range check.
     #[inline]
     pub fn is_any_keyword(self) -> bool {
-        self.is_reserved_keyword()
-            || self.is_contextual_keyword()
-            || self.is_strict_mode_contextual_keyword()
-            || self.is_future_reserved_keyword()
+        matches!(self as u8, x if x >= Await as u8 && x <= Null as u8)
     }
 
     #[rustfmt::skip]
@@ -660,6 +663,10 @@ impl Kind {
             Binary => "binary",
             Octal => "octal",
             Hex => "hex",
+            DecimalBigInt => "decimal bigint",
+            BinaryBigInt => "binary bigint",
+            OctalBigInt => "octal bigint",
+            HexBigInt => "hex bigint",
             Str | String => "string",
             RegExp => "/regexp/",
             NoSubstitutionTemplate => "${}",

@@ -96,6 +96,11 @@ impl<'a> ContextSubHost<'a> {
     pub fn disable_directives(&self) -> &DisableDirectives {
         &self.disable_directives
     }
+
+    /// Shared reference to the [`FrameworkOptions`]
+    pub fn framework_options(&self) -> FrameworkOptions {
+        self.framework_options
+    }
 }
 
 /// Stores shared information about a file being linted.
@@ -141,6 +146,12 @@ pub struct ContextHost<'a> {
     pub(super) config: Arc<LintConfig>,
     /// Front-end frameworks that might be in use in the target file.
     pub(super) frameworks: FrameworkFlags,
+}
+
+impl std::fmt::Debug for ContextHost<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ContextHost").field("file_path", &self.file_path).finish_non_exhaustive()
+    }
 }
 
 impl<'a> ContextHost<'a> {
@@ -340,6 +351,20 @@ impl<'a> ContextHost<'a> {
         // this should never panic.
         let mut messages = self.diagnostics.borrow_mut();
         std::mem::take(&mut *messages)
+    }
+
+    /// Take ownership of the disable directives from the first sub host.
+    /// This consumes the `ContextHost`.
+    ///
+    /// # Panics
+    /// Panics if `sub_hosts` contains more than one sub host.
+    pub fn into_disable_directives(self) -> Option<DisableDirectives> {
+        assert!(
+            self.sub_hosts.len() <= 1,
+            "into_disable_directives expects at most one sub host, but found {}",
+            self.sub_hosts.len()
+        );
+        self.sub_hosts.into_iter().next().map(|sub_host| sub_host.disable_directives)
     }
 
     #[cfg(debug_assertions)]

@@ -1,23 +1,25 @@
-import { createRequire } from 'node:module';
-import {
-  DATA_POINTER_POS_32,
-  SOURCE_LEN_OFFSET,
-  // TODO(camc314): we need to generate `.d.ts` file for this module.
-  // @ts-expect-error
-} from '../generated/constants.js';
+import { DATA_POINTER_POS_32, SOURCE_LEN_OFFSET } from '../generated/constants.js';
+
+// We use the deserializer which removes `ParenthesizedExpression`s from AST,
+// and with `range`, `loc`, and `parent` properties on AST nodes, to match ESLint
 // @ts-expect-error we need to generate `.d.ts` file for this module
-import { deserializeProgramOnly } from '../../dist/generated/deserialize/ts.js';
+import { deserializeProgramOnly } from '../../dist/generated/deserialize.js';
 
-import type { Program } from '@oxc-project/types';
+import visitorKeys from '../generated/keys.js';
+import {
+  getLineColumnFromOffset,
+  getNodeLoc,
+  getOffsetFromLineColumn,
+  initLines,
+  lines,
+  resetLines,
+} from './location.js';
+
+import type { Program } from '../generated/types.d.ts';
 import type { Scope, ScopeManager, Variable } from './scope.ts';
-import type { BufferWithArrays, Comment, LineColumn, Node, NodeOrToken, Token } from './types.ts';
-
-const require = createRequire(import.meta.url);
+import type { BufferWithArrays, Comment, Node, NodeOrToken, Ranged, Token } from './types.ts';
 
 const { max } = Math;
-
-// Pattern for splitting source text into lines
-const LINE_BREAK_PATTERN = /\r\n|[\r\n\u2028\u2029]/gu;
 
 // Text decoder, for decoding source text from buffer
 const textDecoder = new TextDecoder('utf-8', { ignoreBOM: true });
@@ -29,18 +31,10 @@ let buffer: BufferWithArrays | null = null;
 let hasBOM = false;
 
 // Lazily populated when `SOURCE_CODE.text` or `SOURCE_CODE.ast` is accessed,
-// or `getAst()` is called before the AST is walked.
-let sourceText: string | null = null;
+// or `initAst()` is called before the AST is walked.
+export let sourceText: string | null = null;
 let sourceByteLen: number = 0;
-let ast: Program | null = null;
-
-// Lazily populated when `SOURCE_CODE.lines` is accessed.
-// `lineStartOffsets` starts as `[0]`, and `resetSource` doesn't remove that initial element, so it's never empty.
-const lines: string[] = [],
-  lineStartOffsets: number[] = [0];
-
-// Lazily populated when `SOURCE_CODE.visitorKeys` is accessed.
-let visitorKeys: { [key: string]: string[] } | null = null;
+export let ast: Program | null = null;
 
 /**
  * Set up source for the file about to be linted.
@@ -55,7 +49,7 @@ export function setupSourceForFile(bufferInput: BufferWithArrays, hasBOMInput: b
 /**
  * Decode source text from buffer.
  */
-function initSourceText(): void {
+export function initSourceText(): void {
   const { uint32 } = buffer,
     programPos = uint32[DATA_POINTER_POS_32];
   sourceByteLen = uint32[(programPos + SOURCE_LEN_OFFSET) >> 2];
@@ -65,51 +59,9 @@ function initSourceText(): void {
 /**
  * Deserialize AST from buffer.
  */
-function initAst(): void {
+export function initAst(): void {
   if (sourceText === null) initSourceText();
-
-  // `preserveParens` argument is `false`, to match ESLint.
-  // ESLint does not include `ParenthesizedExpression` nodes in its AST.
-  ast = deserializeProgramOnly(buffer, sourceText, sourceByteLen, false);
-}
-
-/**
- * Get AST of the file being linted.
- * If AST has not already been deserialized, do it now.
- * @returns AST of the file being linted.
- */
-export function getAst(): Program {
-  if (ast === null) initAst();
-  return ast;
-}
-
-/**
- * Split source text into lines.
- */
-function initLines(): void {
-  if (sourceText === null) initSourceText();
-
-  // This implementation is based on the one in ESLint.
-  // TODO: Investigate if using `String.prototype.matchAll` is faster.
-  // This comment is above ESLint's implementation:
-  /*
-   * Previously, this was implemented using a regex that
-   * matched a sequence of non-linebreak characters followed by a
-   * linebreak, then adding the lengths of the matches. However,
-   * this caused a catastrophic backtracking issue when the end
-   * of a file contained a large number of non-newline characters.
-   * To avoid this, the current implementation just matches newlines
-   * and uses match.index to get the correct line start indices.
-   */
-
-  // Note: `lineStartOffsets` starts as `[0]`
-  let lastOffset = 0, offset, match;
-  while ((match = LINE_BREAK_PATTERN.exec(sourceText))) {
-    offset = match.index;
-    lines.push(sourceText.slice(lastOffset, offset));
-    lineStartOffsets.push(lastOffset = offset + match[0].length);
-  }
-  lines.push(sourceText.slice(lastOffset));
+  ast = deserializeProgramOnly(buffer, sourceText, sourceByteLen, getNodeLoc);
 }
 
 /**
@@ -126,8 +78,7 @@ export function resetSource(): void {
   buffer = null;
   sourceText = null;
   ast = null;
-  lines.length = 0;
-  lineStartOffsets.length = 1;
+  resetLines();
 }
 
 // `SourceCode` object.
@@ -153,7 +104,8 @@ export const SOURCE_CODE = Object.freeze({
 
   // Get AST of the file.
   get ast(): Program {
-    return getAst();
+    if (ast === null) initAst();
+    return ast;
   },
 
   // Get `ScopeManager` for the file.
@@ -163,8 +115,6 @@ export const SOURCE_CODE = Object.freeze({
 
   // Get visitor keys to traverse this AST.
   get visitorKeys(): { [key: string]: string[] } {
-    // This is the path relative to `plugins.js` file in `dist` directory
-    if (visitorKeys === null) visitorKeys = require('./generated/visit/keys.js').default;
     return visitorKeys;
   },
 
@@ -187,7 +137,7 @@ export const SOURCE_CODE = Object.freeze({
    * @returns Source text representing the AST node.
    */
   getText(
-    node?: Node | null | undefined,
+    node?: Ranged | null | undefined,
     beforeCount?: number | null | undefined,
     afterCount?: number | null | undefined,
   ): string {
@@ -197,7 +147,8 @@ export const SOURCE_CODE = Object.freeze({
     if (!node) return sourceText;
 
     // ESLint ignores falsy values for `beforeCount` and `afterCount`
-    let { start, end } = node;
+    const { range } = node;
+    let start = range[0], end = range[1];
     if (beforeCount) start = max(start - beforeCount, 0);
     if (afterCount) end += afterCount;
     return sourceText.slice(start, end);
@@ -506,8 +457,8 @@ export const SOURCE_CODE = Object.freeze({
     throw new Error('`sourceCode.getNodeByRangeIndex` not implemented yet'); // TODO
   },
 
-  getLocFromIndex,
-  getIndexFromLoc,
+  getLocFromIndex: getLineColumnFromOffset,
+  getIndexFromLoc: getOffsetFromLineColumn,
 
   /**
    * Check whether any comments exist or not between the given 2 nodes.
@@ -520,16 +471,7 @@ export const SOURCE_CODE = Object.freeze({
     throw new Error('`sourceCode.commentsExistBetween` not implemented yet'); // TODO
   },
 
-  /**
-   * Get all the ancestors of a given node.
-   * @param node - AST node
-   * @returns All the ancestor nodes in the AST, not including the provided node,
-   *   starting from the root node at index 0 and going inwards to the parent node.
-   */
-  // oxlint-disable-next-line no-unused-vars
-  getAncestors(node: Node): Node[] {
-    throw new Error('`sourceCode.getAncestors` not implemented yet'); // TODO
-  },
+  getAncestors,
 
   /**
    * Get the variables that `node` defines.
@@ -567,94 +509,23 @@ export const SOURCE_CODE = Object.freeze({
 export type SourceCode = typeof SOURCE_CODE;
 
 /**
- * Convert a source text index into a (line, column) pair.
- * @param offset The index of a character in a file.
- * @returns `{line, column}` location object with 1-indexed line and 0-indexed column.
- * @throws {TypeError|RangeError} If non-numeric `index`, or `index` out of range.
+ * Get all the ancestors of a given node.
+ * @param node - AST node
+ * @returns All the ancestor nodes in the AST, not including the provided node,
+ *   starting from the root node at index 0 and going inwards to the parent node.
  */
-function getLocFromIndex(offset: number): LineColumn {
-  if (typeof offset !== 'number' || offset < 0 || (offset | 0) !== offset) {
-    throw new TypeError('Expected `offset` to be a non-negative integer.');
+function getAncestors(node: Node): Node[] {
+  const ancestors = [];
+
+  for (
+    let ancestor = (node as unknown as { parent: Node }).parent;
+    ancestor;
+    ancestor = (ancestor as unknown as { parent: Node }).parent
+  ) {
+    ancestors.push(ancestor);
   }
 
-  // Build `lines` and `lineStartOffsets` tables if they haven't been already.
-  // This also decodes `sourceText` if it wasn't already.
-  if (lines.length === 0) initLines();
-
-  if (offset > sourceText.length) {
-    throw new RangeError(
-      `Index out of range (requested index ${offset}, but source text has length ${sourceText.length}).`,
-    );
-  }
-
-  // Binary search `lineStartOffsets` for the line containing `offset`
-  let low = 0, high = lineStartOffsets.length, mid: number;
-  do {
-    mid = ((low + high) / 2) | 0; // Use bitwise OR to floor the division
-    if (offset < lineStartOffsets[mid]) {
-      high = mid;
-    } else {
-      low = mid + 1;
-    }
-  } while (low < high);
-
-  return { line: low, column: offset - lineStartOffsets[low - 1] };
-}
-
-/**
- * Convert a `{ line, column }` pair into a range index.
- * @param loc - A line/column location.
- * @returns The range index of the location in the file.
- * @throws {TypeError|RangeError} If `loc` is not an object with a numeric `line` and `column`,
- *   or if the `line` is less than or equal to zero, or the line or column is out of the expected range.
- */
-export function getIndexFromLoc(loc: LineColumn): number {
-  if (loc !== null && typeof loc === 'object') {
-    const { line, column } = loc;
-    if (typeof line === 'number' && typeof column === 'number' && (line | 0) === line && (column | 0) === column) {
-      // Build `lines` and `lineStartOffsets` tables if they haven't been already.
-      // This also decodes `sourceText` if it wasn't already.
-      if (lines.length === 0) initLines();
-
-      const linesCount = lineStartOffsets.length;
-      if (line <= 0 || line > linesCount) {
-        throw new RangeError(
-          `Line number out of range (line ${line} requested). ` +
-            `Line numbers should be 1-based, and less than or equal to number of lines in file (${linesCount}).`,
-        );
-      }
-      if (column < 0) throw new RangeError(`Invalid column number (column ${column} requested).`);
-
-      const lineOffset = lineStartOffsets[line - 1];
-      const offset = lineOffset + column;
-
-      // Comment from ESLint implementation:
-      /*
-       * By design, `getIndexFromLoc({ line: lineNum, column: 0 })` should return the start index of
-       * the given line, provided that the line number is valid element of `lines`. Since the
-       * last element of `lines` is an empty string for files with trailing newlines, add a
-       * special case where getting the index for the first location after the end of the file
-       * will return the length of the file, rather than throwing an error. This allows rules to
-       * use `getIndexFromLoc` consistently without worrying about edge cases at the end of a file.
-       */
-
-      let nextLineOffset;
-      if (line === linesCount) {
-        nextLineOffset = sourceText.length;
-        if (offset <= nextLineOffset) return offset;
-      } else {
-        nextLineOffset = lineStartOffsets[line];
-        if (offset < nextLineOffset) return offset;
-      }
-
-      throw new RangeError(
-        `Column number out of range (column ${column} requested, ` +
-          `but the length of line ${line} is ${nextLineOffset - lineOffset}).`,
-      );
-    }
-  }
-
-  throw new TypeError('Expected `loc` to be an object with integer `line` and `column` properties.');
+  return ancestors.reverse();
 }
 
 // Options for various `SourceCode` methods e.g. `getFirstToken`.

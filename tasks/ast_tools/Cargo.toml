@@ -14,6 +14,19 @@ test = true
 doctest = false
 
 [dependencies]
+# NOT `workspace = true`.
+# If AST is updated, the local versions of these crates may not compile until after the codegen has run.
+# So the codegen itself (this crate) can't use local versions.
+# `features = ["serialize"]` on `oxc_span` and `oxc_syntax` is needed to work around a bug in `oxc_index`.
+oxc_allocator = { version = "0.93.0" }
+oxc_ast = { version = "0.93.0" }
+oxc_ast_visit = { version = "0.93.0" }
+oxc_codegen = { version = "0.93.0" }
+oxc_minifier = { version = "0.93.0" }
+oxc_parser = { version = "0.93.0" }
+oxc_span = { version = "0.93.0", features = ["serialize"] }
+oxc_syntax = { version = "0.93.0", features = ["serialize"] }
+
 oxc_data_structures = { workspace = true, features = ["slice_iter"] }
 
 bitflags = { workspace = true }
@@ -23,7 +36,7 @@ cow-utils = { workspace = true }
 indexmap = { workspace = true }
 itertools = { workspace = true }
 lazy-regex = { workspace = true }
-oxc_index = { workspace = true, features = ["serde"] }
+oxc_index = { workspace = true }
 phf = { workspace = true, features = ["macros"] }
 phf_codegen = { workspace = true }
 prettyplease = { workspace = true }

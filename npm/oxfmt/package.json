@@ -1,6 +1,6 @@
 {
   "name": "oxfmt",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "description": "Formatter for the JavaScript Oxidation Compiler",
   "keywords": [],
@@ -24,6 +24,7 @@
   },
   "files": [
     "bin/oxfmt",
+    "configuration_schema.json",
     "README.md"
   ]
 }

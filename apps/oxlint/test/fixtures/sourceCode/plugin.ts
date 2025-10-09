@@ -1,9 +1,18 @@
 import assert from 'node:assert';
 
-import type { Program } from '@oxc-project/types';
-import type { Plugin, Rule } from '../../../dist/index.js';
+import type { ESTree, Node, Plugin, Rule } from '../../../dist/index.js';
 
-const SPAN = { start: 0, end: 0 };
+type Program = ESTree.Program;
+
+const SPAN: Node = {
+  start: 0,
+  end: 0,
+  range: [0, 0],
+  loc: {
+    start: { line: 0, column: 0 },
+    end: { line: 0, column: 0 },
+  },
+};
 
 const createRule: Rule = {
   create(context) {

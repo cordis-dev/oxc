@@ -62,6 +62,10 @@ pub struct FormatOptions {
     /// - `"start"`: Places the operator at the beginning of the next line.
     /// - `"end"`: Places the operator at the end of the current line (default).
     pub experimental_operator_position: OperatorPosition,
+
+    // TODO: `FormatOptions`? Split out as `TransformOptions`?
+    /// Sort import statements. By default disabled.
+    pub experimental_sort_imports: Option<SortImports>,
 }
 
 impl FormatOptions {
@@ -82,6 +86,7 @@ impl FormatOptions {
             attribute_position: AttributePosition::default(),
             expand: Expand::default(),
             experimental_operator_position: OperatorPosition::default(),
+            experimental_sort_imports: None,
         }
     }
 
@@ -106,7 +111,8 @@ impl fmt::Display for FormatOptions {
         writeln!(f, "Bracket same line: {}", self.bracket_same_line.value())?;
         writeln!(f, "Attribute Position: {}", self.attribute_position)?;
         writeln!(f, "Expand lists: {}", self.expand)?;
-        writeln!(f, "Experimental operator position: {}", self.experimental_operator_position)
+        writeln!(f, "Experimental operator position: {}", self.experimental_operator_position)?;
+        writeln!(f, "Experimental sort imports: {:?}", self.experimental_sort_imports)
     }
 }
 
@@ -590,8 +596,7 @@ impl FromStr for ArrowParentheses {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            // Prettier calls it `avoid`, but Biome calls it `AsNeeded`
-            "avoid" => Ok(Self::AsNeeded),
+            "as-needed" => Ok(Self::AsNeeded),
             "always" => Ok(Self::Always),
             _ => Err(
                 "Value not supported for Arrow parentheses. Supported values are 'as-needed' and 'always'.",
@@ -904,6 +909,80 @@ impl fmt::Display for OperatorPosition {
         let s = match self {
             OperatorPosition::Start => "Start",
             OperatorPosition::End => "End",
+        };
+        f.write_str(s)
+    }
+}
+
+// ---
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct SortImports {
+    /// Partition imports by newlines.
+    /// Default is `false`.
+    pub partition_by_newline: bool,
+    /// Partition imports by comments.
+    /// Default is `false`.
+    pub partition_by_comment: bool,
+    /// Sort side effects imports.
+    /// Default is `false`.
+    pub sort_side_effects: bool,
+    /// Sort order (asc or desc).
+    /// Default is ascending (asc).
+    pub order: SortOrder,
+    /// Ignore case when sorting.
+    /// Default is `true`.
+    pub ignore_case: bool,
+}
+
+impl Default for SortImports {
+    fn default() -> Self {
+        Self {
+            partition_by_newline: false,
+            partition_by_comment: false,
+            sort_side_effects: false,
+            order: SortOrder::default(),
+            ignore_case: true,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+pub enum SortOrder {
+    /// Sort in ascending order (A-Z).
+    #[default]
+    Asc,
+    /// Sort in descending order (Z-A).
+    Desc,
+}
+
+impl SortOrder {
+    pub const fn is_asc(self) -> bool {
+        matches!(self, Self::Asc)
+    }
+
+    pub const fn is_desc(self) -> bool {
+        matches!(self, Self::Desc)
+    }
+}
+
+impl FromStr for SortOrder {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "asc" => Ok(Self::Asc),
+            "desc" => Ok(Self::Desc),
+            _ => Err("Value not supported for SortOrder. Supported values are 'asc' and 'desc'."),
+        }
+    }
+}
+
+impl fmt::Display for SortOrder {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            SortOrder::Asc => "ASC",
+            SortOrder::Desc => "DESC",
         };
         f.write_str(s)
     }

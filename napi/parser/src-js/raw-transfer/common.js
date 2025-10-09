@@ -28,14 +28,14 @@ if (!rawTransferSupported()) {
  *
  * @param {string} filename - Filename
  * @param {string} sourceText - Source text of file
- * @param {Object|undefined} options - Parsing options
+ * @param {Object} options - Parsing options
  * @param {function} convert - Function to convert the buffer returned from Rust into a JS object
  * @returns {Object} - The return value of `convert`
  */
 export function parseSyncRawImpl(filename, sourceText, options, convert) {
   const { buffer, sourceByteLen } = prepareRaw(sourceText);
   parseSyncRawBinding(filename, buffer, sourceByteLen, options);
-  return convert(buffer, sourceText, sourceByteLen);
+  return convert(buffer, sourceText, sourceByteLen, options);
 }
 
 // User should not schedule more async tasks than there are available CPUs, as it hurts performance,
@@ -87,7 +87,7 @@ const queue = [];
  *
  * @param {string} filename - Filename
  * @param {string} sourceText - Source text of file
- * @param {Object|undefined} options - Parsing options
+ * @param {Object} options - Parsing options
  * @param {function} convert - Function to convert the buffer returned from Rust into a JS object
  * @returns {Object} - The return value of `convert`
  */
@@ -115,7 +115,7 @@ export async function parseAsyncRawImpl(filename, sourceText, options, convert) 
   // Parse
   const { buffer, sourceByteLen } = prepareRaw(sourceText);
   await parseAsyncRawBinding(filename, buffer, sourceByteLen, options);
-  const data = convert(buffer, sourceText, sourceByteLen);
+  const data = convert(buffer, sourceText, sourceByteLen, options);
 
   // Free the CPU core
   if (queue.length > 0) {

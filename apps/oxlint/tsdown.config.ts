@@ -6,14 +6,14 @@ const commonConfig: UserConfig = {
   target: 'node20',
   outDir: 'dist',
   clean: true,
-  bundle: true,
+  unbundle: false,
   external: [
     // External native bindings
     './oxlint.*.node',
     'oxlint-*',
     // Files copied from `oxc-parser`.
     // Not bundled, to avoid needing sourcemaps when debugging.
-    /\/dist\//,
+    /^\.\.?\/.*\/dist\//,
   ],
   // At present only compress syntax.
   // Don't mangle identifiers or remove whitespace, so `dist` code remains somewhat readable.

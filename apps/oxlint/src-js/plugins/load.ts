@@ -1,3 +1,5 @@
+import { pathToFileURL } from 'node:url';
+
 import { Context } from './context.js';
 import { getErrorMessage } from './utils.js';
 
@@ -58,6 +60,9 @@ const registeredPluginPaths = new Set<string>();
 // Indexed by `ruleId`, which is passed to `lintFile`.
 export const registeredRules: RuleAndContext[] = [];
 
+// `before` hook which makes rule never run.
+const neverRunBeforeHook: BeforeHook = () => false;
+
 // Plugin details returned to Rust
 interface PluginDetails {
   // Plugin name
@@ -100,7 +105,7 @@ async function loadPluginImpl(path: string): Promise<PluginDetails> {
     throw new Error('This plugin has already been registered. This is a bug in Oxlint. Please report it.');
   }
 
-  const { default: plugin } = (await import(path)) as { default: Plugin };
+  const { default: plugin } = (await import(pathToFileURL(path).href)) as { default: Plugin };
 
   registeredPluginPaths.add(path);
 
@@ -117,6 +122,7 @@ async function loadPluginImpl(path: string): Promise<PluginDetails> {
 
     // Validate `rule.meta` and convert to vars with standardized shape
     let isFixable = false;
+    let messages: Record<string, string> | null = null;
     let ruleMeta = rule.meta;
     if (ruleMeta != null) {
       if (typeof ruleMeta !== 'object') throw new TypeError('Invalid `meta`');
@@ -126,11 +132,18 @@ async function loadPluginImpl(path: string): Promise<PluginDetails> {
         if (fixable !== 'code' && fixable !== 'whitespace') throw new TypeError('Invalid `meta.fixable`');
         isFixable = true;
       }
+
+      // Extract messages for messageId support
+      const inputMessages = ruleMeta.messages;
+      if (inputMessages != null) {
+        if (typeof inputMessages !== 'object') throw new TypeError('`meta.messages` must be an object if provided');
+        messages = inputMessages;
+      }
     }
 
     // Create `Context` object for rule. This will be re-used for every file.
     // It's updated with file-specific data before linting each file with `setupContextForFile`.
-    const context = new Context(`${pluginName}/${ruleName}`, isFixable);
+    const context = new Context(`${pluginName}/${ruleName}`, isFixable, messages);
 
     let ruleAndContext;
     if ('createOnce' in rule) {
@@ -143,6 +156,19 @@ async function loadPluginImpl(path: string): Promise<PluginDetails> {
       let { before: beforeHook, after: afterHook, ...visitor } = visitorWithHooks;
       beforeHook = conformHookFn(beforeHook, 'before');
       afterHook = conformHookFn(afterHook, 'after');
+
+      // If empty visitor, make this rule never run by substituting a `before` hook which always returns `false`.
+      // This means the original `before` hook won't run either.
+      //
+      // Reason for doing this is:
+      // In future, we may do a check on Rust side whether AST contains any nodes which rules act on,
+      // and if not, skip calling into JS entirely. In that case, the `before` hook won't get called.
+      // We can't emulate that behavior exactly, but we can at least emulate it in this simple case,
+      // and prevent users defining rules with *only* a `before` hook, which they expect to run on every file.
+      if (ObjectKeys(visitor).length === 0) {
+        beforeHook = neverRunBeforeHook;
+        afterHook = null;
+      }
 
       ruleAndContext = { rule, context, visitor, beforeHook, afterHook };
     } else {

@@ -3,15 +3,16 @@
 use std::borrow::Cow;
 
 use itertools::Itertools;
+use lazy_regex::{Captures, Lazy, Regex, lazy_regex, regex::Replacer};
 
 use crate::{
-    Codegen, Generator, TYPESCRIPT_DEFINITIONS_PATH,
+    Codegen, Generator, OXLINT_APP_PATH, TYPESCRIPT_DEFINITIONS_PATH,
     derives::estree::{
         get_fieldless_variant_value, get_struct_field_name, should_flatten_field,
         should_skip_enum_variant, should_skip_field,
     },
     output::Output,
-    schema::{Def, EnumDef, FieldDef, Schema, StructDef, TypeDef},
+    schema::{Def, EnumDef, FieldDef, Schema, StructDef, TypeDef, TypeId},
     utils::{FxIndexSet, format_cow, write_it},
 };
 
@@ -24,25 +25,40 @@ define_generator!(TypescriptGenerator);
 
 impl Generator for TypescriptGenerator {
     /// Generate Typescript type definitions for all AST types.
-    fn generate(&self, schema: &Schema, codegen: &Codegen) -> Output {
-        let estree_derive_id = codegen.get_derive_id_by_name("ESTree");
+    fn generate_many(&self, schema: &Schema, codegen: &Codegen) -> Vec<Output> {
+        let code = generate_ts_type_defs(schema, codegen);
+        let oxlint_code = amend_oxlint_types(&code);
 
-        let mut code = String::new();
-        let mut ast_node_names: Vec<String> = vec![];
-        for type_def in &schema.types {
-            if type_def.generates_derive(estree_derive_id) {
-                generate_ts_type_def(type_def, &mut code, &mut ast_node_names, schema);
-            }
-        }
-
-        // Manually append `ParamPattern`, which is generated via `add_ts_def`.
-        // `ParamPattern` is a union type of other `add_ts_def`ed types.
-        // TODO: Should not be hard-coded here.
-        let ast_node_union = ast_node_names.join(" | ");
-        write_it!(code, "export type Node = {ast_node_union} | ParamPattern;\n\n");
-
-        Output::Javascript { path: TYPESCRIPT_DEFINITIONS_PATH.to_string(), code }
+        vec![
+            Output::Javascript { path: TYPESCRIPT_DEFINITIONS_PATH.to_string(), code },
+            Output::Javascript {
+                path: format!("{OXLINT_APP_PATH}/src-js/generated/types.d.ts"),
+                code: oxlint_code,
+            },
+        ]
     }
+}
+
+/// Generate Typescript type definitions for all types.
+fn generate_ts_type_defs(schema: &Schema, codegen: &Codegen) -> String {
+    let estree_derive_id = codegen.get_derive_id_by_name("ESTree");
+    let program_type_id = schema.type_names["Program"];
+
+    let mut code = String::new();
+    let mut ast_node_names: Vec<String> = vec![];
+    for type_def in &schema.types {
+        if type_def.generates_derive(estree_derive_id) {
+            generate_ts_type_def(type_def, &mut code, &mut ast_node_names, program_type_id, schema);
+        }
+    }
+
+    // Manually append `ParamPattern`, which is generated via `add_ts_def`.
+    // `ParamPattern` is a union type of other `add_ts_def`ed types.
+    // TODO: Should not be hard-coded here.
+    let ast_node_union = ast_node_names.join(" | ");
+    write_it!(code, "export type Node = {ast_node_union} | ParamPattern;\n\n");
+
+    code
 }
 
 /// Generate Typescript type definition for a struct or enum.
@@ -52,6 +68,7 @@ fn generate_ts_type_def(
     type_def: &TypeDef,
     code: &mut String,
     ast_node_names: &mut Vec<String>,
+    program_type_id: TypeId,
     schema: &Schema,
 ) {
     // Skip TS def generation if `#[estree(no_ts_def)]` attribute
@@ -64,7 +81,7 @@ fn generate_ts_type_def(
     if !no_ts_def {
         let ts_def = match type_def {
             TypeDef::Struct(struct_def) => {
-                generate_ts_type_def_for_struct(struct_def, ast_node_names, schema)
+                generate_ts_type_def_for_struct(struct_def, ast_node_names, program_type_id, schema)
             }
             TypeDef::Enum(enum_def) => generate_ts_type_def_for_enum(enum_def, schema),
             _ => unreachable!(),
@@ -90,6 +107,7 @@ fn generate_ts_type_def(
 fn generate_ts_type_def_for_struct(
     struct_def: &StructDef,
     ast_node_names: &mut Vec<String>,
+    program_type_id: TypeId,
     schema: &Schema,
 ) -> Option<String> {
     // If struct marked with `#[estree(ts_alias = "...")]`, then it needs no type def
@@ -148,6 +166,11 @@ fn generate_ts_type_def_for_struct(
                 schema,
             );
         }
+    }
+
+    if !struct_def.estree.no_type {
+        let parent_type = if struct_def.id == program_type_id { "null" } else { "Node" };
+        write_it!(fields_str, "\n\tparent?: {parent_type};");
     }
 
     let ts_def = if extends.is_empty() {
@@ -427,4 +450,30 @@ fn get_single_field<'s>(struct_def: &'s StructDef, schema: &Schema) -> Option<&'
     } else {
         None
     }
+}
+
+/// Amend version of types for Oxlint.
+///
+/// Remove `export interface Span`, and instead import local version of same interface,
+/// which includes non-optional `range` and `loc` fields.
+fn amend_oxlint_types(code: &str) -> String {
+    static SPAN_REGEX: Lazy<Regex> = lazy_regex!(r"export interface Span \{.+?\}");
+
+    struct SpanReplacer;
+    impl Replacer for SpanReplacer {
+        fn replace_append(&mut self, _caps: &Captures, _dst: &mut String) {
+            // Remove it
+        }
+    }
+
+    let mut code = SPAN_REGEX.replace(code, SpanReplacer).into_owned();
+
+    #[rustfmt::skip]
+    code.insert_str(0, "
+        import { Span } from '../plugins/types.ts';
+        export { Span };
+
+    ");
+
+    code
 }

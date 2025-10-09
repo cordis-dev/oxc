@@ -3,7 +3,7 @@ use std::{
     ffi::OsStr,
     io::{ErrorKind, Read, Write},
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, Mutex},
 };
 
 use rustc_hash::FxHashMap;
@@ -12,13 +12,10 @@ use serde::{Deserialize, Serialize};
 use oxc_diagnostics::{DiagnosticSender, DiagnosticService, OxcDiagnostic, Severity};
 use oxc_span::{SourceType, Span};
 
-use super::{AllowWarnDeny, ConfigStore, ResolvedLinterState, read_to_string};
+use super::{AllowWarnDeny, ConfigStore, DisableDirectives, ResolvedLinterState, read_to_string};
 
 #[cfg(feature = "language_server")]
-use crate::{
-    fixer::{CompositeFix, Message, PossibleFixes},
-    lsp::{MessageWithPosition, message_to_message_with_position},
-};
+use crate::fixer::{CompositeFix, Message, PossibleFixes};
 
 /// State required to initialize the `tsgolint` linter.
 #[derive(Debug, Clone)]
@@ -69,7 +66,12 @@ impl TsGoLintState {
     ///
     /// # Errors
     /// A human-readable error message indicating why the linting failed.
-    pub fn lint(self, paths: &[Arc<OsStr>], error_sender: DiagnosticSender) -> Result<(), String> {
+    pub fn lint(
+        self,
+        paths: &[Arc<OsStr>],
+        disable_directives_map: Arc<Mutex<FxHashMap<PathBuf, DisableDirectives>>>,
+        error_sender: DiagnosticSender,
+    ) -> Result<(), String> {
         if paths.is_empty() {
             return Ok(());
         }
@@ -133,6 +135,8 @@ impl TsGoLintState {
             let cwd_clone = self.cwd.clone();
 
             let stdout_handler = std::thread::spawn(move || -> Result<(), String> {
+                let disable_directives_map =
+                    disable_directives_map.lock().expect("disable_directives_map mutex poisoned");
                 let msg_iter = TsGoLintMessageStream::new(stdout);
 
                 let mut source_text_map: FxHashMap<PathBuf, String> = FxHashMap::default();
@@ -162,6 +166,41 @@ impl TsGoLintState {
                                 // If the severity is not found, we should not report the diagnostic
                                 continue;
                             };
+
+                            let span = Span::new(
+                                tsgolint_diagnostic.range.pos,
+                                tsgolint_diagnostic.range.end,
+                            );
+
+                            let should_skip = {
+                                if let Some(directives) = disable_directives_map.get(&path) {
+                                    directives.contains(&tsgolint_diagnostic.rule, span)
+                                        || directives.contains(
+                                            &format!(
+                                                "typescript-eslint/{}",
+                                                tsgolint_diagnostic.rule
+                                            ),
+                                            span,
+                                        )
+                                        || directives.contains(
+                                            &format!(
+                                                "@typescript-eslint/{}",
+                                                tsgolint_diagnostic.rule
+                                            ),
+                                            span,
+                                        )
+                                } else {
+                                    debug_assert!(
+                                        false,
+                                        "disable_directives_map should have an entry for every file we linted"
+                                    );
+                                    false
+                                }
+                            };
+
+                            if should_skip {
+                                continue;
+                            }
 
                             let oxc_diagnostic: OxcDiagnostic =
                                 OxcDiagnostic::from(tsgolint_diagnostic);
@@ -252,9 +291,7 @@ impl TsGoLintState {
         &self,
         path: &Arc<OsStr>,
         source_text: String,
-    ) -> Result<Vec<MessageWithPosition<'_>>, String> {
-        use oxc_data_structures::rope::Rope;
-
+    ) -> Result<Vec<Message<'_>>, String> {
         let mut resolved_configs: FxHashMap<PathBuf, ResolvedLinterState> = FxHashMap::default();
 
         let json_input = self.json_input(std::slice::from_ref(path), &mut resolved_configs);
@@ -294,65 +331,58 @@ impl TsGoLintState {
             // Stream diagnostics as they are emitted, rather than waiting for all output
             let stdout = child.stdout.take().expect("Failed to open tsgolint stdout");
 
-            let stdout_handler =
-                std::thread::spawn(move || -> Result<Vec<MessageWithPosition<'_>>, String> {
-                    let msg_iter = TsGoLintMessageStream::new(stdout);
+            let stdout_handler = std::thread::spawn(move || -> Result<Vec<Message<'_>>, String> {
+                let msg_iter = TsGoLintMessageStream::new(stdout);
 
-                    let mut result = vec![];
+                let mut result = vec![];
 
-                    for msg in msg_iter {
-                        match msg {
-                            Ok(TsGoLintMessage::Error(err)) => {
-                                return Err(err.error);
-                            }
-                            Ok(TsGoLintMessage::Diagnostic(tsgolint_diagnostic)) => {
-                                let path = tsgolint_diagnostic.file_path.clone();
-                                let Some(resolved_config) = resolved_configs.get(&path) else {
-                                    // If we don't have a resolved config for this path, skip it. We should always
-                                    // have a resolved config though, since we processed them already above.
-                                    continue;
-                                };
+                for msg in msg_iter {
+                    match msg {
+                        Ok(TsGoLintMessage::Error(err)) => {
+                            return Err(err.error);
+                        }
+                        Ok(TsGoLintMessage::Diagnostic(tsgolint_diagnostic)) => {
+                            let path = tsgolint_diagnostic.file_path.clone();
+                            let Some(resolved_config) = resolved_configs.get(&path) else {
+                                // If we don't have a resolved config for this path, skip it. We should always
+                                // have a resolved config though, since we processed them already above.
+                                continue;
+                            };
 
-                                let severity =
-                                    resolved_config.rules.iter().find_map(|(rule, status)| {
-                                        if rule.name() == tsgolint_diagnostic.rule {
-                                            Some(*status)
-                                        } else {
-                                            None
-                                        }
-                                    });
-                                let Some(severity) = severity else {
-                                    // If the severity is not found, we should not report the diagnostic
-                                    continue;
-                                };
+                            let severity =
+                                resolved_config.rules.iter().find_map(|(rule, status)| {
+                                    if rule.name() == tsgolint_diagnostic.rule {
+                                        Some(*status)
+                                    } else {
+                                        None
+                                    }
+                                });
+                            let Some(severity) = severity else {
+                                // If the severity is not found, we should not report the diagnostic
+                                continue;
+                            };
 
-                                let mut message_with_position: MessageWithPosition<'_> =
-                                    message_to_message_with_position(
-                                        Message::from_tsgo_lint_diagnostic(
-                                            tsgolint_diagnostic,
-                                            &source_text,
-                                        ),
-                                        &source_text,
-                                        &Rope::from_str(&source_text),
-                                    );
+                            let mut message = Message::from_tsgo_lint_diagnostic(
+                                tsgolint_diagnostic,
+                                &source_text,
+                            );
 
-                                message_with_position.severity = if severity == AllowWarnDeny::Deny
-                                {
-                                    Severity::Error
-                                } else {
-                                    Severity::Warning
-                                };
+                            message.error.severity = if severity == AllowWarnDeny::Deny {
+                                Severity::Error
+                            } else {
+                                Severity::Warning
+                            };
 
-                                result.push(message_with_position);
-                            }
-                            Err(e) => {
-                                return Err(e);
-                            }
+                            result.push(message);
+                        }
+                        Err(e) => {
+                            return Err(e);
                         }
                     }
+                }
 
-                    Ok(result)
-                });
+                Ok(result)
+            });
 
             // Wait for process to complete and stdout processing to finish
             let exit_status = child.wait().expect("Failed to wait for tsgolint process");

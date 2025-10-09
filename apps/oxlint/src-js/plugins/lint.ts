@@ -1,19 +1,17 @@
 import { diagnostics, setupContextForFile } from './context.js';
 import { registeredRules } from './load.js';
-import { getAst, resetSource, setupSourceForFile } from './source_code.js';
+import { ast, initAst, resetSource, setupSourceForFile } from './source_code.js';
 import { assertIs, getErrorMessage } from './utils.js';
 import { addVisitorToCompiled, compiledVisitor, finalizeCompiledVisitor, initCompiledVisitor } from './visitor.js';
 
 // Lazy implementation
 /*
-// @ts-expect-error we need to generate `.d.ts` file for this module.
 import { TOKEN } from '../../dist/src-js/raw-transfer/lazy-common.js';
-// @ts-expect-error we need to generate `.d.ts` file for this module.
-import { walkProgram } from '../../dist/generated/lazy/walk.js';
+import { walkProgram } from '../generated/walk.js';
 */
 
 // @ts-expect-error we need to generate `.d.ts` file for this module
-import { walkProgram } from '../../dist/generated/visit/walk.js';
+import { walkProgram } from '../generated/walk.js';
 
 import type { AfterHook, BufferWithArrays } from './types.ts';
 
@@ -134,8 +132,8 @@ function lintFileImpl(filePath: string, bufferId: number, buffer: Uint8Array | n
   // Some rules seen in the wild return an empty visitor object from `create` if some initial check fails
   // e.g. file extension is not one the rule acts on.
   if (needsVisit) {
-    const program = getAst();
-    walkProgram(program, compiledVisitor);
+    if (ast === null) initAst();
+    walkProgram(ast, compiledVisitor);
 
     // Lazy implementation
     /*

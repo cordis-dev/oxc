@@ -19,10 +19,13 @@ use super::{EmptyArray, Null};
 #[ast_meta]
 #[estree(raw_deser = "
     const pattern = DESER[BindingPatternKind](POS_OFFSET.kind);
-    /* IF_TS */
-    pattern.optional = DESER[bool](POS_OFFSET.optional);
-    pattern.typeAnnotation = DESER[Option<Box<TSTypeAnnotation>>](POS_OFFSET.type_annotation);
-    /* END_IF_TS */
+    if (IS_TS) {
+        const previousParent = parent;
+        parent = pattern;
+        pattern.optional = DESER[bool](POS_OFFSET.optional);
+        pattern.typeAnnotation = DESER[Option<Box<TSTypeAnnotation>>](POS_OFFSET.type_annotation);
+        if (PARENT) parent = previousParent;
+    }
     pattern
 ")]
 pub struct BindingPatternConverter<'a, 'b>(pub &'b BindingPattern<'a>);
@@ -119,22 +122,31 @@ impl ESTree for CatchParameterConverter<'_, '_> {
         const params = DESER[Vec<FormalParameter>](POS_OFFSET.items);
         if (uint32[(POS_OFFSET.rest) >> 2] !== 0 && uint32[(POS_OFFSET.rest + 4) >> 2] !== 0) {
             pos = uint32[(POS_OFFSET.rest) >> 2];
-            params.push({
+
+            let start, end;
+            const previousParent = parent;
+            const rest = parent = {
                 type: 'RestElement',
-                /* IF_TS */
-                decorators: [],
-                /* END_IF_TS */
-                argument: DESER[BindingPatternKind]( POS_OFFSET<BindingRestElement>.argument.kind ),
-                /* IF_TS */
-                optional: DESER[bool]( POS_OFFSET<BindingRestElement>.argument.optional ),
-                typeAnnotation: DESER[Option<Box<TSTypeAnnotation>>](
+                ...(IS_TS && { decorators: [] }),
+                argument: null,
+                ...(IS_TS && {
+                    optional: DESER[bool]( POS_OFFSET<BindingRestElement>.argument.optional ),
+                    typeAnnotation: null,
+                    value: null,
+                }),
+                start: start = DESER[u32]( POS_OFFSET<BindingRestElement>.span.start ),
+                end: end = DESER[u32]( POS_OFFSET<BindingRestElement>.span.end ),
+                ...(RANGE && { range: [start, end] }),
+                ...(PARENT && { parent }),
+            };
+            rest.argument = DESER[BindingPatternKind]( POS_OFFSET<BindingRestElement>.argument.kind );
+            if (IS_TS) {
+                rest.typeAnnotation = DESER[Option<Box<TSTypeAnnotation>>](
                     POS_OFFSET<BindingRestElement>.argument.type_annotation
-                ),
-                value: null,
-                /* END_IF_TS */
-                start: DESER[u32]( POS_OFFSET<BindingRestElement>.span.start ),
-                end: DESER[u32]( POS_OFFSET<BindingRestElement>.span.end ),
-            });
+                );
+            }
+            params.push(rest);
+            if (PARENT) parent = previousParent;
         }
         params
     "
@@ -183,35 +195,40 @@ impl ESTree for FormalParametersRest<'_, '_> {
 #[estree(
     ts_type = "FormalParameter | TSParameterProperty",
     raw_deser = "
-        /* IF_JS */
-        DESER[BindingPatternKind](POS_OFFSET.pattern.kind)
-        /* END_IF_JS */
-
-        /* IF_TS */
-        const accessibility = DESER[Option<TSAccessibility>](POS_OFFSET.accessibility),
-            readonly = DESER[bool](POS_OFFSET.readonly),
-            override = DESER[bool](POS_OFFSET.override);
         let param;
-        if (accessibility === null && !readonly && !override) {
-            param = DESER[BindingPatternKind](POS_OFFSET.pattern.kind);
-            param.decorators = DESER[Vec<Decorator>](POS_OFFSET.decorators);
-            param.optional = DESER[bool](POS_OFFSET.pattern.optional);
-            param.typeAnnotation = DESER[Option<Box<TSTypeAnnotation>>](POS_OFFSET.pattern.type_annotation);
+        if (IS_TS) {
+            const accessibility = DESER[Option<TSAccessibility>](POS_OFFSET.accessibility),
+                readonly = DESER[bool](POS_OFFSET.readonly),
+                override = DESER[bool](POS_OFFSET.override),
+                previousParent = parent;
+            if (accessibility === null && !readonly && !override) {
+                param = parent = DESER[BindingPatternKind](POS_OFFSET.pattern.kind);
+                param.decorators = DESER[Vec<Decorator>](POS_OFFSET.decorators);
+                param.optional = DESER[bool](POS_OFFSET.pattern.optional);
+                param.typeAnnotation = DESER[Option<Box<TSTypeAnnotation>>](POS_OFFSET.pattern.type_annotation);
+            } else {
+                let start, end;
+                param = parent = {
+                    type: 'TSParameterProperty',
+                    accessibility,
+                    decorators: null,
+                    override,
+                    parameter: null,
+                    readonly,
+                    static: false,
+                    start: start = DESER[u32]( POS_OFFSET<BindingRestElement>.span.start ),
+                    end: end = DESER[u32]( POS_OFFSET<BindingRestElement>.span.end ),
+                    ...(RANGE && { range: [start, end] }),
+                    ...(PARENT && { parent }),
+                };
+                param.decorators = DESER[Vec<Decorator>](POS_OFFSET.decorators);
+                param.parameter = DESER[BindingPattern](POS_OFFSET.pattern);
+            }
+            if (PARENT) parent = previousParent;
         } else {
-            param = {
-                type: 'TSParameterProperty',
-                accessibility,
-                decorators: DESER[Vec<Decorator>](POS_OFFSET.decorators),
-                override,
-                parameter: DESER[BindingPattern](POS_OFFSET.pattern),
-                readonly,
-                static: false,
-                start: DESER[u32]( POS_OFFSET<BindingRestElement>.span.start ),
-                end: DESER[u32]( POS_OFFSET<BindingRestElement>.span.end ),
-            };
+            param = DESER[BindingPatternKind](POS_OFFSET.pattern.kind);
         }
         param
-        /* END_IF_TS */
     "
 )]
 pub struct FormalParameterConverter<'a, 'b>(pub &'b FormalParameter<'a>);
@@ -255,10 +272,10 @@ impl ESTree for FormalParameterConverter<'_, '_> {
     ts_type = "ParamPattern[]",
     raw_deser = "
         const params = DESER[Box<FormalParameters>](POS_OFFSET.params);
-        /* IF_TS */
-        const thisParam = DESER[Option<Box<TSThisParameter>>](POS_OFFSET.this_param);
-        if (thisParam !== null) params.unshift(thisParam);
-        /* END_IF_TS */
+        if (IS_TS) {
+            const thisParam = DESER[Option<Box<TSThisParameter>>](POS_OFFSET.this_param);
+            if (thisParam !== null) params.unshift(thisParam);
+        }
         params
     "
 )]
@@ -384,7 +401,11 @@ impl ESTree for ExportAllDeclarationWithClause<'_, '_> {
     ts_type = "FunctionBody | Expression",
     raw_deser = "
         let body = DESER[Box<FunctionBody>](POS_OFFSET.body);
-        THIS.expression ? body.body[0].expression : body
+        if (THIS.expression === true) {
+            body = body.body[0].expression;
+            if (PARENT) body.parent = parent;
+        }
+        body
     "
 )]
 pub struct ArrowFunctionExpressionBody<'a>(pub &'a ArrowFunctionExpression<'a>);
@@ -405,24 +426,31 @@ impl ESTree for ArrowFunctionExpressionBody<'_> {
 #[estree(
     ts_type = "IdentifierReference | AssignmentTargetWithDefault",
     raw_deser = "
-        const init = DESER[Option<Expression>](POS_OFFSET.init),
-            keyCopy = { ...THIS.key },
-            value = init === null
-                ? keyCopy
-                : {
-                    type: 'AssignmentPattern',
-                    /* IF_TS */
-                    decorators: [],
-                    /* END_IF_TS */
-                    left: keyCopy,
-                    right: init,
-                    /* IF_TS */
+        const init = DESER[Option<Expression>](POS_OFFSET.init);
+        let value = { ...THIS.key };
+        if (init !== null) {
+            const left = value;
+            const previousParent = parent;
+            value = parent = {
+                type: 'AssignmentPattern',
+                ...(IS_TS && { decorators: [] }),
+                left,
+                right: init,
+                ...(IS_TS && {
                     optional: false,
                     typeAnnotation: null,
-                    /* END_IF_TS */
-                    start: THIS.start,
-                    end: THIS.end,
-                };
+                }),
+                start: THIS.start,
+                end: THIS.end,
+                ...(RANGE && { range: [THIS.start, THIS.end] }),
+                ...(PARENT && { parent }),
+            };
+            if (PARENT) {
+                left.parent = value;
+                init.parent = value;
+                parent = previousParent;
+            }
+        }
         value
     "
 )]
@@ -450,7 +478,7 @@ impl ESTree for AssignmentTargetPropertyIdentifierInit<'_> {
 
 /// Converter for [`ParenthesizedExpression`].
 ///
-/// In raw transfer, do not produce a `ParenthesizedExpression` node in AST if `preserveParens` is false.
+/// In raw transfer, do not produce a `ParenthesizedExpression` node in AST if `PRESERVE_PARENS` is false.
 ///
 /// Not useful in `oxc-parser`, as can use parser option `preserve_parens`.
 /// Required for `oxlint` plugins where we run parser with `preserve_parens` set to `true`,
@@ -459,14 +487,22 @@ impl ESTree for AssignmentTargetPropertyIdentifierInit<'_> {
 /// ESTree implementation is unchanged from the auto-generated version.
 #[ast_meta]
 #[estree(raw_deser = "
-    let node = DESER[Expression](POS_OFFSET.expression);
-    if (preserveParens) {
-        node = {
+    let node;
+    if (PRESERVE_PARENS) {
+        let start, end;
+        const previousParent = parent;
+        node = parent = {
             type: 'ParenthesizedExpression',
-            expression: node,
-            start: DESER[u32]( POS_OFFSET.span.start ),
-            end: DESER[u32]( POS_OFFSET.span.end ),
+            expression: null,
+            start: start = DESER[u32]( POS_OFFSET.span.start ),
+            end: end = DESER[u32]( POS_OFFSET.span.end ),
+            ...(RANGE && { range: [start, end] }),
+            ...(PARENT && { parent }),
         };
+        node.expression = DESER[Expression](POS_OFFSET.expression);
+        if (PARENT) parent = previousParent;
+    } else {
+        node = DESER[Expression](POS_OFFSET.expression);
     }
     node
 ")]

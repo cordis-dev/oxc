@@ -124,6 +124,8 @@ fn private_member_mangling() {
         "class Foo { publicField = 1; #privateField = 2; getSum() { return this.publicField + this.#privateField; } }",
         // Test same names across different classes should reuse mangled names
         "class A { #field = 1; #method() { return this.#field; } } class B { #field = 2; #method() { return this.#field; } }",
+        "class A { #field = 1; #method() { return this.#field; } } class B { #field2 = 2; #method2() { return this.#field2; } }",
+        "class Outer { #shared = 1; #getInner() { return class { #method() { return this.#shared; } }; } }",
     ];
 
     let mut snapshot = String::new();
