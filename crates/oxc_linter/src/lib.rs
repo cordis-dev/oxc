@@ -70,7 +70,7 @@ pub use crate::{
     module_record::ModuleRecord,
     options::LintOptions,
     options::{AllowWarnDeny, InvalidFilterKind, LintFilter, LintFilterKind},
-    rule::{RuleCategory, RuleFixMeta, RuleMeta, RuleRunner},
+    rule::{RuleCategory, RuleFixMeta, RuleMeta, RuleRunFunctionsImplemented, RuleRunner},
     service::{LintService, LintServiceOptions, RuntimeFileSystem},
     tsgolint::TsGoLintState,
     utils::{read_to_arena_str, read_to_string},
@@ -146,7 +146,7 @@ impl Linter {
         path: &Path,
         context_sub_hosts: Vec<ContextSubHost<'a>>,
         allocator: &'a Allocator,
-    ) -> Vec<Message<'a>> {
+    ) -> Vec<Message> {
         self.run_with_disable_directives(path, context_sub_hosts, allocator).0
     }
 
@@ -159,7 +159,7 @@ impl Linter {
         path: &Path,
         context_sub_hosts: Vec<ContextSubHost<'a>>,
         allocator: &'a Allocator,
-    ) -> (Vec<Message<'a>>, Option<DisableDirectives>) {
+    ) -> (Vec<Message>, Option<DisableDirectives>) {
         let ResolvedLinterState { rules, config, external_rules } = self.config.resolve(path);
 
         let mut ctx_host = Rc::new(ContextHost::new(path, context_sub_hosts, self.options, config));
@@ -173,7 +173,7 @@ impl Linter {
             .is_some_and(|ext| LINT_PARTIAL_LOADER_EXTENSIONS.contains(&ext));
 
         loop {
-            let rules = rules
+            let mut rules = rules
                 .iter()
                 .filter(|(rule, _)| rule.should_run(&ctx_host) && !rule.is_tsgolint_rule())
                 .map(|(rule, severity)| (rule, Rc::clone(&ctx_host).spawn(rule, *severity)))
@@ -184,7 +184,21 @@ impl Linter {
             let should_run_on_jest_node =
                 ctx_host.plugins().has_test() && ctx_host.frameworks().is_test();
 
-            let execute_rules = |with_ast_kind_filtering: bool| {
+            let mut execute_rules = |with_runtime_optimization: bool| {
+                // If only the `run` function is implemented, we can skip running the file entirely if the current
+                // file does not contain any of the relevant AST node types.
+                if with_runtime_optimization {
+                    rules.retain(|(rule, _)| {
+                        let run_info = rule.run_info();
+                        if run_info == RuleRunFunctionsImplemented::Run
+                            && let Some(ast_types) = rule.types_info()
+                        {
+                            semantic.nodes().contains_any(ast_types)
+                        } else {
+                            true
+                        }
+                    });
+                }
                 // IMPORTANT: We have two branches here for performance reasons:
                 //
                 // 1) Branch where we iterate over each node, then each rule
@@ -217,9 +231,13 @@ impl Linter {
 
                     for (rule, ctx) in &rules {
                         let rule = *rule;
+                        let run_info = rule.run_info();
                         // Collect node type information for rules. In large files, benchmarking showed it was worth
                         // collecting rules into buckets by AST node type to avoid iterating over all rules for each node.
-                        if with_ast_kind_filtering && let Some(ast_types) = rule.types_info() {
+                        if with_runtime_optimization
+                            && let Some(ast_types) = rule.types_info()
+                            && run_info.is_run_implemented()
+                        {
                             for ty in ast_types {
                                 rules_by_ast_type[ty as usize].push((rule, ctx));
                             }
@@ -227,12 +245,8 @@ impl Linter {
                             rules_any_ast_type.push((rule, ctx));
                         }
 
-                        rule.run_once(ctx);
-                    }
-
-                    for symbol in semantic.scoping().symbol_ids() {
-                        for (rule, ctx) in &rules {
-                            rule.run_on_symbol(symbol, ctx);
+                        if !with_runtime_optimization || run_info.is_run_once_implemented() {
+                            rule.run_once(ctx);
                         }
                     }
 
@@ -249,33 +263,42 @@ impl Linter {
                     if should_run_on_jest_node {
                         for jest_node in iter_possible_jest_call_node(semantic) {
                             for (rule, ctx) in &rules {
-                                rule.run_on_jest_node(&jest_node, ctx);
+                                if !with_runtime_optimization
+                                    || rule.run_info().is_run_on_jest_node_implemented()
+                                {
+                                    rule.run_on_jest_node(&jest_node, ctx);
+                                }
                             }
                         }
                     }
                 } else {
                     for (rule, ctx) in &rules {
-                        rule.run_once(ctx);
-
-                        for symbol in semantic.scoping().symbol_ids() {
-                            rule.run_on_symbol(symbol, ctx);
+                        let run_info = rule.run_info();
+                        if !with_runtime_optimization || run_info.is_run_once_implemented() {
+                            rule.run_once(ctx);
                         }
 
-                        // For smaller files, benchmarking showed it was faster to iterate over all rules and just check the
-                        // node types as we go, rather than pre-bucketing rules by AST node type and doing extra allocations.
-                        if with_ast_kind_filtering && let Some(ast_types) = rule.types_info() {
-                            for node in semantic.nodes() {
-                                if ast_types.has(node.kind().ty()) {
+                        if !with_runtime_optimization || run_info.is_run_implemented() {
+                            // For smaller files, benchmarking showed it was faster to iterate over all rules and just check the
+                            // node types as we go, rather than pre-bucketing rules by AST node type and doing extra allocations.
+                            if with_runtime_optimization && let Some(ast_types) = rule.types_info()
+                            {
+                                for node in semantic.nodes() {
+                                    if ast_types.has(node.kind().ty()) {
+                                        rule.run(node, ctx);
+                                    }
+                                }
+                            } else {
+                                for node in semantic.nodes() {
                                     rule.run(node, ctx);
                                 }
                             }
-                        } else {
-                            for node in semantic.nodes() {
-                                rule.run(node, ctx);
-                            }
                         }
 
-                        if should_run_on_jest_node {
+                        if should_run_on_jest_node
+                            && (!with_runtime_optimization
+                                || run_info.is_run_on_jest_node_implemented())
+                        {
                             for jest_node in iter_possible_jest_call_node(semantic) {
                                 rule.run_on_jest_node(&jest_node, ctx);
                             }

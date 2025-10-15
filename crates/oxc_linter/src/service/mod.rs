@@ -96,21 +96,17 @@ impl LintService {
     }
 
     #[cfg(feature = "language_server")]
-    pub fn run_source<'a>(
-        &mut self,
-        allocator: &'a mut oxc_allocator::Allocator,
-    ) -> Vec<crate::Message<'a>> {
-        self.runtime.run_source(allocator)
+    pub fn run_source(&mut self) -> Vec<crate::Message> {
+        self.runtime.run_source()
     }
 
     /// For tests
     #[cfg(test)]
-    pub(crate) fn run_test_source<'a>(
+    pub(crate) fn run_test_source(
         &mut self,
-        allocator: &'a mut oxc_allocator::Allocator,
         check_syntax_errors: bool,
         tx_error: &DiagnosticSender,
-    ) -> Vec<crate::Message<'a>> {
-        self.runtime.run_test_source(allocator, check_syntax_errors, tx_error)
+    ) -> Vec<crate::Message> {
+        self.runtime.run_test_source(check_syntax_errors, tx_error)
     }
 }

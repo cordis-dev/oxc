@@ -25,6 +25,25 @@ impl<'a> Format<'a> for ImportOrExportKind {
     }
 }
 
+pub fn format_import_and_export_source_with_clause<'a>(
+    source: &AstNode<'a, StringLiteral>,
+    with_clause: Option<&AstNode<'a, WithClause>>,
+    f: &mut Formatter<'_, 'a>,
+) -> FormatResult<()> {
+    source.format_leading_comments(f)?;
+    source.write(f)?;
+
+    if let Some(with_clause) = with_clause {
+        if f.comments().has_comment_before(with_clause.span.start) {
+            write!(f, [space()])?;
+        }
+
+        write!(f, [with_clause])?;
+    }
+
+    Ok(())
+}
+
 impl<'a> FormatWrite<'a> for AstNode<'a, ImportDeclaration<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
         let decl = &format_once(|f| {
@@ -34,7 +53,9 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ImportDeclaration<'a>> {
                 write!(f, [specifiers, space(), "from", space()])?;
             }
 
-            write!(f, [self.source(), self.with_clause(), OptionalSemicolon])
+            format_import_and_export_source_with_clause(self.source(), self.with_clause(), f)?;
+
+            write!(f, [OptionalSemicolon])
         });
 
         write!(f, [labelled(LabelId::of(JsLabels::ImportDeclaration), decl)])
@@ -70,7 +91,7 @@ impl<'a> Format<'a> for AstNode<'a, Vec<'a, ImportDeclarationSpecifier<'a>>> {
         } else if self.len() == 1
             && let Some(ImportDeclarationSpecifier::ImportSpecifier(specifier)) =
                 specifiers_iter.peek().map(AsRef::as_ref)
-            && !f.comments().has_comment_before(specifier.local.span.start)
+            && f.comments().comments_before_character(self.parent.span().start, b'}').is_empty()
         {
             write!(
                 f,
@@ -96,20 +117,16 @@ impl<'a> Format<'a> for AstNode<'a, Vec<'a, ImportDeclarationSpecifier<'a>>> {
                                 .map(|specifier| {
                                     format_once(move |f| {
                                         // Should add empty line before the specifier if there are comments before it.
-                                        let comments = f
-                                            .context()
+                                        let specifier_span = specifier.span();
+                                        if f.context()
                                             .comments()
-                                            .comments_before(specifier.span().start);
-                                        if !comments.is_empty() {
-                                            if f.source_text()
-                                                .get_lines_before(comments[0].span, f.comments())
+                                            .has_comment_before(specifier_span.start)
+                                            && f.source_text()
+                                                .get_lines_before(specifier_span, f.comments())
                                                 > 1
-                                            {
-                                                write!(f, [empty_line()])?;
-                                            }
-                                            write!(f, [FormatLeadingComments::Comments(comments)])?;
+                                        {
+                                            write!(f, [empty_line()])?;
                                         }
-
                                         write!(f, specifier)
                                     })
                                 });
@@ -138,37 +155,22 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ImportSpecifier<'a>> {
         }
         write!(f, [self.import_kind()])?;
         if self.local.span == self.imported.span() {
-            write!(f, [self.local()])?;
+            write!(f, [self.local()])
         } else {
-            write!(f, [self.imported(), space(), "as", space(), self.local()])?;
-        }
-
-        if f.source_text().next_non_whitespace_byte_is(self.span.end, b'}') {
-            let comments = f.context().comments().comments_before_character(self.span.end, b'}');
-            write!(f, [FormatTrailingComments::Comments(comments)])
-        } else {
-            self.format_trailing_comments(f)
+            write!(f, [self.imported(), space(), "as", space(), self.local()])
         }
     }
 }
 
 impl<'a> FormatWrite<'a> for AstNode<'a, ImportDefaultSpecifier<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        self.local().fmt(f)
+        write!(f, [self.local()])
     }
 }
 
 impl<'a> FormatWrite<'a> for AstNode<'a, ImportNamespaceSpecifier<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        write!(f, ["*", space(), "as", space()])?;
-        let local = self.local();
-        local.format_leading_comments(f)?;
-        local.write(f)?;
-        // `import * as all /* comment */ from 'mod'`
-        //                  ^^^^^^^^^^^^ get comments that before `from` keyword to print
-        // `f` is the first character of `from`
-        let comments = f.context().comments().comments_before_character(local.span().start, b'f');
-        write!(f, [space(), FormatTrailingComments::Comments(comments)])
+        write!(f, ["*", space(), "as", space(), self.local()])
     }
 }
 

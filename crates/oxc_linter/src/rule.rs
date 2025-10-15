@@ -5,7 +5,7 @@ use std::{fmt, hash::Hash};
 use schemars::{JsonSchema, SchemaGenerator, schema::Schema};
 use serde::{Deserialize, Serialize};
 
-use oxc_semantic::{AstTypesBitset, SymbolId};
+use oxc_semantic::AstTypesBitset;
 
 use crate::{
     AstNode, FixKind,
@@ -29,11 +29,6 @@ pub trait Rule: Sized + Default + fmt::Debug {
     #[expect(unused_variables)]
     #[inline]
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {}
-
-    /// Visit each symbol
-    #[expect(unused_variables)]
-    #[inline]
-    fn run_on_symbol(&self, symbol_id: SymbolId, ctx: &LintContext<'_>) {}
 
     /// Run only once. Useful for inspecting scopes and trivias etc.
     #[expect(unused_variables)]
@@ -71,8 +66,44 @@ pub trait RuleRunner: Rule {
     /// can't figure it out and the linter should call `run` on every node.
     const NODE_TYPES: Option<&AstTypesBitset>;
 
+    /// What `Rule` functions are implemented by this `Rule`. For example, if a rule only
+    /// implements `run_once`, then the linter can skip calling `run`, so
+    /// this value would be tagged as [`RuleRunFunctionsImplemented::RunOnce`].
+    const RUN_FUNCTIONS: RuleRunFunctionsImplemented = RuleRunFunctionsImplemented::Unknown;
+
     fn types_info(&self) -> Option<&'static AstTypesBitset> {
         Self::NODE_TYPES
+    }
+
+    fn run_info(&self) -> RuleRunFunctionsImplemented {
+        Self::RUN_FUNCTIONS
+    }
+}
+
+/// Enum approximating a bitset of which `Rule` functions are implemented.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum RuleRunFunctionsImplemented {
+    /// Unknown which functions are implemented.
+    Unknown,
+    /// Only `run` is implemented
+    Run,
+    /// Only `run_once` is implemented
+    RunOnce,
+    /// Only `run_on_jest_node` is implemented
+    RunOnJestNode,
+}
+
+impl RuleRunFunctionsImplemented {
+    pub fn is_run_implemented(self) -> bool {
+        matches!(self, Self::Run | Self::Unknown)
+    }
+
+    pub fn is_run_once_implemented(self) -> bool {
+        matches!(self, Self::RunOnce | Self::Unknown)
+    }
+
+    pub fn is_run_on_jest_node_implemented(self) -> bool {
+        matches!(self, Self::RunOnJestNode | Self::Unknown)
     }
 }
 

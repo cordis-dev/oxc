@@ -83,6 +83,7 @@ use self::{
     object_like::ObjectLike,
     object_pattern_like::ObjectPatternLike,
     parameters::{ParameterLayout, ParameterList},
+    return_or_throw_statement::FormatAdjacentArgument,
     semicolon::OptionalSemicolon,
     type_parameters::{FormatTSTypeParameters, FormatTSTypeParametersOptions},
     utils::{
@@ -225,7 +226,12 @@ impl<'a> FormatWrite<'a> for AstNode<'a, CallExpression<'a>> {
             MemberChain::from_call_expression(self, f).fmt(f)
         } else {
             let format_inner = format_with(|f| {
-                write!(f, [callee, optional.then_some("?."), type_arguments, arguments])
+                if self.type_arguments.is_some() {
+                    write!(f, [callee]);
+                } else {
+                    write!(f, [FormatNodeWithoutTrailingComments(callee)]);
+                }
+                write!(f, [optional.then_some("?."), type_arguments, arguments])
             });
             if matches!(callee.as_ref(), Expression::CallExpression(_)) {
                 write!(f, [group(&format_inner)])
@@ -238,7 +244,13 @@ impl<'a> FormatWrite<'a> for AstNode<'a, CallExpression<'a>> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, NewExpression<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        write!(f, ["new", space(), self.callee(), self.type_arguments(), self.arguments()])
+        write!(f, ["new", space()]);
+        if self.type_arguments.is_some() {
+            write!(f, [self.callee()]);
+        } else {
+            write!(f, [FormatNodeWithoutTrailingComments(self.callee())]);
+        }
+        write!(f, [self.type_arguments(), self.arguments()])
     }
 }
 
@@ -592,17 +604,67 @@ impl<'a> FormatWrite<'a> for AstNode<'a, DoWhileStatement<'a>> {
     }
 }
 
+/// Formats comments that appear before empty statements in control structures.
+///
+/// Example:
+/// ```js
+/// // Input:
+/// for (init;;) /* comment */ ;
+/// for (init;;update) /* comment */ ;
+/// for (init of iterable) /* comment */ ;
+/// for (init in iterable) /* comment */ ;
+/// while (test) /* comment */ ;
+/// if (test) /* comment */ ;
+///
+/// // Output:
+/// for (init /* comment */;; );
+/// for (init; ; update /* comment */);
+/// for (init of iterable /* comment */) ;
+/// for (init in iterable /* comment */) ;
+/// while (test /* comment */) ;
+/// if (test /* comment */) ;
+/// ```
+///
+/// This ensures compatibility with [Prettier's comment handling for empty statements](https://github.com/prettier/prettier/blob/7584432401a47a26943dd7a9ca9a8e032ead7285/src/language-js/comments/printer-methods.js#L15).
+struct FormatCommentForEmptyStatement<'a, 'b>(&'b AstNode<'a, Statement<'a>>);
+impl<'a> Format<'a> for FormatCommentForEmptyStatement<'a, '_> {
+    fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+        if let AstNodes::EmptyStatement(empty) = self.0.as_ast_nodes() {
+            let comments = f.context().comments().comments_before(empty.span.start);
+            FormatTrailingComments::Comments(comments).fmt(f)?;
+            empty.format_trailing_comments(f)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+struct FormatTestOfIfAndWhileStatement<'a, 'b>(&'b AstNode<'a, Expression<'a>>);
+impl<'a> Format<'a> for FormatTestOfIfAndWhileStatement<'a, '_> {
+    fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+        write!(f, FormatNodeWithoutTrailingComments(self.0))?;
+        let comments = f.context().comments().comments_before_character(self.0.span().end, b')');
+        if !comments.is_empty() {
+            write!(f, [space(), FormatTrailingComments::Comments(comments)])?;
+        }
+        Ok(())
+    }
+}
 impl<'a> FormatWrite<'a> for AstNode<'a, WhileStatement<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+        let body = self.body();
         write!(
             f,
             group(&format_args!(
                 "while",
                 space(),
                 "(",
-                group(&soft_block_indent(self.test())),
+                group(&soft_block_indent(&format_args!(
+                    FormatTestOfIfAndWhileStatement(self.test()),
+                    FormatCommentForEmptyStatement(self.body())
+                ))),
                 ")",
-                FormatStatementBody::new(self.body())
+                FormatStatementBody::new(body)
             ))
         )
     }
@@ -641,12 +703,16 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ForStatement<'a>> {
                     "(",
                     group(&soft_block_indent(&format_args!(
                         init,
+                        (test.is_none() && update.is_none())
+                            .then_some(FormatCommentForEmptyStatement(body)),
                         ";",
                         soft_line_break_or_space(),
                         test,
+                        (update.is_none()).then_some(FormatCommentForEmptyStatement(body)),
                         ";",
                         soft_line_break_or_space(),
-                        update
+                        update,
+                        FormatCommentForEmptyStatement(body)
                     ))),
                     ")",
                     format_body
@@ -659,7 +725,8 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ForStatement<'a>> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, ForInStatement<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        let comments = f.context().comments().own_line_comments_before(self.body.span().start);
+        let comments = f.context().comments().own_line_comments_before(self.right.span().start);
+        let body = self.body();
         write!(
             f,
             [
@@ -673,8 +740,9 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ForInStatement<'a>> {
                     "in",
                     space(),
                     self.right(),
+                    FormatCommentForEmptyStatement(body),
                     ")",
-                    FormatStatementBody::new(self.body())
+                    FormatStatementBody::new(body)
                 ))
             ]
         )
@@ -683,7 +751,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ForInStatement<'a>> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, ForOfStatement<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        let comments = f.context().comments().own_line_comments_before(self.body.span().start);
+        let comments = f.context().comments().own_line_comments_before(self.right.span().start);
 
         let r#await = self.r#await();
         let left = self.left();
@@ -704,6 +772,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ForOfStatement<'a>> {
                     "of",
                     space(),
                     right,
+                    FormatCommentForEmptyStatement(body),
                     ")",
                     FormatStatementBody::new(body)
                 ]
@@ -718,13 +787,17 @@ impl<'a> FormatWrite<'a> for AstNode<'a, IfStatement<'a>> {
         let test = self.test();
         let consequent = self.consequent();
         let alternate = self.alternate();
+
         write!(
             f,
             group(&format_args!(
                 "if",
                 space(),
                 "(",
-                group(&soft_block_indent(&test)),
+                group(&soft_block_indent(&format_args!(
+                    FormatTestOfIfAndWhileStatement(test),
+                    FormatCommentForEmptyStatement(consequent)
+                ))),
                 ")",
                 FormatStatementBody::new(consequent),
             ))
@@ -737,9 +810,9 @@ impl<'a> FormatWrite<'a> for AstNode<'a, IfStatement<'a>> {
             let has_dangling_comments = has_line_comment
                 || comments.last().is_some_and(|last_comment| {
                     // Ensure the comments are placed before the else keyword or on a new line
-                    let gap_str =
-                        f.source_text().slice_range(last_comment.span.end, alternate_start);
-                    gap_str.contains("else")
+                    f.source_text()
+                        .slice_range(last_comment.span.end, alternate_start)
+                        .contains("else")
                         || f.source_text()
                             .contains_newline_between(last_comment.span.end, alternate_start)
                 });
@@ -803,6 +876,14 @@ impl<'a> FormatWrite<'a> for AstNode<'a, BreakStatement<'a>> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, WithStatement<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+        let format_comment_for_empty_body = format_with(|f| {
+            if let Statement::EmptyStatement(empty) = &self.body {
+                let comments = f.context().comments().comments_before(empty.span.start);
+                FormatTrailingComments::Comments(comments).fmt(f)?;
+            }
+            Ok(())
+        });
+
         write!(
             f,
             group(&format_args!(
@@ -857,17 +938,14 @@ impl<'a> FormatWrite<'a> for AstNode<'a, BindingPattern<'a>> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, AssignmentPattern<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+        let mut left = self.left().memoized();
+        // Format `left` early before writing leading comments, so that comments
+        // inside `left` are not treated as leading comments of `= right`
+        left.inspect(f)?;
         let comments = f.context().comments().own_line_comments_before(self.right.span().start);
         write!(
             f,
-            [
-                FormatLeadingComments::Comments(comments),
-                self.left(),
-                space(),
-                "=",
-                space(),
-                self.right(),
-            ]
+            [FormatLeadingComments::Comments(comments), left, space(), "=", space(), self.right()]
         )
     }
 }
@@ -938,12 +1016,9 @@ impl<'a> FormatWrite<'a, FormatJsArrowFunctionExpressionOptions>
 
 impl<'a> FormatWrite<'a> for AstNode<'a, YieldExpression<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        write!(f, "yield")?;
-        if self.delegate() {
-            write!(f, "*")?;
-        }
+        write!(f, ["yield", self.delegate().then_some("*")])?;
         if let Some(argument) = &self.argument() {
-            write!(f, [space(), argument])?;
+            write!(f, [space(), FormatAdjacentArgument(argument)])?;
         }
         Ok(())
     }

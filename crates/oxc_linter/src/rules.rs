@@ -371,6 +371,7 @@ pub(crate) mod react {
     pub mod no_string_refs;
     pub mod no_unescaped_entities;
     pub mod no_unknown_property;
+    pub mod only_export_components;
     pub mod prefer_es6_class;
     pub mod react_in_jsx_scope;
     pub mod require_render_return;
@@ -641,6 +642,7 @@ pub(crate) mod vitest {
 pub(crate) mod node {
     pub mod no_exports_assign;
     pub mod no_new_require;
+    pub mod no_process_env;
 }
 
 pub(crate) mod vue {
@@ -964,6 +966,7 @@ oxc_macros::declare_all_lint_rules! {
     nextjs::no_typos,
     nextjs::no_unwanted_polyfillio,
     nextjs::no_html_link_for_pages,
+    node::no_process_env,
     node::no_exports_assign,
     node::no_new_require,
     oxc::approx_constant,
@@ -1040,6 +1043,7 @@ oxc_macros::declare_all_lint_rules! {
     react::no_string_refs,
     react::no_unescaped_entities,
     react::no_unknown_property,
+    react::only_export_components,
     react::prefer_es6_class,
     react::react_in_jsx_scope,
     react::require_render_return,

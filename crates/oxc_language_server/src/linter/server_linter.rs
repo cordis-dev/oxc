@@ -1,11 +1,11 @@
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 
 use ignore::gitignore::Gitignore;
 use log::{debug, warn};
 use oxc_linter::{AllowWarnDeny, LintIgnoreMatcher};
-use rustc_hash::{FxBuildHasher, FxHashMap};
+use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
 use tokio::sync::Mutex;
 use tower_lsp_server::lsp_types::Uri;
 
@@ -21,7 +21,8 @@ use crate::linter::{
     options::{LintOptions as LSPLintOptions, Run},
     tsgo_linter::TsgoLinter,
 };
-use crate::{ConcurrentHashMap, OXC_CONFIG_FILE};
+use crate::utils::normalize_path;
+use crate::{ConcurrentHashMap, LINT_CONFIG_FILE};
 
 use super::config_walker::ConfigWalker;
 
@@ -39,7 +40,7 @@ pub struct ServerLinter {
     gitignore_glob: Vec<Gitignore>,
     lint_on_run: Run,
     diagnostics: ServerLinterDiagnostics,
-    pub extended_paths: Vec<PathBuf>,
+    pub extended_paths: FxHashSet<PathBuf>,
 }
 
 #[derive(Debug, Default)]
@@ -90,7 +91,7 @@ impl ServerLinter {
         let mut nested_ignore_patterns = Vec::new();
         let (nested_configs, mut extended_paths) =
             Self::create_nested_configs(&root_path, options, &mut nested_ignore_patterns);
-        let config_path = options.config_path.as_ref().map_or(OXC_CONFIG_FILE, |v| v);
+        let config_path = options.config_path.as_ref().map_or(LINT_CONFIG_FILE, |v| v);
         let config = normalize_path(root_path.join(config_path));
         let oxlintrc = if config.try_exists().is_ok_and(|exists| exists) {
             if let Ok(oxlintrc) = Oxlintrc::from_file(&config) {
@@ -188,8 +189,8 @@ impl ServerLinter {
         root_path: &Path,
         options: &LSPLintOptions,
         nested_ignore_patterns: &mut Vec<(Vec<String>, PathBuf)>,
-    ) -> (ConcurrentHashMap<PathBuf, Config>, Vec<PathBuf>) {
-        let mut extended_paths = Vec::new();
+    ) -> (ConcurrentHashMap<PathBuf, Config>, FxHashSet<PathBuf>) {
+        let mut extended_paths = FxHashSet::default();
         // nested config is disabled, no need to search for configs
         if !options.use_nested_configs() {
             return (ConcurrentHashMap::default(), extended_paths);
@@ -377,31 +378,6 @@ impl ServerLinter {
     }
 }
 
-/// Normalize a path by removing `.` and resolving `..` components,
-/// without touching the filesystem.
-pub fn normalize_path<P: AsRef<Path>>(path: P) -> PathBuf {
-    let mut result = PathBuf::new();
-
-    for component in path.as_ref().components() {
-        match component {
-            Component::ParentDir => {
-                result.pop();
-            }
-            Component::CurDir => {
-                // Skip current directory component
-            }
-            Component::Normal(c) => {
-                result.push(c);
-            }
-            Component::RootDir | Component::Prefix(_) => {
-                result.push(component.as_os_str());
-            }
-        }
-    }
-
-    result
-}
-
 #[cfg(test)]
 mod test {
     use std::path::{Path, PathBuf};
@@ -411,19 +387,11 @@ mod test {
         linter::{
             error_with_position::DiagnosticReport,
             options::{LintOptions, Run, UnusedDisableDirectives},
-            server_linter::{ServerLinter, ServerLinterDiagnostics, normalize_path},
+            server_linter::{ServerLinter, ServerLinterDiagnostics},
         },
         tester::{Tester, get_file_path},
     };
     use rustc_hash::FxHashMap;
-
-    #[test]
-    fn test_normalize_path() {
-        assert_eq!(
-            normalize_path(Path::new("/root/directory/./.oxlintrc.json")),
-            Path::new("/root/directory/.oxlintrc.json")
-        );
-    }
 
     #[test]
     fn test_create_nested_configs_with_disabled_nested_configs() {

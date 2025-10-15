@@ -1,4 +1,5 @@
 use oxc_allocator::Allocator;
+use oxc_ast_visit::Visit;
 use oxc_codegen::{Codegen, CodegenOptions};
 use oxc_minifier::{CompressOptions, Compressor};
 use oxc_parser::Parser;
@@ -15,10 +16,13 @@ pub fn test(source_text: &str, expected: &str, config: &ReplaceGlobalDefinesConf
     let ret = Parser::new(&allocator, source_text, source_type).parse();
     assert!(ret.errors.is_empty());
     let mut program = ret.program;
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
-    let _ = ReplaceGlobalDefines::new(&allocator, config.clone()).build(scoping, &mut program);
+    let mut scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
+    let ret = ReplaceGlobalDefines::new(&allocator, config.clone()).build(scoping, &mut program);
+    assert_eq!(ret.changed, source_text != expected);
+    // Use the updated scoping, instead of recreating one.
+    scoping = ret.scoping;
+    AssertAst.visit_program(&program);
     // Run DCE, to align pipeline in crates/oxc/src/compiler.rs
-    let scoping = SemanticBuilder::new().build(&program).semantic.into_scoping();
     Compressor::new(&allocator).dead_code_elimination_with_scoping(
         &mut program,
         scoping,
@@ -35,6 +39,14 @@ pub fn test(source_text: &str, expected: &str, config: &ReplaceGlobalDefinesConf
 #[track_caller]
 fn test_same(source_text: &str, config: &ReplaceGlobalDefinesConfig) {
     test(source_text, source_text, config);
+}
+
+struct AssertAst;
+
+impl Visit<'_> for AssertAst {
+    fn visit_identifier_reference(&mut self, ident: &oxc_ast::ast::IdentifierReference<'_>) {
+        assert!(ident.reference_id.get().is_some());
+    }
 }
 
 fn config<S: AsRef<str>>(defines: &[(S, S)]) -> ReplaceGlobalDefinesConfig {
@@ -71,18 +83,18 @@ fn dot() {
 #[test]
 fn dot_with_overlap() {
     let config =
-        config(&[("import.meta.env.FOO", "import.meta.env.FOO"), ("import.meta.env", "__foo__")]);
+        config(&[("import.meta.env.FOO", "import.meta.env.BAR"), ("import.meta.env", "__foo__")]);
     test("const _ = import.meta.env", "__foo__", &config);
-    test("const _ = import.meta.env.FOO", "import.meta.env.FOO", &config);
+    test("const _ = import.meta.env.FOO", "import.meta.env.BAR", &config);
     test("const _ = import.meta.env.NODE_ENV", "__foo__.NODE_ENV", &config);
 
     test("_ = import.meta.env", "_ = __foo__", &config);
-    test("_ = import.meta.env.FOO", "_ = import.meta.env.FOO", &config);
+    test("_ = import.meta.env.FOO", "_ = import.meta.env.BAR", &config);
     test("_ = import.meta.env.NODE_ENV", "_ = __foo__.NODE_ENV", &config);
 
     test("import.meta.env = 0", "__foo__ = 0", &config);
     test("import.meta.env.NODE_ENV = 0", "__foo__.NODE_ENV = 0", &config);
-    test("import.meta.env.FOO = 0", "import.meta.env.FOO = 0", &config);
+    test("import.meta.env.FOO = 0", "import.meta.env.BAR = 0", &config);
 }
 
 #[test]

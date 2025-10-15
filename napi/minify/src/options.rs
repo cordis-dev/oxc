@@ -30,14 +30,30 @@ pub struct CompressOptions {
     /// @default true
     pub drop_debugger: Option<bool>,
 
-    /// Drop unreferenced functions and variables.
+    /// Pass `true` to drop unreferenced functions and variables.
     ///
-    /// Simple direct variable assignments do not count as references unless set to "keep_assign".
-    #[napi(ts_type = "true | false | 'keep_assign'")]
-    pub unused: Option<String>,
+    /// Simple direct variable assignments do not count as references unless set to `keep_assign`.
+    /// @default true
+    #[napi(ts_type = "boolean | 'keep_assign'")]
+    pub unused: Option<Either<bool, String>>,
 
     /// Keep function / class names.
     pub keep_names: Option<CompressOptionsKeepNames>,
+
+    /// Join consecutive var, let and const statements.
+    ///
+    /// @default true
+    pub join_vars: Option<bool>,
+
+    /// Join consecutive simple statements using the comma operator.
+    ///
+    /// `a; b` -> `a, b`
+    ///
+    /// @default true
+    pub sequences: Option<bool>,
+
+    /// Limit the maximum number of iterations for debugging purpose.
+    pub max_iterations: Option<u8>,
 }
 
 impl TryFrom<&CompressOptions> for oxc_minifier::CompressOptions {
@@ -52,14 +68,20 @@ impl TryFrom<&CompressOptions> for oxc_minifier::CompressOptions {
             },
             drop_console: o.drop_console.unwrap_or(default.drop_console),
             drop_debugger: o.drop_debugger.unwrap_or(default.drop_debugger),
-            // TODO
-            join_vars: true,
-            sequences: true,
-            // TODO
-            unused: oxc_minifier::CompressOptionsUnused::Keep,
+            join_vars: o.join_vars.unwrap_or(true),
+            sequences: o.sequences.unwrap_or(true),
+            unused: match &o.unused {
+                Some(Either::A(true)) => oxc_minifier::CompressOptionsUnused::Remove,
+                Some(Either::A(false)) => oxc_minifier::CompressOptionsUnused::Keep,
+                Some(Either::B(s)) => match s.as_str() {
+                    "keep_assign" => oxc_minifier::CompressOptionsUnused::KeepAssign,
+                    _ => return Err(format!("Invalid unused option: `{s}`.")),
+                },
+                None => default.unused,
+            },
             keep_names: o.keep_names.as_ref().map(Into::into).unwrap_or_default(),
             treeshake: TreeShakeOptions::default(),
-            max_iterations: None,
+            max_iterations: o.max_iterations,
         })
     }
 }

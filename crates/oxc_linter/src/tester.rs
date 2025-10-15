@@ -501,7 +501,6 @@ impl Tester {
         fix_kind: ExpectFixKind,
         fix_index: u8,
     ) -> TestResult {
-        let mut allocator = Allocator::default();
         let rule = self.find_rule().read_json(rule_config.unwrap_or_default());
         let mut external_plugin_store = ExternalPluginStore::default();
         let linter = Linter::new(
@@ -518,7 +517,12 @@ impl Tester {
                         )
                         .unwrap()
                     })
-                    .with_builtin_plugins(self.plugins | LintPlugins::from(self.plugin_name))
+                    .with_builtin_plugins(
+                        self.plugins
+                            | LintPlugins::try_from(self.plugin_name).unwrap_or_else(|()| {
+                                panic!("invalid plugin name: {}", self.plugin_name)
+                            }),
+                    )
                     .with_rule(rule, AllowWarnDeny::Warn)
                     .build(&external_plugin_store)
                     .unwrap(),
@@ -552,7 +556,7 @@ impl Tester {
             .with_paths(paths);
 
         let (sender, _receiver) = mpsc::channel();
-        let result = lint_service.run_test_source(&mut allocator, false, &sender);
+        let result = lint_service.run_test_source(false, &sender);
 
         if result.is_empty() {
             return TestResult::Passed;

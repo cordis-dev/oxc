@@ -16,9 +16,11 @@ use crate::{
     formatter::server_formatter::ServerFormatter,
     linter::{
         error_with_position::DiagnosticReport,
-        server_linter::{ServerLinter, ServerLinterRun, normalize_path},
+        options::LintOptions,
+        server_linter::{ServerLinter, ServerLinterRun},
     },
     options::Options,
+    utils::normalize_path,
 };
 
 /// A worker that manages the individual tools for a specific workspace
@@ -71,7 +73,8 @@ impl WorkspaceWorker {
         *self.server_linter.write().await = Some(ServerLinter::new(&self.root_uri, &options.lint));
         if options.format.experimental {
             debug!("experimental formatter enabled");
-            *self.server_formatter.write().await = Some(ServerFormatter::new());
+            *self.server_formatter.write().await =
+                Some(ServerFormatter::new(&self.root_uri, &options.format));
         }
     }
 
@@ -153,10 +156,7 @@ impl WorkspaceWorker {
     /// Refresh the server linter with the current options
     /// This will recreate the linter and re-read the config files.
     /// Call this when the options have changed and the linter needs to be updated.
-    async fn refresh_server_linter(&self) {
-        let options = self.options.lock().await;
-        let default_options = Options::default();
-        let lint_options = &options.as_ref().unwrap_or(&default_options).lint;
+    async fn refresh_server_linter(&self, lint_options: &LintOptions) {
         let server_linter = ServerLinter::new(&self.root_uri, lint_options);
 
         *self.server_linter.write().await = Some(server_linter);
@@ -301,7 +301,15 @@ impl WorkspaceWorker {
             let server_linter = server_linter_guard.as_ref()?;
             server_linter.get_cached_files_of_diagnostics()
         };
-        self.refresh_server_linter().await;
+        let lint_options = self
+            .options
+            .lock()
+            .await
+            .as_ref()
+            .map(|option| option.lint.clone())
+            .unwrap_or_default();
+
+        self.refresh_server_linter(&lint_options).await;
         Some(self.revalidate_diagnostics(files).await)
     }
 
@@ -338,10 +346,12 @@ impl WorkspaceWorker {
         }
 
         let mut formatting = false;
-        if current_option.format.experimental != changed_options.format.experimental {
+        if current_option.format != changed_options.format {
             if changed_options.format.experimental {
-                debug!("experimental formatter enabled");
-                *self.server_formatter.write().await = Some(ServerFormatter::new());
+                debug!("experimental formatter enabled/restarted");
+                // restart the formatter
+                *self.server_formatter.write().await =
+                    Some(ServerFormatter::new(&self.root_uri, &changed_options.format));
                 formatting = true;
             } else {
                 debug!("experimental formatter disabled");
@@ -359,7 +369,7 @@ impl WorkspaceWorker {
                     vec![]
                 }
             };
-            self.refresh_server_linter().await;
+            self.refresh_server_linter(&changed_options.lint).await;
 
             if current_option.lint.config_path != changed_options.lint.config_path {
                 return (
@@ -418,5 +428,209 @@ mod tests {
             !worker
                 .is_responsible_for_uri(&Uri::from_str("file:///path/to/other/file.js").unwrap())
         );
+    }
+}
+
+#[cfg(test)]
+mod test_watchers {
+    use tower_lsp_server::{
+        UriExt,
+        lsp_types::{FileSystemWatcher, Uri},
+    };
+
+    use crate::{options::Options, worker::WorkspaceWorker};
+
+    struct Tester {
+        pub worker: WorkspaceWorker,
+    }
+
+    impl Tester {
+        pub fn new(relative_root_dir: &'static str, options: &Options) -> Self {
+            let absolute_path =
+                std::env::current_dir().expect("could not get current dir").join(relative_root_dir);
+            let uri =
+                Uri::from_file_path(absolute_path).expect("could not convert current dir to uri");
+
+            let worker = tokio::runtime::Runtime::new()
+                .unwrap()
+                .block_on(async { Self::create_workspace_worker(uri, options).await });
+
+            Self { worker }
+        }
+
+        async fn create_workspace_worker(absolute_path: Uri, options: &Options) -> WorkspaceWorker {
+            let worker = WorkspaceWorker::new(absolute_path);
+            worker.start_worker(options).await;
+
+            worker
+        }
+
+        fn init_watchers(&self) -> Vec<FileSystemWatcher> {
+            tokio::runtime::Runtime::new()
+                .unwrap()
+                .block_on(async { self.worker.init_watchers().await })
+        }
+
+        fn did_change_configuration(&self, options: &Options) -> Option<FileSystemWatcher> {
+            let (_, watchers, _) = tokio::runtime::Runtime::new()
+                .unwrap()
+                .block_on(async { self.worker.did_change_configuration(options).await });
+            watchers
+        }
+    }
+
+    mod init_watchers {
+        use tower_lsp_server::lsp_types::{GlobPattern, OneOf, RelativePattern};
+
+        use crate::{
+            linter::options::LintOptions, options::Options, worker::test_watchers::Tester,
+        };
+
+        #[test]
+        fn test_default_options() {
+            let tester = Tester::new("fixtures/watcher/default", &Options::default());
+            let watchers = tester.init_watchers();
+
+            assert_eq!(watchers.len(), 1);
+            assert_eq!(
+                watchers[0].glob_pattern,
+                GlobPattern::Relative(RelativePattern {
+                    base_uri: OneOf::Right(tester.worker.get_root_uri().clone()),
+                    pattern: "**/.oxlintrc.json".to_string(),
+                })
+            );
+        }
+
+        #[test]
+        fn test_custom_config_path() {
+            let tester = Tester::new(
+                "fixtures/watcher/default",
+                &Options {
+                    lint: LintOptions {
+                        config_path: Some("configs/lint.json".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            );
+            let watchers = tester.init_watchers();
+
+            assert_eq!(watchers.len(), 1);
+            assert_eq!(
+                watchers[0].glob_pattern,
+                GlobPattern::Relative(RelativePattern {
+                    base_uri: OneOf::Right(tester.worker.get_root_uri().clone()),
+                    pattern: "configs/lint.json".to_string(),
+                })
+            );
+        }
+
+        #[test]
+        fn test_linter_extends_configs() {
+            let tester = Tester::new("fixtures/watcher/linter_extends", &Options::default());
+            let watchers = tester.init_watchers();
+
+            // The `.oxlintrc.json` extends `./lint.json -> 2 watchers
+            assert_eq!(watchers.len(), 2);
+
+            // nested configs pattern
+            assert_eq!(
+                watchers[0].glob_pattern,
+                GlobPattern::Relative(RelativePattern {
+                    base_uri: OneOf::Right(tester.worker.get_root_uri().clone()),
+                    pattern: "**/.oxlintrc.json".to_string(),
+                })
+            );
+
+            // extends of root config
+            assert_eq!(
+                watchers[1].glob_pattern,
+                GlobPattern::Relative(RelativePattern {
+                    base_uri: OneOf::Right(tester.worker.get_root_uri().clone()),
+                    pattern: "lint.json".to_string(),
+                })
+            );
+        }
+
+        #[test]
+        fn test_linter_extends_custom_config_path() {
+            let tester = Tester::new(
+                "fixtures/watcher/linter_extends",
+                &Options {
+                    lint: LintOptions {
+                        config_path: Some(".oxlintrc.json".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            );
+            let watchers = tester.init_watchers();
+
+            assert_eq!(watchers.len(), 2);
+            assert_eq!(
+                watchers[0].glob_pattern,
+                GlobPattern::Relative(RelativePattern {
+                    base_uri: OneOf::Right(tester.worker.get_root_uri().clone()),
+                    pattern: ".oxlintrc.json".to_string(),
+                })
+            );
+            assert_eq!(
+                watchers[1].glob_pattern,
+                GlobPattern::Relative(RelativePattern {
+                    base_uri: OneOf::Right(tester.worker.get_root_uri().clone()),
+                    pattern: "lint.json".to_string(),
+                })
+            );
+        }
+    }
+
+    mod did_change_configuration {
+        use tower_lsp_server::lsp_types::{GlobPattern, OneOf, RelativePattern};
+
+        use crate::{
+            linter::options::{LintOptions, Run},
+            options::Options,
+            worker::test_watchers::Tester,
+        };
+
+        #[test]
+        fn test_no_change() {
+            let tester = Tester::new("fixtures/watcher/default", &Options::default());
+            let watchers = tester.did_change_configuration(&Options::default());
+            assert!(watchers.is_none());
+        }
+
+        #[test]
+        fn test_lint_config_path_change() {
+            let tester = Tester::new("fixtures/watcher/default", &Options::default());
+            let watchers = tester
+                .did_change_configuration(&Options {
+                    lint: LintOptions {
+                        config_path: Some("configs/lint.json".to_string()),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                })
+                .unwrap();
+
+            assert_eq!(
+                watchers.glob_pattern,
+                GlobPattern::Relative(RelativePattern {
+                    base_uri: OneOf::Right(tester.worker.get_root_uri().clone()),
+                    pattern: "configs/lint.json".to_string(),
+                })
+            );
+        }
+
+        #[test]
+        fn test_lint_other_option_change() {
+            let tester = Tester::new("fixtures/watcher/default", &Options::default());
+            let watchers = tester.did_change_configuration(&Options {
+                // run is the only option that does not require a restart
+                lint: LintOptions { run: Run::OnSave, ..Default::default() },
+                ..Default::default()
+            });
+            assert!(watchers.is_none());
+        }
     }
 }

@@ -4,10 +4,10 @@ use rustc_hash::FxHashSet;
 
 use oxc_allocator::{Address, Allocator, GetAddress};
 use oxc_ast::ast::*;
-use oxc_ast_visit::VisitMut;
+use oxc_ast_visit::{VisitMut, walk_mut};
 use oxc_diagnostics::OxcDiagnostic;
 use oxc_parser::Parser;
-use oxc_semantic::{IsGlobalReference, ScopeFlags, Scoping};
+use oxc_semantic::{IsGlobalReference, ReferenceFlags, ScopeFlags, Scoping};
 use oxc_span::{CompactStr, SPAN, SourceType};
 use oxc_syntax::identifier::is_identifier_name;
 use oxc_traverse::{Ancestor, Traverse, traverse_mut};
@@ -208,6 +208,7 @@ impl ReplaceGlobalDefinesConfig {
 #[must_use]
 pub struct ReplaceGlobalDefinesReturn {
     pub scoping: Scoping,
+    pub changed: bool,
 }
 
 /// Replace Global Defines.
@@ -227,6 +228,7 @@ pub struct ReplaceGlobalDefines<'a> {
     /// When `exit` the node, reset the `Lock` to `None` to make sure not affect other
     /// transformation.
     ast_node_lock: Option<Address>,
+    changed: bool,
 }
 
 impl<'a> Traverse<'a, ()> for ReplaceGlobalDefines<'a> {
@@ -237,6 +239,7 @@ impl<'a> Traverse<'a, ()> for ReplaceGlobalDefines<'a> {
         let is_replaced =
             self.replace_identifier_defines(expr, ctx) || self.replace_dot_defines(expr, ctx);
         if is_replaced {
+            self.mark_as_changed();
             self.ast_node_lock = Some(expr.address());
         }
     }
@@ -256,6 +259,7 @@ impl<'a> Traverse<'a, ()> for ReplaceGlobalDefines<'a> {
             return;
         }
         if self.replace_define_with_assignment_expr(node, ctx) {
+            self.mark_as_changed();
             // `AssignmentExpression` is stored in a `Box`, so we can use `from_ptr` to get
             // the stable address
             self.ast_node_lock = Some(Address::from_ptr(node));
@@ -275,7 +279,11 @@ impl<'a> Traverse<'a, ()> for ReplaceGlobalDefines<'a> {
 
 impl<'a> ReplaceGlobalDefines<'a> {
     pub fn new(allocator: &'a Allocator, config: ReplaceGlobalDefinesConfig) -> Self {
-        Self { allocator, config, ast_node_lock: None }
+        Self { allocator, config, ast_node_lock: None, changed: false }
+    }
+
+    fn mark_as_changed(&mut self) {
+        self.changed = true;
     }
 
     pub fn build(
@@ -284,11 +292,11 @@ impl<'a> ReplaceGlobalDefines<'a> {
         program: &mut Program<'a>,
     ) -> ReplaceGlobalDefinesReturn {
         let scoping = traverse_mut(self, self.allocator, program, scoping, ());
-        ReplaceGlobalDefinesReturn { scoping }
+        ReplaceGlobalDefinesReturn { scoping, changed: self.changed }
     }
 
     // Construct a new expression because we don't have ast clone right now.
-    fn parse_value(&self, source_text: &str) -> Expression<'a> {
+    fn parse_value(&self, source_text: &str, ctx: &mut TraverseCtx<'a>) -> Expression<'a> {
         // Allocate the string lazily because replacement happens rarely.
         let source_text = self.allocator.alloc_str(source_text);
         // Unwrapping here, it should already be checked by [ReplaceGlobalDefinesConfig::new].
@@ -296,12 +304,16 @@ impl<'a> ReplaceGlobalDefines<'a> {
             .parse_expression()
             .unwrap();
 
-        RemoveSpans.visit_expression(&mut expr);
+        UpdateReplacedExpression { ctx }.visit_expression(&mut expr);
 
         expr
     }
 
-    fn replace_identifier_defines(&self, expr: &mut Expression<'a>, ctx: &TraverseCtx<'a>) -> bool {
+    fn replace_identifier_defines(
+        &self,
+        expr: &mut Expression<'a>,
+        ctx: &mut TraverseCtx<'a>,
+    ) -> bool {
         match expr {
             Expression::Identifier(ident) => {
                 if let Some(new_expr) = self.replace_identifier_define_impl(ident, ctx) {
@@ -315,7 +327,7 @@ impl<'a> ReplaceGlobalDefines<'a> {
             {
                 for (key, value) in &self.config.0.identifier.identifier_defines {
                     if key.as_str() == "this" {
-                        let value = self.parse_value(value);
+                        let value = self.parse_value(value, ctx);
                         *expr = value;
 
                         return true;
@@ -330,7 +342,7 @@ impl<'a> ReplaceGlobalDefines<'a> {
     fn replace_identifier_define_impl(
         &self,
         ident: &oxc_allocator::Box<'_, IdentifierReference<'_>>,
-        ctx: &TraverseCtx<'a>,
+        ctx: &mut TraverseCtx<'a>,
     ) -> Option<Expression<'a>> {
         if let Some(symbol_id) = ident
             .reference_id
@@ -345,7 +357,7 @@ impl<'a> ReplaceGlobalDefines<'a> {
         // This is a global variable, including ambient variants such as `declare const`.
         for (key, value) in &self.config.0.identifier.identifier_defines {
             if ident.name.as_str() == key {
-                let value = self.parse_value(value);
+                let value = self.parse_value(value, ctx);
                 return Some(value);
             }
         }
@@ -355,17 +367,17 @@ impl<'a> ReplaceGlobalDefines<'a> {
     fn replace_define_with_assignment_expr(
         &self,
         node: &mut AssignmentExpression<'a>,
-        ctx: &TraverseCtx<'a>,
+        ctx: &mut TraverseCtx<'a>,
     ) -> bool {
         let new_left = node
             .left
             .as_simple_assignment_target_mut()
             .and_then(|item| match item {
                 SimpleAssignmentTarget::ComputedMemberExpression(computed_member_expr) => {
-                    self.replace_dot_computed_member_expr(ctx, computed_member_expr)
+                    self.replace_dot_computed_member_expr(computed_member_expr, ctx)
                 }
                 SimpleAssignmentTarget::StaticMemberExpression(member) => {
-                    self.replace_dot_static_member_expr(ctx, member)
+                    self.replace_dot_static_member_expr(member, ctx)
                 }
                 SimpleAssignmentTarget::AssignmentTargetIdentifier(ident) => {
                     self.replace_identifier_define_impl(ident, ctx)
@@ -380,16 +392,16 @@ impl<'a> ReplaceGlobalDefines<'a> {
         false
     }
 
-    fn replace_dot_defines(&self, expr: &mut Expression<'a>, ctx: &TraverseCtx<'a>) -> bool {
+    fn replace_dot_defines(&self, expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) -> bool {
         match expr {
             Expression::ChainExpression(chain) => {
                 let Some(new_expr) =
                     chain.expression.as_member_expression_mut().and_then(|item| match item {
                         MemberExpression::ComputedMemberExpression(computed_member_expr) => {
-                            self.replace_dot_computed_member_expr(ctx, computed_member_expr)
+                            self.replace_dot_computed_member_expr(computed_member_expr, ctx)
                         }
                         MemberExpression::StaticMemberExpression(member) => {
-                            self.replace_dot_static_member_expr(ctx, member)
+                            self.replace_dot_static_member_expr(member, ctx)
                         }
                         MemberExpression::PrivateFieldExpression(_) => None,
                     })
@@ -400,13 +412,13 @@ impl<'a> ReplaceGlobalDefines<'a> {
                 return true;
             }
             Expression::StaticMemberExpression(member) => {
-                if let Some(new_expr) = self.replace_dot_static_member_expr(ctx, member) {
+                if let Some(new_expr) = self.replace_dot_static_member_expr(member, ctx) {
                     *expr = new_expr;
                     return true;
                 }
             }
             Expression::ComputedMemberExpression(member) => {
-                if let Some(new_expr) = self.replace_dot_computed_member_expr(ctx, member) {
+                if let Some(new_expr) = self.replace_dot_computed_member_expr(member, ctx) {
                     *expr = new_expr;
                     return true;
                 }
@@ -416,7 +428,7 @@ impl<'a> ReplaceGlobalDefines<'a> {
                     && meta_property.meta.name == "import"
                     && meta_property.property.name == "meta"
                 {
-                    let value = self.parse_value(replacement);
+                    let value = self.parse_value(replacement, ctx);
                     *expr = value;
                     return true;
                 }
@@ -428,8 +440,8 @@ impl<'a> ReplaceGlobalDefines<'a> {
 
     fn replace_dot_computed_member_expr(
         &self,
-        ctx: &TraverseCtx<'a>,
         member: &ComputedMemberExpression<'a>,
+        ctx: &mut TraverseCtx<'a>,
     ) -> Option<Expression<'a>> {
         for dot_define in &self.config.0.dot {
             if Self::is_dot_define(
@@ -437,7 +449,7 @@ impl<'a> ReplaceGlobalDefines<'a> {
                 dot_define,
                 DotDefineMemberExpression::ComputedMemberExpression(member),
             ) {
-                let value = self.parse_value(&dot_define.value);
+                let value = self.parse_value(&dot_define.value, ctx);
                 return Some(value);
             }
         }
@@ -447,8 +459,8 @@ impl<'a> ReplaceGlobalDefines<'a> {
 
     fn replace_dot_static_member_expr(
         &self,
-        ctx: &TraverseCtx<'a>,
         member: &StaticMemberExpression<'a>,
+        ctx: &mut TraverseCtx<'a>,
     ) -> Option<Expression<'a>> {
         for dot_define in &self.config.0.dot {
             if Self::is_dot_define(
@@ -456,13 +468,13 @@ impl<'a> ReplaceGlobalDefines<'a> {
                 dot_define,
                 DotDefineMemberExpression::StaticMemberExpression(member),
             ) {
-                let value = self.parse_value(&dot_define.value);
+                let value = self.parse_value(&dot_define.value, ctx);
                 return Some(destructing_dot_define_optimizer(value, ctx));
             }
         }
         for meta_property_define in &self.config.0.meta_property {
             if Self::is_meta_property_define(meta_property_define, member) {
-                let value = self.parse_value(&meta_property_define.value);
+                let value = self.parse_value(&meta_property_define.value, ctx);
                 return Some(destructing_dot_define_optimizer(value, ctx));
             }
         }
@@ -722,9 +734,21 @@ fn assignment_target_from_expr(expr: Expression) -> Option<AssignmentTarget> {
     }
 }
 
-struct RemoveSpans;
+/// Update the replaced expression:
+/// * change spans to empty spans for sourcemap
+/// * assign reference id in current scope
+struct UpdateReplacedExpression<'a, 'b> {
+    ctx: &'b mut TraverseCtx<'a>,
+}
 
-impl VisitMut<'_> for RemoveSpans {
+impl VisitMut<'_> for UpdateReplacedExpression<'_, '_> {
+    fn visit_identifier_reference(&mut self, ident: &mut IdentifierReference<'_>) {
+        let reference_id =
+            self.ctx.create_reference_in_current_scope(ident.name.as_str(), ReferenceFlags::Read);
+        ident.set_reference_id(reference_id);
+        walk_mut::walk_identifier_reference(self, ident);
+    }
+
     fn visit_span(&mut self, span: &mut Span) {
         *span = SPAN;
     }

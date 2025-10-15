@@ -4,7 +4,7 @@ use std::{
 };
 
 use itertools::Itertools;
-use oxc_resolver::Resolver;
+use oxc_resolver::{ResolveOptions, Resolver};
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use oxc_span::{CompactStr, format_compact_str};
@@ -169,7 +169,11 @@ impl ConfigStoreBuilder {
                 return Err(ConfigBuilderError::NoExternalLinterConfigured { plugin_specifier });
             };
 
-            let resolver = Resolver::default();
+            let resolver = Resolver::new(ResolveOptions {
+                main_fields: vec!["module".into(), "main".into()],
+                condition_names: vec!["module".into(), "import".into()],
+                ..Default::default()
+            });
 
             #[expect(clippy::missing_panics_doc, reason = "oxlintrc.path is always a file path")]
             let oxlintrc_dir = oxlintrc.path.parent().unwrap();
@@ -346,7 +350,10 @@ impl ConfigStoreBuilder {
 
             RULES
                 .iter()
-                .filter(|rule| builtin_plugins.contains(LintPlugins::from(rule.plugin_name())))
+                .filter(|rule| {
+                    LintPlugins::try_from(rule.plugin_name())
+                        .is_ok_and(|plugin_flag| builtin_plugins.contains(plugin_flag))
+                })
                 .cloned()
                 .collect()
         }
@@ -396,7 +403,10 @@ impl ConfigStoreBuilder {
         let mut rules: Vec<_> = self
             .rules
             .into_iter()
-            .filter(|(r, _)| plugins.contains(r.plugin_name().into()))
+            .filter(|(r, _)| {
+                LintPlugins::try_from(r.plugin_name())
+                    .is_ok_and(|plugin_name| plugins.contains(plugin_name))
+            })
             .collect();
         rules.sort_unstable_by_key(|(r, _)| r.id());
 
@@ -457,7 +467,8 @@ impl ConfigStoreBuilder {
                 // NOTE: this logic means there's no way to disable ESLint
                 // correctness rules. I think that's fine for now.
                 rule.category() == RuleCategory::Correctness
-                    && plugins.contains(LintPlugins::from(rule.plugin_name()))
+                    && LintPlugins::try_from(rule.plugin_name())
+                        .is_ok_and(|plugin_flag| plugins.contains(plugin_flag))
             })
             .map(|rule| (rule.clone(), AllowWarnDeny::Warn))
             .collect()
@@ -535,7 +546,7 @@ impl ConfigStoreBuilder {
 
         match result {
             PluginLoadResult::Success { name, offset, rule_names } => {
-                if name != "eslint" && LintPlugins::from(name.as_str()) == LintPlugins::empty() {
+                if LintPlugins::try_from(name.as_str()).is_err() {
                     external_plugin_store.register_plugin(plugin_path, name, offset, rule_names);
                     Ok(())
                 } else {
@@ -650,11 +661,12 @@ mod test {
         for (rule, severity) in &builder.rules {
             assert_eq!(rule.category(), RuleCategory::Correctness);
             assert_eq!(*severity, AllowWarnDeny::Warn);
-            let plugin = rule.plugin_name();
+            let plugin_name = rule.plugin_name();
+            let plugin = LintPlugins::try_from(plugin_name);
             let name = rule.name();
             assert!(
-                builder.plugins().contains(plugin.into()),
-                "{plugin}/{name} is in the default rule set but its plugin is not enabled"
+                plugin.is_ok_and(|plugin| builder.plugins().contains(plugin)),
+                "{plugin_name}/{name} is in the default rule set but its plugin is not enabled"
             );
         }
     }
@@ -683,11 +695,12 @@ mod test {
             assert_eq!(rule.category(), RuleCategory::Correctness);
             assert_eq!(*severity, AllowWarnDeny::Deny);
 
-            let plugin = rule.plugin_name();
+            let plugin_name = rule.plugin_name();
+            let plugin = LintPlugins::try_from(plugin_name);
             let name = rule.name();
             assert!(
-                builder.plugins().contains(plugin.into()),
-                "{plugin}/{name} is in the default rule set but its plugin is not enabled"
+                plugin.is_ok_and(|plugin| builder.plugins().contains(plugin)),
+                "{plugin_name}/{name} is in the default rule set but its plugin is not enabled"
             );
         }
     }
@@ -792,8 +805,8 @@ mod test {
             let name = rule.name();
             let plugin = rule.plugin_name();
             assert_ne!(
-                LintPlugins::from(plugin),
-                LintPlugins::TYPESCRIPT,
+                LintPlugins::try_from(plugin),
+                Ok(LintPlugins::TYPESCRIPT),
                 "{plugin}/{name} is in the rules list after typescript plugin has been disabled"
             );
         }

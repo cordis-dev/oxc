@@ -12,7 +12,10 @@ use crate::{
     },
     generated::ast_nodes::{AstNode, AstNodes},
     write,
-    write::semicolon::OptionalSemicolon,
+    write::{
+        import_declaration::format_import_and_export_source_with_clause,
+        semicolon::OptionalSemicolon,
+    },
 };
 
 use super::FormatWrite;
@@ -78,7 +81,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ExportAllDeclaration<'a>> {
         if let Some(name) = &self.exported() {
             write!(f, ["as", space(), name, space()])?;
         }
-        write!(f, ["from", space(), self.source(), self.with_clause(), OptionalSemicolon])
+        write!(f, ["from", space()]);
+
+        format_import_and_export_source_with_clause(self.source(), self.with_clause(), f)?;
+        write!(f, [OptionalSemicolon])
     }
 }
 
@@ -88,7 +94,6 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ExportNamedDeclaration<'a>> {
         let export_kind = self.export_kind();
         let specifiers = self.specifiers();
         let source = self.source();
-        let with_clause = self.with_clause();
 
         if let Some(decl) = declaration {
             format_export_keyword_with_class_decorators(
@@ -141,18 +146,16 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ExportNamedDeclaration<'a>> {
                     [
                         export_kind,
                         "{",
-                        group(&soft_block_indent_with_maybe_space(&specifiers, needs_space))
+                        group(&soft_block_indent_with_maybe_space(specifiers, needs_space))
                     ]
                 )?;
             }
             write!(f, "}")?;
 
+            let with_clause = self.with_clause();
             if let Some(source) = source {
-                write!(f, [space(), "from", space(), source])?;
-            }
-
-            if let Some(with_clause) = with_clause {
-                write!(f, [space(), with_clause])?;
+                write!(f, [space(), "from", space()])?;
+                format_import_and_export_source_with_clause(source, with_clause, f)?;
             }
         }
 
@@ -174,15 +177,12 @@ impl<'a> Format<'a> for AstNode<'a, Vec<'a, ExportSpecifier<'a>>> {
                     .map(|specifier| {
                         format_once(move |f| {
                             // Should add empty line before the specifier if there are comments before it.
-                            let comments =
-                                f.context().comments().comments_before(specifier.span().start);
-                            if !comments.is_empty() {
-                                if f.source_text().get_lines_before(comments[0].span, f.comments())
+                            let specifier_span = specifier.span();
+                            if f.context().comments().has_comment_before(specifier_span.start)
+                                && f.source_text().get_lines_before(specifier_span, f.comments())
                                     > 1
-                                {
-                                    write!(f, [empty_line()])?;
-                                }
-                                write!(f, [FormatLeadingComments::Comments(comments)])?;
+                            {
+                                write!(f, [empty_line()])?;
                             }
 
                             write!(f, specifier)
@@ -206,18 +206,9 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ExportSpecifier<'a>> {
 
         write!(f, [self.export_kind()]);
         if self.local.span() == self.exported.span() {
-            write!(f, self.exported())?;
+            write!(f, self.exported())
         } else {
-            write!(f, [self.local(), space(), "as", space(), self.exported()])?;
-        }
-
-        if f.source_text().next_non_whitespace_byte_is(self.span.end, b'}') {
-            // `export { a as b /* comment */ } from 'mod'
-            //                  ^^^^^^^^^^^^ get comments that before `}` to print
-            let comments = f.context().comments().comments_before_character(self.span.end, b'}');
-            write!(f, [FormatTrailingComments::Comments(comments)])
-        } else {
-            self.format_trailing_comments(f)
+            write!(f, [self.local(), space(), "as", space(), self.exported()])
         }
     }
 }

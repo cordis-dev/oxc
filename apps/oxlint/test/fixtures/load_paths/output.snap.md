@@ -16,6 +16,30 @@
    : ^^^^^^^^^
    `----
 
+  x plugin10(no-debugger): Unexpected Debugger Statement
+   ,-[files/index.js:1:1]
+ 1 | debugger;
+   : ^^^^^^^^^
+   `----
+
+  x plugin11(no-debugger): Unexpected Debugger Statement
+   ,-[files/index.js:1:1]
+ 1 | debugger;
+   : ^^^^^^^^^
+   `----
+
+  x plugin12(no-debugger): Unexpected Debugger Statement
+   ,-[files/index.js:1:1]
+ 1 | debugger;
+   : ^^^^^^^^^
+   `----
+
+  x plugin13(no-debugger): Unexpected Debugger Statement
+   ,-[files/index.js:1:1]
+ 1 | debugger;
+   : ^^^^^^^^^
+   `----
+
   x plugin2(no-debugger): Unexpected Debugger Statement
    ,-[files/index.js:1:1]
  1 | debugger;
@@ -64,7 +88,7 @@
    : ^^^^^^^^^
    `----
 
-Found 1 warning and 9 errors.
+Found 1 warning and 13 errors.
 Finished in Xms on 1 file using X threads.
 ```
 
