@@ -3,12 +3,13 @@ use std::{
     process::{Command, Stdio},
 };
 
-use lazy_regex::{Captures, Lazy, Regex, lazy_regex};
+use lazy_regex::{Captures, Lazy, Regex, lazy_regex, regex::Replacer};
+use rayon::prelude::*;
 
-use oxc_allocator::{Allocator, CloneIn};
+use oxc_allocator::Allocator;
 use oxc_ast::{
     AstBuilder,
-    ast::{Expression, Program, Statement, UnaryOperator},
+    ast::{Expression, Program, UnaryOperator},
 };
 use oxc_ast_visit::{VisitMut, walk_mut};
 use oxc_codegen::Codegen;
@@ -135,7 +136,7 @@ fn format(source_text: &str) -> String {
 ///     // ... modify AST ...
 /// }
 /// ```
-pub trait VariantGenerator<const FLAG_COUNT: usize> {
+pub trait VariantGenerator<const FLAG_COUNT: usize>: Sync {
     /// Names of flag consts in code.
     const FLAG_NAMES: [&str; FLAG_COUNT];
 
@@ -163,7 +164,7 @@ pub trait VariantGenerator<const FLAG_COUNT: usize> {
     #[expect(unused_variables)]
     #[inline]
     fn pre_process_variant<'a>(
-        &mut self,
+        &self,
         program: &mut Program<'a>,
         flags: [bool; FLAG_COUNT],
         allocator: &'a Allocator,
@@ -172,60 +173,40 @@ pub trait VariantGenerator<const FLAG_COUNT: usize> {
 
     /// Generate variants.
     fn generate(&mut self, code: &str) -> Vec<String> {
-        // Add `const` statements to top of file
-        let input_code = code;
-        let mut code = String::new();
+        // Calculate length of code including flags consts.
+        // Calculation of `flags_len` is const-folded.
+        let mut flags_len = 1;
         for flag_name in Self::FLAG_NAMES {
-            write_it!(code, "const {flag_name} = false;\n");
+            flags_len += "const ".len() + flag_name.len() + " = false;\n".len();
         }
-        code.push('\n');
-        code.push_str(input_code);
+        let code_len = code.len() + flags_len;
 
-        // Parse
-        let allocator = Allocator::new();
-        let mut program = parse_js(&code, &allocator);
+        // Generate variants
+        let input_code = code;
 
-        // Get details of variants.
-        let mut variants = self.variants();
+        let variants = self.variants();
+        variants
+            .into_par_iter()
+            .map(|flags| {
+                // Add flags consts to top of file
+                let mut code = String::with_capacity(code_len);
+                for (i, &flag_name) in Self::FLAG_NAMES.iter().enumerate() {
+                    let value = if flags[i] { "true" } else { "false" };
+                    write_it!(code, "const {flag_name} = {value};\n");
+                }
+                code.push('\n');
+                code.push_str(input_code);
 
-        // Generate variants.
-        // Handle last separately to avoid cloning AST 1 more time than necessary.
-        let mut print_allocator = Allocator::new();
-        let mut outputs = Vec::with_capacity(variants.len());
+                // Replace flags comment blocks
+                code = replace_flag_comments(&code, flags, &Self::FLAG_NAMES);
 
-        let Some(last_variant) = variants.pop() else { return outputs };
-
-        for flags in variants {
-            let mut program = program.clone_in(&print_allocator);
-            outputs.push(self.generate_variant(&mut program, flags, &print_allocator));
-            print_allocator.reset();
-        }
-
-        outputs.push(self.generate_variant(&mut program, last_variant, &print_allocator));
-
-        outputs
-    }
-
-    /// Generate variants for a set of flags.
-    fn generate_variant<'a>(
-        &mut self,
-        program: &mut Program<'a>,
-        flags: [bool; FLAG_COUNT],
-        allocator: &'a Allocator,
-    ) -> String {
-        for (stmt_index, value) in flags.into_iter().enumerate() {
-            let stmt = &mut program.body[stmt_index];
-            let Statement::VariableDeclaration(var_decl) = stmt else { unreachable!() };
-            let declarator = &mut var_decl.declarations[0];
-            let Some(Expression::BooleanLiteral(bool_lit)) = &mut declarator.init else {
-                unreachable!()
-            };
-            bool_lit.value = value;
-        }
-
-        self.pre_process_variant(program, flags, allocator);
-
-        print_minified(program, allocator)
+                // Parse, preprocess, minify, and print
+                let allocator = Allocator::new();
+                let mut program = parse_js(&code, &allocator);
+                self.pre_process_variant(&mut program, flags, &allocator);
+                print_minified(&mut program, &allocator)
+            })
+            .collect()
     }
 }
 
@@ -235,6 +216,45 @@ pub fn parse_js<'a>(source_text: &'a str, allocator: &'a Allocator) -> Program<'
     let parser_ret = Parser::new(allocator, source_text, source_type).parse();
     assert!(parser_ret.errors.is_empty(), "Parse errors: {:#?}", parser_ret.errors);
     parser_ret.program
+}
+
+/// Replace `/* IF <FLAG> */ ... /* END_IF */` and `/* IF !<FLAG> */ ... /* END_IF */` comment blocks,
+/// depending on provided `flags`.
+fn replace_flag_comments<const FLAG_COUNT: usize>(
+    code: &str,
+    flags: [bool; FLAG_COUNT],
+    flag_names: &[&str; FLAG_COUNT],
+) -> String {
+    FLAG_COMMENT_REGEX.replace_all(code, FlagCommentReplacer { flags, flag_names }).into_owned()
+}
+
+static FLAG_COMMENT_REGEX: Lazy<Regex> =
+    lazy_regex!(r"/\*\s*IF\s+(!?)([a-zA-Z_]+)\s*\*/([\s\S]*?)/\*\s*END_IF\s*\*/");
+
+struct FlagCommentReplacer<'n, const FLAG_COUNT: usize> {
+    flags: [bool; FLAG_COUNT],
+    flag_names: &'n [&'n str; FLAG_COUNT],
+}
+
+impl<const FLAG_COUNT: usize> Replacer for FlagCommentReplacer<'_, FLAG_COUNT> {
+    fn replace_append(&mut self, caps: &Captures, dst: &mut String) {
+        assert_eq!(caps.len(), 4);
+        let flag_name = &caps[2];
+        let flag_index = self.flag_names.iter().position(|&f| f == flag_name);
+
+        if let Some(flag_index) = flag_index {
+            let enable = caps[1].is_empty();
+            if self.flags[flag_index] == enable {
+                // Flag enabled. Remove comments and output text within the comment block.
+                dst.push_str(&caps[3]);
+            } else {
+                // Flag disabled. Remove everything between and including the comments.
+            }
+        } else {
+            // Unknown flag. Leave as is.
+            dst.push_str(&caps[0]);
+        }
+    }
 }
 
 /// Print AST with minified syntax.

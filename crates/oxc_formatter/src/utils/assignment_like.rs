@@ -5,13 +5,14 @@ use oxc_span::GetSpan;
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
-    FormatOptions, format_args,
+    FormatOptions,
+    ast_nodes::{AstNode, AstNodes},
+    format_args,
     formatter::{
         Buffer, BufferExtensions, Format, FormatResult, Formatter, VecBuffer,
         prelude::{FormatElements, format_once, line_suffix_boundary, *},
         trivia::{FormatLeadingComments, FormatTrailingComments},
     },
-    generated::ast_nodes::{AstNode, AstNodes},
     options::Expand,
     parentheses::NeedsParentheses,
     utils::{
@@ -161,7 +162,7 @@ fn format_left_trailing_comments(
 
     let comments = if end_of_line_comments.is_empty() {
         let comments = f.context().comments().comments_before_character(start, b'=');
-        if comments.iter().any(|c| f.source_text().is_own_line_comment(c)) { &[] } else { comments }
+        if comments.iter().any(|c| f.comments().is_own_line_comment(c)) { &[] } else { comments }
     } else if should_print_as_leading || end_of_line_comments.last().is_some_and(|c| c.is_block()) {
         // No trailing comments for these expressions or if the trailing comment is a block comment
         &[]
@@ -232,7 +233,6 @@ impl<'a> AssignmentLike<'a, '_> {
                 }
             }
             AssignmentLike::PropertyDefinition(property) => {
-                write!(f, property.decorators())?;
                 if property.declare {
                     write!(f, ["declare", space()])?;
                 }
@@ -387,11 +387,15 @@ impl<'a> AssignmentLike<'a, '_> {
             }
         }
 
+        if self.should_break_left_hand_side(left_may_break) {
+            return AssignmentLikeLayout::BreakLeftHandSide;
+        }
+
         if self.should_break_after_operator(right_expression, f) {
             return AssignmentLikeLayout::BreakAfterOperator;
         }
 
-        if self.should_break_left_hand_side() {
+        if self.is_complex_type_alias() {
             return AssignmentLikeLayout::BreakLeftHandSide;
         }
 
@@ -517,12 +521,8 @@ impl<'a> AssignmentLike<'a, '_> {
 
     /// Particular function that checks if the left hand side of a [AssignmentLike] should
     /// be broken on multiple lines
-    fn should_break_left_hand_side(&self) -> bool {
+    fn should_break_left_hand_side(&self, left_may_break: bool) -> bool {
         if self.is_complex_destructuring() {
-            return true;
-        }
-
-        if self.is_complex_type_alias() {
             return true;
         }
 
@@ -533,9 +533,11 @@ impl<'a> AssignmentLike<'a, '_> {
         let type_annotation = declarator.id.type_annotation.as_ref();
 
         type_annotation.is_some_and(|ann| is_complex_type_annotation(ann))
-            || (self.get_right_expression().is_some_and(|expr| {
-                matches!(expr.as_ref(), Expression::ArrowFunctionExpression(_))
-            }) && type_annotation.is_some_and(|ann| is_annotation_breakable(ann)))
+            || (left_may_break
+                && declarator
+                    .init
+                    .as_ref()
+                    .is_some_and(|expr| matches!(expr, Expression::ArrowFunctionExpression(_))))
     }
 
     /// Checks if the current assignment is eligible for [AssignmentLikeLayout::BreakAfterOperator]
@@ -601,13 +603,12 @@ impl<'a> AssignmentLike<'a, '_> {
                     return false;
                 };
 
-                let properties = &object.properties;
-                if properties.len() <= 2 {
+                if object.len() <= 2 {
                     return false;
                 }
 
-                properties.iter().any(|property| {
-                    !property.shorthand || !property.value.kind.is_binding_identifier()
+                object.properties.iter().any(|property| {
+                    !property.shorthand || property.value.kind.is_assignment_pattern()
                 })
             }
             AssignmentLike::AssignmentExpression(assignment) => {
@@ -615,8 +616,11 @@ impl<'a> AssignmentLike<'a, '_> {
                     return false;
                 };
 
-                let properties = &object.properties;
-                properties.iter().any(|property| match property {
+                if object.len() <= 2 {
+                    return false;
+                }
+
+                object.properties.iter().any(|property| match property {
                     AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(
                         property_identifier,
                     ) => property_identifier.init.is_some(),
@@ -644,7 +648,9 @@ fn should_break_after_operator<'a>(
     let comments = f.comments();
     let source_text = f.source_text();
     for comment in comments.comments_before(right.span().start) {
-        if source_text.lines_after(comment.span.end) > 0 {
+        if source_text.lines_after(comment.span.end) > 0
+            || f.source_text().has_newline_before(comment.span.start)
+        {
             return true;
         }
 
@@ -876,6 +882,10 @@ fn is_poorly_breakable_member_or_call_chain<'a>(
                 is_chain = true;
                 node.object().as_ast_nodes()
             }
+            AstNodes::PrivateFieldExpression(node) => {
+                is_chain = true;
+                node.object().as_ast_nodes()
+            }
             AstNodes::ChainExpression(chain) => {
                 is_chain = true;
                 chain.expression().as_ast_nodes()
@@ -908,7 +918,9 @@ fn is_poorly_breakable_member_or_call_chain<'a>(
         let is_breakable_call = match args.len() {
             0 => false,
             1 => match args.iter().next() {
-                Some(first_argument) => !is_short_argument(first_argument, threshold, f),
+                Some(first_argument) => first_argument
+                    .as_expression()
+                    .is_none_or(|e| !is_short_argument(e, threshold, f)),
                 None => false,
             },
             _ => true,
@@ -935,15 +947,14 @@ fn is_poorly_breakable_member_or_call_chain<'a>(
 /// We need it to decide if `JsCallExpression` with the argument is breakable or not
 /// If the argument is short the function call isn't breakable
 /// [Prettier applies]: <https://github.com/prettier/prettier/blob/a043ac0d733c4d53f980aa73807a63fc914f23bd/src/language-js/print/assignment.js#L374>
-fn is_short_argument(argument: &Argument, threshold: u16, f: &Formatter) -> bool {
-    match argument {
-        Argument::Identifier(identifier) => identifier.name.len() <= threshold as usize,
-        Argument::UnaryExpression(unary_expression) => {
-            unary_expression.operator.is_arithmetic()
-                && matches!(unary_expression.argument, Expression::NumericLiteral(_))
+fn is_short_argument(expression: &Expression, threshold: u16, f: &Formatter) -> bool {
+    match expression {
+        Expression::Identifier(identifier) => identifier.name.len() <= threshold as usize,
+        Expression::UnaryExpression(unary_expression) => {
+            is_short_argument(&unary_expression.argument, threshold, f)
         }
-        Argument::RegExpLiteral(regex) => regex.regex.pattern.text.len() <= threshold as usize,
-        Argument::StringLiteral(literal) => {
+        Expression::RegExpLiteral(regex) => regex.regex.pattern.text.len() <= threshold as usize,
+        Expression::StringLiteral(literal) => {
             let formatter = FormatLiteralStringToken::new(
                 f.source_text().text_for(literal.as_ref()),
                 literal.span,
@@ -954,7 +965,7 @@ fn is_short_argument(argument: &Argument, threshold: u16, f: &Formatter) -> bool
             formatter.clean_text(f.context().source_type(), f.options()).width()
                 <= threshold as usize
         }
-        Argument::TemplateLiteral(literal) => {
+        Expression::TemplateLiteral(literal) => {
             let elements = &literal.expressions;
 
             // Besides checking length exceed we also need to check that the template doesn't have any expressions.
@@ -965,11 +976,11 @@ fn is_short_argument(argument: &Argument, threshold: u16, f: &Formatter) -> bool
                 raw.len() <= threshold as usize && !raw.contains('\n')
             }
         }
-        Argument::ThisExpression(_)
-        | Argument::NullLiteral(_)
-        | Argument::BigIntLiteral(_)
-        | Argument::BooleanLiteral(_)
-        | Argument::NumericLiteral(_) => true,
+        Expression::ThisExpression(_)
+        | Expression::NullLiteral(_)
+        | Expression::BigIntLiteral(_)
+        | Expression::BooleanLiteral(_)
+        | Expression::NumericLiteral(_) => true,
         _ => false,
     }
 }
@@ -1000,15 +1011,6 @@ fn is_complex_type_arguments(type_arguments: &TSTypeParameterInstantiation) -> b
     // https://github.com/prettier/prettier/blob/a043ac0d733c4d53f980aa73807a63fc914f23bd/src/language-js/print/assignment.js#L454
 
     false
-}
-
-/// Checks if the annotation is breakable
-fn is_annotation_breakable(annotation: &TSTypeAnnotation) -> bool {
-    matches!(
-        &annotation.type_annotation,
-        TSType::TSTypeReference(reference_type)
-            if reference_type.type_arguments.as_ref().is_some_and(|type_args| !type_args.params.is_empty())
-    )
 }
 
 /// [Prettier applies]: <https://github.com/prettier/prettier/blob/fde0b49d7866e203ca748c306808a87b7c15548f/src/language-js/print/assignment.js#L278>

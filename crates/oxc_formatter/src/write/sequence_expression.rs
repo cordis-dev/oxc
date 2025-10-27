@@ -2,8 +2,8 @@ use oxc_ast::ast::*;
 use oxc_span::GetSpan;
 
 use crate::{
+    ast_nodes::{AstNode, AstNodeIterator, AstNodes},
     formatter::{Format, FormatResult, Formatter, prelude::*, separated::FormatSeparatedIter},
-    generated::ast_nodes::{AstNode, AstNodeIterator, AstNodes},
     write,
 };
 
@@ -32,8 +32,8 @@ impl<'a> FormatWrite<'a> for AstNode<'a, SequenceExpression<'a>> {
             });
 
             if matches!(self.parent, AstNodes::ForStatement(_))
-                || (matches!(self.parent, AstNodes::ExpressionStatement(statement) if
-                    !matches!(statement.parent.parent(), AstNodes::ArrowFunctionExpression(arrow) if arrow.expression)))
+                || (matches!(self.parent, AstNodes::ExpressionStatement(statement)
+                    if !statement.is_arrow_function_body()))
             {
                 write!(f, [indent(&rest)])
             } else {

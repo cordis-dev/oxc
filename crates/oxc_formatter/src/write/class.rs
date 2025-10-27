@@ -5,14 +5,15 @@ use oxc_ast::{AstKind, ast::*};
 use oxc_span::GetSpan;
 
 use crate::{
-    Semicolons, TrailingSeparator, format_args,
+    Semicolons, TrailingSeparator,
+    ast_nodes::{AstNode, AstNodes},
+    format_args,
     formatter::{
         Buffer, FormatResult, Formatter,
         prelude::*,
         separated::FormatSeparatedIter,
         trivia::{DanglingIndentMode, FormatLeadingComments, FormatTrailingComments},
     },
-    generated::ast_nodes::{AstNode, AstNodes},
     parentheses::NeedsParentheses,
     utils::{
         assignment_like::AssignmentLike,
@@ -53,16 +54,25 @@ impl<'a> Format<'a> for AstNode<'a, Vec<'a, ClassElement<'a>>> {
 
 impl<'a> Format<'a> for (&AstNode<'a, ClassElement<'a>>, Option<&AstNode<'a, ClassElement<'a>>>) {
     fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        write!(f, [self.0, ClassPropertySemicolon::new(self.0, self.1)])
+        let decorators = match self.0.as_ast_nodes() {
+            AstNodes::MethodDefinition(method) => {
+                write!(f, [method.decorators(), method])
+            }
+            AstNodes::PropertyDefinition(property) => {
+                write!(f, [property.decorators(), property])
+            }
+            AstNodes::AccessorProperty(accessor) => {
+                write!(f, [accessor.decorators(), accessor])
+            }
+            _ => write!(f, self.0),
+        };
+
+        write!(f, [ClassPropertySemicolon::new(self.0, self.1)])
     }
 }
 
 impl<'a> FormatWrite<'a> for AstNode<'a, MethodDefinition<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        // Write modifiers in the correct order:
-        // decorators -> accessibility -> static -> abstract -> override -> async -> generator
-        write!(f, [self.decorators()])?;
-
         if let Some(accessibility) = &self.accessibility {
             write!(f, [accessibility.as_str(), space()])?;
         }
@@ -102,16 +112,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, MethodDefinition<'a>> {
             write!(f, "?")?;
         }
 
-        if value.type_parameters.is_none() {
-            // // Handle comments between method name and parameters
-            // // Example: method /* comment */ (param) {}
-            // let comments = f.context().comments().comments_before(value.params().span.start);
-            // if !comments.is_empty() {
-            //     write!(f, [space(), FormatTrailingComments::Comments(comments)])?;
-            // }
-        }
-
-        format_grouped_parameters_with_return_type(
+        format_grouped_parameters_with_return_type_for_method(
             value.type_parameters(),
             value.this_param.as_deref(),
             value.params(),
@@ -120,13 +121,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, MethodDefinition<'a>> {
         )?;
 
         if let Some(body) = &value.body() {
-            // Handle block comments between method signature and body
-            // Example: method() /* comment */ {}
-            let comments = f.context().comments().comments_before(body.span.start);
-            if !comments.is_empty() {
-                write!(f, [space(), FormatTrailingComments::Comments(comments)])?;
-            }
-            write!(f, [space(), body])?;
+            write!(f, body)?;
         }
         if self.r#type().is_abstract()
             || matches!(value.r#type, FunctionType::TSEmptyBodyFunctionExpression)
@@ -165,8 +160,6 @@ impl<'a> FormatWrite<'a> for AstNode<'a, StaticBlock<'a>> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, AccessorProperty<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        write!(f, self.decorators())?;
-
         if let Some(accessibility) = self.accessibility() {
             write!(f, [accessibility.as_str(), space()])?;
         }
@@ -242,14 +235,22 @@ impl<'a> Format<'a> for AstNode<'a, Vec<'a, TSClassImplements<'a>>> {
                 group(&indent(&format_args!(
                     soft_line_break_or_space(),
                     format_once(|f| {
-                        // the grouping will be applied by the parent
-                        f.join_with(&soft_line_break_or_space())
-                            .entries_with_trailing_separator(
-                                self.iter(),
-                                ",",
-                                TrailingSeparator::Disallowed,
-                            )
-                            .finish()
+                        let last_index = self.len().saturating_sub(1);
+                        let mut joiner = f.join_with(soft_line_break_or_space());
+
+                        for (i, heritage) in FormatSeparatedIter::new(self.into_iter(), ",")
+                            .with_trailing_separator(TrailingSeparator::Disallowed)
+                            .enumerate()
+                        {
+                            if i == last_index {
+                                // The trailing comments of the last heritage should be printed inside the class declaration
+                                joiner.entry(&FormatNodeWithoutTrailingComments(&heritage));
+                            } else {
+                                joiner.entry(&heritage);
+                            }
+                        }
+
+                        joiner.finish()
                     })
                 )))
             ]
@@ -433,7 +434,7 @@ impl<'a> Format<'a> for FormatClass<'a, '_> {
                         }
                     });
 
-                    if matches!(extends.parent.parent(), AstNodes::AssignmentExpression(_)) {
+                    if matches!(extends.grand_parent(), AstNodes::AssignmentExpression(_)) {
                         if has_trailing_comments {
                             write!(f, [text("("), &content, text(")")])
                         } else {
@@ -632,40 +633,75 @@ impl<'a> Format<'a> for ClassPropertySemicolon<'a, '_> {
     }
 }
 
-pub fn format_grouped_parameters_with_return_type<'a>(
+/// Based on <https://github.com/prettier/prettier/blob/7584432401a47a26943dd7a9ca9a8e032ead7285/src/language-js/print/function.js#L160-L176>
+pub fn format_grouped_parameters_with_return_type_for_method<'a>(
     type_parameters: Option<&AstNode<'a, TSTypeParameterDeclaration<'a>>>,
     this_param: Option<&TSThisParameter<'a>>,
     params: &AstNode<'a, FormalParameters<'a>>,
     return_type: Option<&AstNode<'a, TSTypeAnnotation<'a>>>,
     f: &mut Formatter<'_, 'a>,
 ) -> FormatResult<()> {
-    write!(f, [type_parameters])?;
+    write!(f, type_parameters)?;
 
     group(&format_once(|f| {
         let mut format_parameters = params.memoized();
-        let mut format_return_type = return_type.memoized();
+        let mut format_return_type = return_type.map(FormatNodeWithoutTrailingComments).memoized();
 
         // Inspect early, in case the `return_type` is formatted before `parameters`
         // in `should_group_function_parameters`.
         format_parameters.inspect(f)?;
 
-        let group_parameters = should_group_function_parameters(
-            type_parameters.map(AsRef::as_ref),
-            params.items.len()
-                + usize::from(params.rest.is_some())
-                + usize::from(this_param.is_some()),
-            return_type.map(AsRef::as_ref),
-            &mut format_return_type,
-            f,
-        )?;
+        let should_break_parameters = should_break_function_parameters(params, f);
+        let should_group_parameters = should_break_parameters
+            || should_group_function_parameters(
+                type_parameters.map(AsRef::as_ref),
+                params.parameters_count() + usize::from(this_param.is_some()),
+                return_type.map(AsRef::as_ref),
+                &mut format_return_type,
+                f,
+            )?;
 
-        if group_parameters {
-            write!(f, [group(&format_parameters)])
+        if should_group_parameters {
+            write!(f, [group(&format_parameters).should_expand(should_break_parameters)])?;
         } else {
-            write!(f, [format_parameters])
-        }?;
+            write!(f, [format_parameters])?;
+        }
 
         write!(f, [format_return_type])
     }))
     .fmt(f)
+}
+
+/// Decide if a constructor parameter list should prefer a
+/// multi-line layout.
+///
+/// If there is more than one parameter, and any parameter has a modifier
+///   (e.g. a TypeScript parameter property like `public/private/protected`, or
+///   `readonly`, etc.), we break the parameters onto multiple lines.
+//
+/// Examples
+/// --------
+/// Multiple params with a modifier → break:
+///
+/// ```ts
+/// // input
+/// constructor(public x: number, y: number) {}
+///
+/// // preferred layout
+/// constructor(
+///   public x: number,
+///   y: number,
+/// ) {}
+/// ```
+///
+/// Single param with a modifier → keep inline:
+///
+/// ```ts
+/// constructor(private id: string) {}
+/// ```
+fn should_break_function_parameters<'a>(
+    params: &AstNode<'a, FormalParameters<'a>>,
+    f: &mut Formatter<'_, 'a>,
+) -> bool {
+    params.parameters_count() > 1 && params.items().iter().any(|param| param.has_modifier())
 }

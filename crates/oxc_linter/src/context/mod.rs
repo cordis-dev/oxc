@@ -1,6 +1,6 @@
 #![expect(rustdoc::private_intra_doc_links)] // useful for intellisense
 
-use std::{ops::Deref, path::Path, rc::Rc};
+use std::{ffi::OsStr, ops::Deref, path::Path, rc::Rc};
 
 use javascript_globals::GLOBALS;
 
@@ -8,7 +8,7 @@ use oxc_ast::ast::IdentifierReference;
 use oxc_cfg::ControlFlowGraph;
 use oxc_diagnostics::{OxcDiagnostic, Severity};
 use oxc_semantic::Semantic;
-use oxc_span::{GetSpan, Span};
+use oxc_span::Span;
 
 #[cfg(debug_assertions)]
 use crate::rule::RuleFixMeta;
@@ -141,6 +141,12 @@ impl<'a> LintContext<'a> {
         &self.parent.file_path
     }
 
+    /// Extension of the file currently being linted, without the leading dot.
+    #[inline]
+    pub fn file_extension(&self) -> Option<&OsStr> {
+        self.parent.file_extension()
+    }
+
     /// Plugin settings
     #[inline]
     pub fn settings(&self) -> &OxlintSettings {
@@ -223,7 +229,7 @@ impl<'a> LintContext<'a> {
     /// Add a diagnostic message to the list of diagnostics. Outputs a diagnostic with the current rule
     /// name, severity, and a link to the rule's documentation URL.
     fn add_diagnostic(&self, mut message: Message) {
-        if self.parent.disable_directives().contains(self.current_rule_name, message.span()) {
+        if self.parent.disable_directives().contains(self.current_rule_name, message.span) {
             return;
         }
         message.error = message
@@ -485,23 +491,21 @@ impl<'a> LintContext<'a> {
 /// ```
 #[inline]
 fn plugin_name_to_prefix(plugin_name: &'static str) -> &'static str {
-    PLUGIN_PREFIXES.get(plugin_name).copied().unwrap_or(plugin_name)
+    match plugin_name {
+        "import" => "eslint-plugin-import",
+        "jest" => "eslint-plugin-jest",
+        "jsdoc" => "eslint-plugin-jsdoc",
+        "jsx_a11y" => "eslint-plugin-jsx-a11y",
+        "nextjs" => "eslint-plugin-next",
+        "promise" => "eslint-plugin-promise",
+        "react_perf" => "eslint-plugin-react-perf",
+        "react" => "eslint-plugin-react",
+        "typescript" => "typescript-eslint",
+        "unicorn" => "eslint-plugin-unicorn",
+        "vitest" => "eslint-plugin-vitest",
+        "node" => "eslint-plugin-node",
+        "vue" => "eslint-plugin-vue",
+        "regexp" => "eslint-plugin-regexp",
+        _ => plugin_name,
+    }
 }
-
-/// Map of plugin names to their prefixed versions.
-const PLUGIN_PREFIXES: phf::Map<&'static str, &'static str> = phf::phf_map! {
-    "import" => "eslint-plugin-import",
-    "jest" => "eslint-plugin-jest",
-    "jsdoc" => "eslint-plugin-jsdoc",
-    "jsx_a11y" => "eslint-plugin-jsx-a11y",
-    "nextjs" => "eslint-plugin-next",
-    "promise" => "eslint-plugin-promise",
-    "react_perf" => "eslint-plugin-react-perf",
-    "react" => "eslint-plugin-react",
-    "typescript" => "typescript-eslint",
-    "unicorn" => "eslint-plugin-unicorn",
-    "vitest" => "eslint-plugin-vitest",
-    "node" => "eslint-plugin-node",
-    "vue" => "eslint-plugin-vue",
-    "regexp" => "eslint-plugin-regexp",
-};

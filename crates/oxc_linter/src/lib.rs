@@ -167,10 +167,9 @@ impl Linter {
         #[cfg(debug_assertions)]
         let mut current_diagnostic_index = 0;
 
-        let is_partial_loader_file = path
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .is_some_and(|ext| LINT_PARTIAL_LOADER_EXTENSIONS.contains(&ext));
+        let is_partial_loader_file = ctx_host
+            .file_extension()
+            .is_some_and(|ext| LINT_PARTIAL_LOADER_EXTENSIONS.iter().any(|e| e == &ext));
 
         loop {
             let mut rules = rules
@@ -433,6 +432,7 @@ impl Linter {
             // Convert spans to UTF-16
             let span_converter = Utf8ToUtf16::new(program.source_text);
             span_converter.convert_program(program);
+            span_converter.convert_comments(&mut program.comments);
 
             // Get offset of `Program` within buffer (bottom 32 bits of pointer)
             let program_offset = ptr::from_ref(program) as u32;

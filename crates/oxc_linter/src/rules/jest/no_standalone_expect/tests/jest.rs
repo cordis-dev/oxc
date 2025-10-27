@@ -1,8 +1,7 @@
 #[test]
 fn test() {
-    use super::PreferLowercaseTitle;
-    use crate::rule::RuleMeta;
-    use crate::tester::Tester;
+    use super::super::NoStandaloneExpect;
+    use crate::{rule::RuleMeta, tester::Tester};
 
     let pass = vec![
         ("expect.any(String)", None),
@@ -69,6 +68,36 @@ fn test() {
                 funcWithCallback((result) => {
                   expect(result).toBe(5);
                   done();
+                });
+              });
+            });",
+            None,
+        ),
+        (
+            r"it('should do something', async () => {
+              render();
+
+              await waitFor(() => {
+                expect(screen.getByText('Option 2')).toBeInTheDocument();
+              });
+            });",
+            None,
+        ),
+        (
+            r"it('should do something', () => {
+              waitFor(() => {
+                expect(screen.getByText('Option 2')).toBeInTheDocument();
+              });
+            });",
+            None,
+        ),
+        (
+            r"describe('test suite', () => {
+              it('should work with nested callbacks', () => {
+                someFunction(() => {
+                  anotherFunction(() => {
+                    expect(true).toBe(true);
+                  });
                 });
               });
             });",

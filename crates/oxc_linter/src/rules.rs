@@ -44,6 +44,7 @@ pub(crate) mod eslint {
     pub mod arrow_body_style;
     pub mod block_scoped_var;
     pub mod class_methods_use_this;
+    pub mod constructor_super;
     pub mod curly;
     pub mod default_case;
     pub mod default_case_last;
@@ -172,6 +173,7 @@ pub(crate) mod eslint {
     pub mod no_useless_rename;
     pub mod no_var;
     pub mod no_void;
+    pub mod no_warning_comments;
     pub mod no_with;
     pub mod operator_assignment;
     pub mod prefer_destructuring;
@@ -278,6 +280,7 @@ pub(crate) mod typescript {
     pub mod restrict_plus_operands;
     pub mod restrict_template_expressions;
     pub mod return_await;
+    pub mod strict_boolean_expressions;
     pub mod switch_exhaustiveness_check;
     pub mod triple_slash_reference;
     pub mod unbound_method;
@@ -341,6 +344,7 @@ pub(crate) mod react {
     pub mod button_has_type;
     pub mod checked_requires_onchange_or_readonly;
     pub mod exhaustive_deps;
+    pub mod forbid_dom_props;
     pub mod forbid_elements;
     pub mod forward_ref_uses_ref;
     pub mod iframe_missing_sandbox;
@@ -666,6 +670,7 @@ oxc_macros::declare_all_lint_rules! {
     eslint::arrow_body_style,
     eslint::block_scoped_var,
     eslint::class_methods_use_this,
+    eslint::constructor_super,
     eslint::curly,
     eslint::default_case,
     eslint::default_case_last,
@@ -792,6 +797,7 @@ oxc_macros::declare_all_lint_rules! {
     eslint::no_useless_rename,
     eslint::no_var,
     eslint::no_void,
+    eslint::no_warning_comments,
     eslint::no_with,
     eslint::operator_assignment,
     eslint::prefer_template,
@@ -1013,6 +1019,7 @@ oxc_macros::declare_all_lint_rules! {
     react::button_has_type,
     react::checked_requires_onchange_or_readonly,
     react::exhaustive_deps,
+    react::forbid_dom_props,
     react::forbid_elements,
     react::forward_ref_uses_ref,
     react::iframe_missing_sandbox,
@@ -1134,6 +1141,7 @@ oxc_macros::declare_all_lint_rules! {
     typescript::restrict_plus_operands,
     typescript::restrict_template_expressions,
     typescript::return_await,
+    typescript::strict_boolean_expressions,
     typescript::switch_exhaustiveness_check,
     typescript::triple_slash_reference,
     typescript::unbound_method,
@@ -1258,12 +1266,12 @@ oxc_macros::declare_all_lint_rules! {
     vitest::prefer_to_be_object,
     vitest::prefer_to_be_truthy,
     vitest::require_local_test_context_for_concurrent_snapshots,
-    vue::define_props_destructuring,
     vue::define_emits_declaration,
     vue::define_props_declaration,
+    vue::define_props_destructuring,
     vue::max_props,
-    vue::no_import_compiler_macros,
     vue::no_export_in_script_setup,
+    vue::no_import_compiler_macros,
     vue::no_multiple_slot_args,
     vue::no_required_prop_with_default,
     vue::prefer_import_from_vue,

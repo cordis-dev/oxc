@@ -147,15 +147,16 @@ impl ConfigStoreBuilder {
         let (oxlintrc, extended_paths) = resolve_oxlintrc_config(oxlintrc)?;
 
         // Collect external plugins from both base config and overrides
-        let mut external_plugins = FxHashSet::default();
+        let mut external_plugins: FxHashSet<(&PathBuf, &str)> = FxHashSet::default();
 
         if let Some(base_external_plugins) = &oxlintrc.external_plugins {
-            external_plugins.extend(base_external_plugins.iter().cloned());
+            external_plugins.extend(base_external_plugins.iter().map(|(k, v)| (k, v.as_str())));
         }
 
         for r#override in &oxlintrc.overrides {
             if let Some(override_external_plugins) = &r#override.external_plugins {
-                external_plugins.extend(override_external_plugins.iter().cloned());
+                external_plugins
+                    .extend(override_external_plugins.iter().map(|(k, v)| (k, v.as_str())));
             }
         }
 
@@ -165,8 +166,10 @@ impl ConfigStoreBuilder {
         if !external_plugins.is_empty() && external_plugin_store.is_enabled() {
             let Some(external_linter) = external_linter else {
                 #[expect(clippy::missing_panics_doc, reason = "infallible")]
-                let plugin_specifier = external_plugins.iter().next().unwrap().clone();
-                return Err(ConfigBuilderError::NoExternalLinterConfigured { plugin_specifier });
+                let (_, original_specifier) = external_plugins.iter().next().unwrap();
+                return Err(ConfigBuilderError::NoExternalLinterConfigured {
+                    plugin_specifier: (*original_specifier).to_string(),
+                });
             };
 
             let resolver = Resolver::new(ResolveOptions {
@@ -175,19 +178,17 @@ impl ConfigStoreBuilder {
                 ..Default::default()
             });
 
-            #[expect(clippy::missing_panics_doc, reason = "oxlintrc.path is always a file path")]
-            let oxlintrc_dir = oxlintrc.path.parent().unwrap();
-
-            for plugin_specifier in &external_plugins {
+            for (config_path, specifier) in &external_plugins {
                 Self::load_external_plugin(
-                    oxlintrc_dir,
-                    plugin_specifier,
+                    config_path,
+                    specifier,
                     external_linter,
                     &resolver,
                     external_plugin_store,
                 )?;
             }
         }
+
         let plugins = oxlintrc.plugins.unwrap_or_default();
 
         let rules =
@@ -304,6 +305,7 @@ impl ConfigStoreBuilder {
                     self.upsert_where(severity, |r| r.category() == *category);
                 }
                 LintFilterKind::Rule(plugin, rule) => {
+                    let (plugin, rule) = super::rules::unalias_plugin_name(plugin, rule);
                     self.upsert_where(severity, |r| r.plugin_name() == plugin && r.name() == rule);
                 }
                 LintFilterKind::Generic(name) => self.upsert_where(severity, |r| r.name() == name),
@@ -316,6 +318,7 @@ impl ConfigStoreBuilder {
                     self.rules.retain(|rule, _| rule.category() != *category);
                 }
                 LintFilterKind::Rule(plugin, rule) => {
+                    let (plugin, rule) = super::rules::unalias_plugin_name(plugin, rule);
                     self.rules.retain(|r, _| r.plugin_name() != plugin || r.name() != rule);
                 }
                 LintFilterKind::Generic(name) => self.rules.retain(|rule, _| rule.name() != name),
@@ -505,7 +508,7 @@ impl ConfigStoreBuilder {
     }
 
     fn load_external_plugin(
-        oxlintrc_dir_path: &Path,
+        resolve_dir: &Path,
         plugin_specifier: &str,
         external_linter: &ExternalLinter,
         resolver: &Resolver,
@@ -521,7 +524,8 @@ impl ConfigStoreBuilder {
             );
         }
 
-        let resolved = resolver.resolve(oxlintrc_dir_path, plugin_specifier).map_err(|e| {
+        // Resolve the specifier relative to the config directory
+        let resolved = resolver.resolve(resolve_dir, plugin_specifier).map_err(|e| {
             ConfigBuilderError::PluginLoadFailed {
                 plugin_specifier: plugin_specifier.to_string(),
                 error: e.to_string(),
@@ -534,9 +538,12 @@ impl ConfigStoreBuilder {
             return Ok(());
         }
 
+        // Extract package name from package.json if available
+        let package_name = resolved.package_json().and_then(|pkg| pkg.name().map(String::from));
+
         let result = {
             let plugin_path = plugin_path.clone();
-            (external_linter.load_plugin)(plugin_path).map_err(|e| {
+            (external_linter.load_plugin)(plugin_path, package_name).map_err(|e| {
                 ConfigBuilderError::PluginLoadFailed {
                     plugin_specifier: plugin_specifier.to_string(),
                     error: e.to_string(),
@@ -853,6 +860,47 @@ mod test {
         let expected_plugins = LintPlugins::ESLINT | LintPlugins::TYPESCRIPT | LintPlugins::NEXTJS;
         let builder = builder.with_builtin_plugins(expected_plugins);
         assert_eq!(expected_plugins, builder.plugins());
+    }
+
+    #[test]
+    fn test_cli_rule_aliases() {
+        let builder = ConfigStoreBuilder::default().and_builtin_plugins(LintPlugins::REACT, true);
+
+        // Assert rule doesn't exist by default
+        assert_eq!(
+            builder
+                .rules
+                .iter()
+                .find(|(r, _)| r.plugin_name() == "react" && r.name() == "exhaustive-deps"),
+            None
+        );
+
+        let builder = builder.with_filter(
+            &LintFilter::new(AllowWarnDeny::Deny, "react-hooks/exhaustive-deps").unwrap(),
+        );
+
+        let (rule, sev) = builder
+            .rules
+            .iter()
+            .find(|(r, _)| r.plugin_name() == "react" && r.name() == "exhaustive-deps")
+            .expect("react/exhaustive-deps should be configured to Deny");
+
+        assert_eq!(rule.plugin_name(), "react");
+        assert_eq!(rule.name(), "exhaustive-deps");
+        assert_eq!(sev, &AllowWarnDeny::Deny);
+
+        let builder = builder.with_filter(
+            &LintFilter::new(AllowWarnDeny::Allow, "react-hooks/exhaustive-deps").unwrap(),
+        );
+
+        // Allowing the rule removes it from rules "overlay"
+        assert_eq!(
+            builder
+                .rules
+                .iter()
+                .find(|(r, _)| r.plugin_name() == "react" && r.name() == "exhaustive-deps"),
+            None
+        );
     }
 
     #[test]

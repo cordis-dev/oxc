@@ -8,7 +8,6 @@ use tower_lsp_server::lsp_types::{
 use oxc_data_structures::rope::{Rope, get_line_column};
 use oxc_diagnostics::{OxcCode, Severity};
 use oxc_linter::{Fix, Message, PossibleFixes};
-use oxc_span::GetSpan;
 
 #[derive(Debug, Clone, Default)]
 pub struct DiagnosticReport {
@@ -67,15 +66,9 @@ pub fn message_to_lsp_diagnostic(
             .collect()
     });
 
-    let range = message.error.labels.as_ref().map_or(Range::default(), |labels| {
-        let offset = labels.first().map(|span| span.offset() as u32).unwrap_or_default();
-        let length = labels.first().map(|span| span.len() as u32).unwrap_or_default();
-
-        let start_position = offset_to_position(rope, offset, source_text);
-        let end_position = offset_to_position(rope, offset + length, source_text);
-
-        Range::new(start_position, end_position)
-    });
+    let start_position = offset_to_position(rope, message.span.start, source_text);
+    let end_position = offset_to_position(rope, message.span.end, source_text);
+    let range = Range::new(start_position, end_position);
 
     let code = message.error.code.to_string();
     let code_description = message
@@ -120,8 +113,16 @@ pub fn message_to_lsp_diagnostic(
     };
 
     // Add ignore fixes
-    let error_offset = message.span().start;
+    let error_offset = message.span.start;
     let section_offset = message.section_offset;
+
+    // If the error is exactly at the section offset and has 0 span length, it means that the file is the problem
+    // and attaching a ignore comment would not ignore the error.
+    // This is because the ignore comment would need to be placed before the error offset, which is not possible.
+    if error_offset == section_offset && message.span.end == section_offset {
+        return DiagnosticReport { diagnostic, fixed_content };
+    }
+
     let fixed_content = add_ignore_fixes(
         fixed_content,
         &message.error.code,
@@ -265,6 +266,9 @@ fn disable_for_this_line(
     let whitespace_range = {
         let start = insert_offset as usize;
         let end = error_offset as usize;
+
+        // make sure that end is at least start to avoid panic
+        let end = end.max(start);
         let slice = &bytes[start..end];
         let whitespace_len = slice.iter().take_while(|c| matches!(c, b' ' | b'\t')).count();
         &slice[..whitespace_len]
@@ -605,6 +609,21 @@ mod test {
 
         assert_eq!(fix.code, "  // oxlint-disable-next-line no-console\n");
         assert_eq!(fix.range.start.line, 3);
+        assert_eq!(fix.range.start.character, 0);
+    }
+
+    #[test]
+    fn disable_for_this_line_section_offset_start() {
+        // Test framework file where error is exactly at section offset
+        let source = "<script>\nconsole.log('hello');\n</script>";
+        let rope = Rope::from_str(source);
+        let section_offset = 8; // At the \n after "<script>"
+        let error_offset = 8; // Error exactly at section offset
+        let fix =
+            super::disable_for_this_line("no-console", error_offset, section_offset, &rope, source);
+
+        assert_eq!(fix.code, "// oxlint-disable-next-line no-console\n");
+        assert_eq!(fix.range.start.line, 1);
         assert_eq!(fix.range.start.character, 0);
     }
 

@@ -1,3 +1,5 @@
+use std::ptr;
+
 use oxc_allocator::Address;
 use oxc_ast::ast::*;
 use oxc_data_structures::stack;
@@ -10,15 +12,16 @@ use oxc_syntax::{
 
 use crate::{
     Format,
+    ast_nodes::{AstNode, AstNodes},
     formatter::Formatter,
-    generated::ast_nodes::{AstNode, AstNodes},
-    write::{BinaryLikeExpression, ExpressionLeftSide, should_flatten},
+    utils::expression::ExpressionLeftSide,
+    write::{BinaryLikeExpression, should_flatten},
 };
 
 use super::NeedsParentheses;
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, Expression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, Expression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         match self.as_ast_nodes() {
             AstNodes::BooleanLiteral(it) => it.needs_parentheses(f),
             AstNodes::NullLiteral(it) => it.needs_parentheses(f),
@@ -71,8 +74,8 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, Expression<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, IdentifierReference<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, IdentifierReference<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -82,27 +85,24 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, IdentifierReference<'a>> {
                 matches!(self.parent, AstNodes::ForOfStatement(stmt) if !stmt.r#await && stmt.left.span().contains_inclusive(self.span))
             }
             "let" => {
-                let mut parent = self.parent;
-                loop {
+                // Walk up ancestors to find the relevant context for `let` keyword
+                for parent in self.ancestors() {
                     match parent {
-                        AstNodes::Program(_) | AstNodes::ExpressionStatement(_) => return false,
+                        AstNodes::ExpressionStatement(_) => return false,
                         AstNodes::ForOfStatement(stmt) => {
                             return stmt.left.span().contains_inclusive(self.span);
                         }
                         AstNodes::TSSatisfiesExpression(expr) => {
                             return expr.expression.span() == self.span();
                         }
-                        _ => parent = parent.parent(),
+                        _ => {}
                     }
                 }
-                unreachable!()
+                false
             }
             name => {
                 // <https://github.com/prettier/prettier/blob/7584432401a47a26943dd7a9ca9a8e032ead7285/src/language-js/needs-parens.js#L123-L133>
-                matches!(
-                    self.parent,
-                    AstNodes::TSSatisfiesExpression(_) | AstNodes::TSAsExpression(_)
-                ) && matches!(
+                if !matches!(
                     name,
                     "await"
                         | "interface"
@@ -112,113 +112,125 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, IdentifierReference<'a>> {
                         | "component"
                         | "hook"
                         | "type"
+                ) {
+                    return false;
+                }
+
+                let mut parent = self.parent;
+                while matches!(
+                    parent,
+                    AstNodes::TSSatisfiesExpression(_) | AstNodes::TSAsExpression(_)
+                ) {
+                    parent = parent.parent();
+                }
+
+                // Early return if the parent isn't a `TSSatisfiesExpression` or `TSAsExpression`
+                if core::ptr::eq(self.parent, parent) {
+                    return false;
+                }
+
+                matches!(
+                    parent, AstNodes::ExpressionStatement(stmt) if
+                        !stmt.is_arrow_function_body()
                 )
             }
         }
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, BooleanLiteral> {
+impl NeedsParentheses<'_> for AstNode<'_, BooleanLiteral> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, NullLiteral> {
+impl NeedsParentheses<'_> for AstNode<'_, NullLiteral> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, BigIntLiteral<'a>> {
+impl NeedsParentheses<'_> for AstNode<'_, BigIntLiteral<'_>> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, RegExpLiteral<'a>> {
+impl NeedsParentheses<'_> for AstNode<'_, RegExpLiteral<'_>> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, TemplateLiteral<'a>> {
+impl NeedsParentheses<'_> for AstNode<'_, TemplateLiteral<'_>> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, MetaProperty<'a>> {
+impl NeedsParentheses<'_> for AstNode<'_, MetaProperty<'_>> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, Super> {
+impl NeedsParentheses<'_> for AstNode<'_, Super> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, NumericLiteral<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, NumericLiteral<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
 
         if let AstNodes::StaticMemberExpression(member) = self.parent {
-            return member.object.without_parentheses().span() == self.span();
+            return member.object.span() == self.span();
         }
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, StringLiteral<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, StringLiteral<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
 
         if let AstNodes::ExpressionStatement(stmt) = self.parent {
             // `() => "foo"`
-            if let AstNodes::FunctionBody(arrow) = stmt.parent {
-                if let AstNodes::ArrowFunctionExpression(arrow) = arrow.parent {
-                    !arrow.expression()
-                } else {
-                    true
-                }
-            } else {
-                true
-            }
+            !stmt.is_arrow_function_body()
         } else {
             false
         }
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, ThisExpression> {
+impl NeedsParentheses<'_> for AstNode<'_, ThisExpression> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, ArrayExpression<'a>> {
+impl NeedsParentheses<'_> for AstNode<'_, ArrayExpression<'_>> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, ObjectExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, ObjectExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -233,29 +245,29 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, ObjectExpression<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, TaggedTemplateExpression<'a>> {
+impl NeedsParentheses<'_> for AstNode<'_, TaggedTemplateExpression<'_>> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, MemberExpression<'a>> {
+impl NeedsParentheses<'_> for AstNode<'_, MemberExpression<'_>> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, ComputedMemberExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, ComputedMemberExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         matches!(self.parent, AstNodes::NewExpression(_))
-            && (!self.optional || member_chain_callee_needs_parens(&self.expression))
+            && (self.optional || member_chain_callee_needs_parens(&self.object))
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, StaticMemberExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, StaticMemberExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -270,15 +282,15 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, StaticMemberExpression<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, PrivateFieldExpression<'a>> {
+impl NeedsParentheses<'_> for AstNode<'_, PrivateFieldExpression<'_>> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, CallExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, CallExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -293,9 +305,8 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, CallExpression<'a>> {
                 // when the leftmost expression is not a class expression or a function expression
                 callee_span != leftmost.span()
                     && matches!(
-                        leftmost,
-                        ExpressionLeftSide::Expression(e)
-                         if matches!(e.as_ref(), Expression::ClassExpression(_) | Expression::FunctionExpression(_))
+                        leftmost.as_ref(),
+                        Expression::ClassExpression(_) | Expression::FunctionExpression(_)
                     )
             }
             _ => false,
@@ -303,8 +314,8 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, CallExpression<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, NewExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, NewExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -313,8 +324,8 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, NewExpression<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, UpdateExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, UpdateExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -334,8 +345,8 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, UpdateExpression<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, UnaryExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, UnaryExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -358,8 +369,8 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, UnaryExpression<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, BinaryExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, BinaryExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -371,21 +382,18 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, BinaryExpression<'a>> {
 
 /// Add parentheses if the `in` is inside of a `for` initializer (see tests).
 fn is_in_for_initializer(expr: &AstNode<'_, BinaryExpression<'_>>) -> bool {
-    let mut parent = expr.parent;
-    loop {
+    let mut ancestors = expr.ancestors();
+
+    while let Some(parent) = ancestors.next() {
         match parent {
             AstNodes::ExpressionStatement(stmt) => {
                 let grand_parent = parent.parent();
 
-                if matches!(grand_parent, AstNodes::FunctionBody(_)) {
-                    let grand_grand_parent = grand_parent.parent();
-                    if matches!(
-                        grand_grand_parent,
-                        AstNodes::ArrowFunctionExpression(arrow) if arrow.expression()
-                    ) {
-                        parent = grand_grand_parent;
-                        continue;
-                    }
+                if stmt.is_arrow_function_body() {
+                    // Skip `FunctionBody` and `ArrowFunctionExpression`
+                    let skipped = ancestors.by_ref().nth(1);
+                    debug_assert!(matches!(skipped, Some(AstNodes::ArrowFunctionExpression(_))));
+                    continue;
                 }
 
                 return false;
@@ -402,16 +410,16 @@ fn is_in_for_initializer(expr: &AstNode<'_, BinaryExpression<'_>>) -> bool {
             AstNodes::Program(_) => {
                 return false;
             }
-            _ => {
-                parent = parent.parent();
-            }
+            _ => {}
         }
     }
+
+    false
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, PrivateInExpression<'a>> {
+impl NeedsParentheses<'_> for AstNode<'_, PrivateInExpression<'_>> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -421,8 +429,8 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, PrivateInExpression<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, LogicalExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, LogicalExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -440,8 +448,8 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, LogicalExpression<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, ConditionalExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, ConditionalExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -462,15 +470,15 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, ConditionalExpression<'a>> {
             return true;
         }
         if let AstNodes::ConditionalExpression(e) = parent {
-            e.test.without_parentheses().span() == self.span()
+            e.test.span() == self.span()
         } else {
             update_or_lower_expression_needs_parens(self.span(), parent)
         }
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, Function<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, Function<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if self.r#type() != FunctionType::FunctionExpression {
             return false;
         }
@@ -493,8 +501,8 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, Function<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, AssignmentExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, AssignmentExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -505,15 +513,11 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, AssignmentExpression<'a>> {
             // - `{ x } = obj` -> `({ x } = obj)` = needed to prevent parsing as block statement
             // - `() => { x } = obj` -> `() => ({ x } = obj)` = needed in arrow function body
             // - `() => a = b` -> `() => (a = b)` = also parens needed
-            AstNodes::ExpressionStatement(parent) => {
-                let parent_parent = parent.parent;
-                if let AstNodes::FunctionBody(body) = parent_parent {
-                    let parent_parent_parent = body.parent;
-                    if matches!(parent_parent_parent, AstNodes::ArrowFunctionExpression(arrow) if arrow.expression())
-                    {
-                        return true;
-                    }
+            AstNodes::ExpressionStatement(stmt) => {
+                if stmt.is_arrow_function_body() {
+                    return true;
                 }
+
                 matches!(self.left, AssignmentTarget::ObjectAssignmentTarget(_))
                     && is_first_in_statement(
                         self.span,
@@ -525,25 +529,20 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, AssignmentExpression<'a>> {
             // - `a = 1, b = 2` in for loops don't need parens
             // - `(a = 1, b = 2)` elsewhere usually need parens
             AstNodes::SequenceExpression(sequence) => {
-                let mut current_parent = self.parent;
-                loop {
-                    match current_parent {
-                        AstNodes::SequenceExpression(_) | AstNodes::ParenthesizedExpression(_) => {
-                            current_parent = current_parent.parent();
-                        }
-                        AstNodes::ForStatement(for_stmt) => {
-                            let is_initializer = for_stmt
-                                .init
-                                .as_ref()
-                                .is_some_and(|init| init.span().contains_inclusive(self.span()));
-                            let is_update = for_stmt.update.as_ref().is_some_and(|update| {
-                                update.span().contains_inclusive(self.span())
-                            });
-                            return !(is_initializer || is_update);
-                        }
-                        _ => break,
+                // Skip through SequenceExpression and ParenthesizedExpression ancestors
+                if let Some(ancestor) = self.ancestors().find(|p| {
+                    !matches!(p, AstNodes::SequenceExpression(_) | AstNodes::ParenthesizedExpression(_))
+                }) && let AstNodes::ForStatement(for_stmt) = ancestor {
+                        let is_initializer = for_stmt
+                            .init
+                            .as_ref()
+                            .is_some_and(|init| init.span().contains_inclusive(self.span()));
+                        let is_update = for_stmt.update.as_ref().is_some_and(|update| {
+                            update.span().contains_inclusive(self.span())
+                        });
+                        return !(is_initializer || is_update);
                     }
-                }
+
                 true
             }
             // `interface { [a = 1]; }` and `class { [a = 1]; }` not need parens
@@ -552,9 +551,9 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, AssignmentExpression<'a>> {
             // - `a = (b = c)` = nested assignments don't need extra parens
             AstNodes::AssignmentExpression(_) => false,
             // Computed member expressions: need parens when assignment is the object
-            // - `obj[a = b]` = no parens needed for property
+            // - `obj[(a = b)]` parens needed for explicitness
             // - `(a = b)[obj]` = parens needed for object
-            AstNodes::ComputedMemberExpression(member) => member.object.span() == self.span(),
+            AstNodes::ComputedMemberExpression(member) => true,
             // For statements, no parens needed in initializer or update sections:
             // - `for (a = 1; ...; a = 2) {}` = both assignments don't need parens
             AstNodes::ForStatement(stmt) => {
@@ -563,12 +562,6 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, AssignmentExpression<'a>> {
                 let is_update =
                     stmt.update.as_ref().is_some_and(|update| update.span() == self.span());
                 !(is_initializer || is_update)
-            }
-            // Arrow functions, only need parens if assignment is the direct body:
-            // - `() => a = b` -> `() => (a = b)` = needed
-            // - `() => someFunc(a = b)` = no extra parens needed
-            AstNodes::ArrowFunctionExpression(arrow) => {
-                arrow.expression() && arrow.body.span() == self.span()
             }
             // Default: need parentheses in most other contexts
             // - `new (a = b)`
@@ -580,8 +573,8 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, AssignmentExpression<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, SequenceExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, SequenceExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -593,14 +586,12 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, SequenceExpression<'a>> {
             | AstNodes::ForStatement(_)
             | AstNodes::ExpressionStatement(_)
             | AstNodes::SequenceExpression(_)
-            // Handled as part of the arrow function formatting
-            | AstNodes::ArrowFunctionExpression(_)
         )
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, AwaitExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, AwaitExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -609,8 +600,8 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, AwaitExpression<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, ChainExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, ChainExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -627,8 +618,8 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, ChainExpression<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, Class<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, Class<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if self.r#type() != ClassType::ClassExpression {
             return false;
         }
@@ -655,14 +646,14 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, Class<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, ParenthesizedExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, ParenthesizedExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         unreachable!("Already disabled `preserveParens` option in the parser")
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, ArrowFunctionExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, ArrowFunctionExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -681,15 +672,15 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, ArrowFunctionExpression<'a>> {
             return true;
         }
         if let AstNodes::ConditionalExpression(e) = parent {
-            e.test.without_parentheses().span() == self.span()
+            e.test.span() == self.span()
         } else {
             update_or_lower_expression_needs_parens(self.span(), parent)
         }
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, YieldExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, YieldExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -700,8 +691,8 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, YieldExpression<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, ImportExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, ImportExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         if f.comments().is_type_cast_node(self) {
             return false;
         }
@@ -710,48 +701,48 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, ImportExpression<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, V8IntrinsicExpression<'a>> {
+impl NeedsParentheses<'_> for AstNode<'_, V8IntrinsicExpression<'_>> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, JSXMemberExpression<'a>> {
+impl NeedsParentheses<'_> for AstNode<'_, JSXMemberExpression<'_>> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, JSXExpression<'a>> {
+impl NeedsParentheses<'_> for AstNode<'_, JSXExpression<'_>> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, JSXEmptyExpression> {
+impl NeedsParentheses<'_> for AstNode<'_, JSXEmptyExpression> {
     #[inline]
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         false
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, TSAsExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, TSAsExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         ts_as_or_satisfies_needs_parens(self.span(), &self.expression, self.parent)
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, TSSatisfiesExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, TSSatisfiesExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         ts_as_or_satisfies_needs_parens(self.span(), &self.expression, self.parent)
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, TSTypeAssertion<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, TSTypeAssertion<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         match self.parent {
             AstNodes::TSAsExpression(_) | AstNodes::TSSatisfiesExpression(_) => true,
             AstNodes::BinaryExpression(binary) => {
@@ -793,8 +784,8 @@ fn type_cast_like_needs_parens(span: Span, parent: &AstNodes<'_>) -> bool {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, TSNonNullExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, TSNonNullExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         let parent = self.parent;
         is_class_extends(self.span, parent)
             || (matches!(parent, AstNodes::NewExpression(_))
@@ -802,8 +793,8 @@ impl<'a> NeedsParentheses<'a> for AstNode<'a, TSNonNullExpression<'a>> {
     }
 }
 
-impl<'a> NeedsParentheses<'a> for AstNode<'a, TSInstantiationExpression<'a>> {
-    fn needs_parentheses(&self, f: &Formatter<'_, 'a>) -> bool {
+impl NeedsParentheses<'_> for AstNode<'_, TSInstantiationExpression<'_>> {
+    fn needs_parentheses(&self, f: &Formatter<'_, '_>) -> bool {
         let expr = match self.parent {
             AstNodes::StaticMemberExpression(expr) => &expr.object,
             AstNodes::ComputedMemberExpression(expr) => &expr.object,
@@ -956,15 +947,15 @@ pub enum FirstInStatementMode {
 /// the left most node or reached a statement.
 fn is_first_in_statement(
     mut current_span: Span,
-    mut parent: &AstNodes<'_>,
+    parent: &AstNodes<'_>,
     mode: FirstInStatementMode,
 ) -> bool {
-    let mut is_not_first_iteration = false;
-    loop {
-        match parent {
+    for (index, ancestor) in parent.ancestors().enumerate() {
+        let is_not_first_iteration = index > 0;
+
+        match ancestor {
             AstNodes::ExpressionStatement(stmt) => {
-                if matches!(stmt.parent.parent(), AstNodes::ArrowFunctionExpression(arrow) if arrow.expression)
-                {
+                if stmt.is_arrow_function_body() {
                     if mode == FirstInStatementMode::ExpressionStatementOrArrow {
                         if is_not_first_iteration
                             && matches!(
@@ -985,7 +976,6 @@ fn is_first_in_statement(
                 return true;
             }
             AstNodes::StaticMemberExpression(_)
-            | AstNodes::TemplateLiteral(_)
             | AstNodes::TaggedTemplateExpression(_)
             | AstNodes::ChainExpression(_)
             | AstNodes::CallExpression(_)
@@ -1030,9 +1020,7 @@ fn is_first_in_statement(
             }
             _ => break,
         }
-        current_span = parent.span();
-        parent = parent.parent();
-        is_not_first_iteration = true;
+        current_span = ancestor.span();
     }
 
     false
@@ -1052,7 +1040,7 @@ fn await_or_yield_needs_parens(span: Span, node: &AstNodes<'_>) -> bool {
         return true;
     }
     if let AstNodes::ConditionalExpression(e) = node {
-        e.test.without_parentheses().span() == span
+        e.test.span() == span
     } else {
         update_or_lower_expression_needs_parens(span, node)
     }
@@ -1079,7 +1067,7 @@ fn ts_as_or_satisfies_needs_parens(
 
 fn is_class_extends(span: Span, parent: &AstNodes<'_>) -> bool {
     if let AstNodes::Class(c) = parent {
-        return c.super_class.as_ref().is_some_and(|c| c.without_parentheses().span() == span);
+        return c.super_class.as_ref().is_some_and(|c| c.span() == span);
     }
     false
 }

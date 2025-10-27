@@ -8,9 +8,10 @@ use oxc_span::{GetSpan, Span};
 use crate::QuoteStyle;
 use crate::formatter::Comments;
 use crate::{
-    FormatResult, format_args,
+    FormatResult,
+    ast_nodes::{AstNode, AstNodes},
+    format_args,
     formatter::{Formatter, prelude::*},
-    generated::ast_nodes::{AstNode, AstNodes},
     write,
 };
 
@@ -77,7 +78,6 @@ pub fn get_wrap_state(parent: &AstNodes<'_>) -> WrapState {
         AstNodes::ArrayExpression(_)
         | AstNodes::JSXAttribute(_)
         | AstNodes::JSXExpressionContainer(_)
-        | AstNodes::Argument(_)
         | AstNodes::ConditionalExpression(_) => WrapState::NoWrap,
         AstNodes::StaticMemberExpression(member) => {
             if member.optional {
@@ -86,16 +86,13 @@ pub fn get_wrap_state(parent: &AstNodes<'_>) -> WrapState {
                 WrapState::WrapOnBreak
             }
         }
+        AstNodes::Argument(argument) if matches!(argument.parent, AstNodes::CallExpression(_)) => {
+            WrapState::NoWrap
+        }
         AstNodes::ExpressionStatement(stmt) => {
             // `() => <div></div>`
             //        ^^^^^^^^^^^
-            if let AstNodes::FunctionBody(body) = stmt.parent
-                && matches!(body.parent, AstNodes::ArrowFunctionExpression(arrow) if arrow.expression)
-            {
-                WrapState::WrapOnBreak
-            } else {
-                WrapState::NoWrap
-            }
+            if stmt.is_arrow_function_body() { WrapState::WrapOnBreak } else { WrapState::NoWrap }
         }
         AstNodes::ComputedMemberExpression(member) => {
             if member.optional {

@@ -1,6 +1,6 @@
 commit: 41d96516
 
-Passed: 188/316
+Passed: 188/317
 
 # All Passed:
 * babel-plugin-transform-class-static-block
@@ -544,7 +544,7 @@ x Output mismatch
 x Output mismatch
 
 
-# legacy-decorators (6/85)
+# legacy-decorators (6/86)
 * oxc/class-without-name-with-decorated_class/input.ts
 Bindings mismatch:
 after transform: ScopeId(0): ["dec"]
@@ -698,6 +698,29 @@ Symbol reference IDs mismatch for "ComputedEnum":
 after transform: SymbolId(25): [ReferenceId(19), ReferenceId(72)]
 rebuilt        : SymbolId(15): [ReferenceId(52)]
 
+* oxc/metadata/getter-setter-method/input.ts
+Bindings mismatch:
+after transform: ScopeId(0): ["Getter", "Setter", "dec"]
+rebuilt        : ScopeId(0): ["Getter", "Setter"]
+Scope children mismatch:
+after transform: ScopeId(0): [ScopeId(1), ScopeId(2), ScopeId(5)]
+rebuilt        : ScopeId(0): [ScopeId(1), ScopeId(4)]
+Reference symbol mismatch for "dec":
+after transform: SymbolId(0) "dec"
+rebuilt        : <None>
+Reference symbol mismatch for "dec":
+after transform: SymbolId(0) "dec"
+rebuilt        : <None>
+Reference symbol mismatch for "dec":
+after transform: SymbolId(0) "dec"
+rebuilt        : <None>
+Reference symbol mismatch for "dec":
+after transform: SymbolId(0) "dec"
+rebuilt        : <None>
+Unresolved references mismatch:
+after transform: ["Function", "Number", "PropertyDescriptor", "String", "babelHelpers"]
+rebuilt        : ["Function", "Number", "String", "babelHelpers", "dec"]
+
 * oxc/metadata/imports/input.ts
 Bindings mismatch:
 after transform: ScopeId(0): ["Bar", "Cls", "Foo", "Zoo", "_ref", "dec"]
@@ -809,7 +832,7 @@ Reference symbol mismatch for "Cls2":
 after transform: SymbolId(2) "Cls2"
 rebuilt        : SymbolId(2) "Cls2"
 Unresolved reference IDs mismatch for "babelHelpers":
-after transform: [ReferenceId(7), ReferenceId(8), ReferenceId(9), ReferenceId(11), ReferenceId(13), ReferenceId(16), ReferenceId(18), ReferenceId(19), ReferenceId(20), ReferenceId(22), ReferenceId(24)]
+after transform: [ReferenceId(7), ReferenceId(8), ReferenceId(9), ReferenceId(11), ReferenceId(13), ReferenceId(17), ReferenceId(18), ReferenceId(19), ReferenceId(20), ReferenceId(22), ReferenceId(24)]
 rebuilt        : [ReferenceId(0), ReferenceId(3), ReferenceId(5), ReferenceId(6), ReferenceId(8), ReferenceId(9), ReferenceId(12), ReferenceId(14), ReferenceId(16)]
 
 * oxc/metadata/this/input.ts
@@ -1226,10 +1249,10 @@ Scope children mismatch:
 after transform: ScopeId(0): [ScopeId(1), ScopeId(3)]
 rebuilt        : ScopeId(0): [ScopeId(1)]
 Symbol span mismatch for "C":
-after transform: SymbolId(2): Span { start: 107, end: 108 }
+after transform: SymbolId(3): Span { start: 107, end: 108 }
 rebuilt        : SymbolId(0): Span { start: 0, end: 0 }
 Symbol span mismatch for "C":
-after transform: SymbolId(3): Span { start: 0, end: 0 }
+after transform: SymbolId(4): Span { start: 0, end: 0 }
 rebuilt        : SymbolId(1): Span { start: 107, end: 108 }
 Reference symbol mismatch for "dec":
 after transform: SymbolId(0) "dec"
@@ -1246,10 +1269,10 @@ Scope children mismatch:
 after transform: ScopeId(0): [ScopeId(1), ScopeId(3)]
 rebuilt        : ScopeId(0): [ScopeId(1)]
 Symbol span mismatch for "C":
-after transform: SymbolId(2): Span { start: 107, end: 108 }
+after transform: SymbolId(3): Span { start: 107, end: 108 }
 rebuilt        : SymbolId(0): Span { start: 0, end: 0 }
 Symbol span mismatch for "C":
-after transform: SymbolId(3): Span { start: 0, end: 0 }
+after transform: SymbolId(4): Span { start: 0, end: 0 }
 rebuilt        : SymbolId(1): Span { start: 107, end: 108 }
 Reference symbol mismatch for "dec":
 after transform: SymbolId(0) "dec"
@@ -1266,10 +1289,10 @@ Scope children mismatch:
 after transform: ScopeId(0): [ScopeId(1), ScopeId(3)]
 rebuilt        : ScopeId(0): [ScopeId(1)]
 Symbol span mismatch for "C":
-after transform: SymbolId(1): Span { start: 134, end: 135 }
+after transform: SymbolId(3): Span { start: 134, end: 135 }
 rebuilt        : SymbolId(0): Span { start: 0, end: 0 }
 Symbol span mismatch for "C":
-after transform: SymbolId(2): Span { start: 0, end: 0 }
+after transform: SymbolId(4): Span { start: 0, end: 0 }
 rebuilt        : SymbolId(1): Span { start: 134, end: 135 }
 Reference symbol mismatch for "dec":
 after transform: SymbolId(0) "dec"

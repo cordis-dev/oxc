@@ -310,7 +310,9 @@ impl<'a> Printer<'a> {
             let indent = std::mem::take(&mut self.state.pending_indent);
             let total_indent_char_count = indent.level() as usize * repeat_count as usize;
 
-            self.state.buffer.reserve(total_indent_char_count + indent.align() as usize);
+            self.state
+                .buffer
+                .reserve(total_indent_char_count + indent.align() as usize + text.len());
 
             for _ in 0..total_indent_char_count {
                 self.print_char(indent_char);
@@ -376,9 +378,7 @@ impl<'a> Printer<'a> {
         } else {
             self.state.measured_group_fits = true;
 
-            let normal_variants = &best_fitting.variants()[..best_fitting.variants().len() - 1];
-
-            for variant in normal_variants {
+            for variant in best_fitting.variants() {
                 // Test if this variant fits and if so, use it. Otherwise try the next
                 // variant.
 

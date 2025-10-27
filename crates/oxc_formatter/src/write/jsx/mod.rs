@@ -11,13 +11,14 @@ use opening_element::{FormatOpeningElement, OpeningElementLayout};
 use oxc_span::GetSpan;
 
 use crate::{
-    AttributePosition, Format, FormatResult, format_args,
+    AttributePosition, Format, FormatResult,
+    ast_nodes::{AstNode, AstNodes},
+    format_args,
     formatter::{
         Comments, Formatter,
         prelude::*,
-        trivia::{DanglingIndentMode, FormatDanglingComments},
+        trivia::{DanglingIndentMode, FormatDanglingComments, FormatTrailingComments},
     },
-    generated::ast_nodes::{AstNode, AstNodes},
     write,
 };
 
@@ -201,6 +202,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, JSXExpressionContainer<'a>> {
                 }
             }
         } else {
+            // JSXAttributeValue
             let should_inline = !has_comment(f) && should_inline_jsx_expression(self, f.comments());
 
             if should_inline {

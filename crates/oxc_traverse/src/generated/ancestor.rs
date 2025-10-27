@@ -5649,6 +5649,7 @@ impl<'a, 't> GetAddress for ReturnStatementWithoutArgument<'a, 't> {
 pub(crate) const OFFSET_WITH_STATEMENT_SPAN: usize = offset_of!(WithStatement, span);
 pub(crate) const OFFSET_WITH_STATEMENT_OBJECT: usize = offset_of!(WithStatement, object);
 pub(crate) const OFFSET_WITH_STATEMENT_BODY: usize = offset_of!(WithStatement, body);
+pub(crate) const OFFSET_WITH_STATEMENT_SCOPE_ID: usize = offset_of!(WithStatement, scope_id);
 
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug)]
@@ -5666,6 +5667,14 @@ impl<'a, 't> WithStatementWithoutObject<'a, 't> {
     #[inline]
     pub fn body(self) -> &'t Statement<'a> {
         unsafe { &*((self.0 as *const u8).add(OFFSET_WITH_STATEMENT_BODY) as *const Statement<'a>) }
+    }
+
+    #[inline]
+    pub fn scope_id(self) -> &'t Cell<Option<ScopeId>> {
+        unsafe {
+            &*((self.0 as *const u8).add(OFFSET_WITH_STATEMENT_SCOPE_ID)
+                as *const Cell<Option<ScopeId>>)
+        }
     }
 }
 
@@ -5693,6 +5702,14 @@ impl<'a, 't> WithStatementWithoutBody<'a, 't> {
     pub fn object(self) -> &'t Expression<'a> {
         unsafe {
             &*((self.0 as *const u8).add(OFFSET_WITH_STATEMENT_OBJECT) as *const Expression<'a>)
+        }
+    }
+
+    #[inline]
+    pub fn scope_id(self) -> &'t Cell<Option<ScopeId>> {
+        unsafe {
+            &*((self.0 as *const u8).add(OFFSET_WITH_STATEMENT_SCOPE_ID)
+                as *const Cell<Option<ScopeId>>)
         }
     }
 }
@@ -12986,6 +13003,8 @@ pub(crate) const OFFSET_TS_CALL_SIGNATURE_DECLARATION_PARAMS: usize =
     offset_of!(TSCallSignatureDeclaration, params);
 pub(crate) const OFFSET_TS_CALL_SIGNATURE_DECLARATION_RETURN_TYPE: usize =
     offset_of!(TSCallSignatureDeclaration, return_type);
+pub(crate) const OFFSET_TS_CALL_SIGNATURE_DECLARATION_SCOPE_ID: usize =
+    offset_of!(TSCallSignatureDeclaration, scope_id);
 
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug)]
@@ -13023,6 +13042,14 @@ impl<'a, 't> TSCallSignatureDeclarationWithoutTypeParameters<'a, 't> {
         unsafe {
             &*((self.0 as *const u8).add(OFFSET_TS_CALL_SIGNATURE_DECLARATION_RETURN_TYPE)
                 as *const Option<Box<'a, TSTypeAnnotation<'a>>>)
+        }
+    }
+
+    #[inline]
+    pub fn scope_id(self) -> &'t Cell<Option<ScopeId>> {
+        unsafe {
+            &*((self.0 as *const u8).add(OFFSET_TS_CALL_SIGNATURE_DECLARATION_SCOPE_ID)
+                as *const Cell<Option<ScopeId>>)
         }
     }
 }
@@ -13072,6 +13099,14 @@ impl<'a, 't> TSCallSignatureDeclarationWithoutThisParam<'a, 't> {
                 as *const Option<Box<'a, TSTypeAnnotation<'a>>>)
         }
     }
+
+    #[inline]
+    pub fn scope_id(self) -> &'t Cell<Option<ScopeId>> {
+        unsafe {
+            &*((self.0 as *const u8).add(OFFSET_TS_CALL_SIGNATURE_DECLARATION_SCOPE_ID)
+                as *const Cell<Option<ScopeId>>)
+        }
+    }
 }
 
 impl<'a, 't> GetAddress for TSCallSignatureDeclarationWithoutThisParam<'a, 't> {
@@ -13119,6 +13154,14 @@ impl<'a, 't> TSCallSignatureDeclarationWithoutParams<'a, 't> {
                 as *const Option<Box<'a, TSTypeAnnotation<'a>>>)
         }
     }
+
+    #[inline]
+    pub fn scope_id(self) -> &'t Cell<Option<ScopeId>> {
+        unsafe {
+            &*((self.0 as *const u8).add(OFFSET_TS_CALL_SIGNATURE_DECLARATION_SCOPE_ID)
+                as *const Cell<Option<ScopeId>>)
+        }
+    }
 }
 
 impl<'a, 't> GetAddress for TSCallSignatureDeclarationWithoutParams<'a, 't> {
@@ -13164,6 +13207,14 @@ impl<'a, 't> TSCallSignatureDeclarationWithoutReturnType<'a, 't> {
         unsafe {
             &*((self.0 as *const u8).add(OFFSET_TS_CALL_SIGNATURE_DECLARATION_PARAMS)
                 as *const Box<'a, FormalParameters<'a>>)
+        }
+    }
+
+    #[inline]
+    pub fn scope_id(self) -> &'t Cell<Option<ScopeId>> {
+        unsafe {
+            &*((self.0 as *const u8).add(OFFSET_TS_CALL_SIGNATURE_DECLARATION_SCOPE_ID)
+                as *const Cell<Option<ScopeId>>)
         }
     }
 }
@@ -14681,6 +14732,8 @@ pub(crate) const OFFSET_TS_CONSTRUCTOR_TYPE_TYPE_PARAMETERS: usize =
 pub(crate) const OFFSET_TS_CONSTRUCTOR_TYPE_PARAMS: usize = offset_of!(TSConstructorType, params);
 pub(crate) const OFFSET_TS_CONSTRUCTOR_TYPE_RETURN_TYPE: usize =
     offset_of!(TSConstructorType, return_type);
+pub(crate) const OFFSET_TS_CONSTRUCTOR_TYPE_SCOPE_ID: usize =
+    offset_of!(TSConstructorType, scope_id);
 
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug)]
@@ -14713,6 +14766,14 @@ impl<'a, 't> TSConstructorTypeWithoutTypeParameters<'a, 't> {
         unsafe {
             &*((self.0 as *const u8).add(OFFSET_TS_CONSTRUCTOR_TYPE_RETURN_TYPE)
                 as *const Box<'a, TSTypeAnnotation<'a>>)
+        }
+    }
+
+    #[inline]
+    pub fn scope_id(self) -> &'t Cell<Option<ScopeId>> {
+        unsafe {
+            &*((self.0 as *const u8).add(OFFSET_TS_CONSTRUCTOR_TYPE_SCOPE_ID)
+                as *const Cell<Option<ScopeId>>)
         }
     }
 }
@@ -14757,6 +14818,14 @@ impl<'a, 't> TSConstructorTypeWithoutParams<'a, 't> {
                 as *const Box<'a, TSTypeAnnotation<'a>>)
         }
     }
+
+    #[inline]
+    pub fn scope_id(self) -> &'t Cell<Option<ScopeId>> {
+        unsafe {
+            &*((self.0 as *const u8).add(OFFSET_TS_CONSTRUCTOR_TYPE_SCOPE_ID)
+                as *const Cell<Option<ScopeId>>)
+        }
+    }
 }
 
 impl<'a, 't> GetAddress for TSConstructorTypeWithoutParams<'a, 't> {
@@ -14797,6 +14866,14 @@ impl<'a, 't> TSConstructorTypeWithoutReturnType<'a, 't> {
         unsafe {
             &*((self.0 as *const u8).add(OFFSET_TS_CONSTRUCTOR_TYPE_PARAMS)
                 as *const Box<'a, FormalParameters<'a>>)
+        }
+    }
+
+    #[inline]
+    pub fn scope_id(self) -> &'t Cell<Option<ScopeId>> {
+        unsafe {
+            &*((self.0 as *const u8).add(OFFSET_TS_CONSTRUCTOR_TYPE_SCOPE_ID)
+                as *const Cell<Option<ScopeId>>)
         }
     }
 }

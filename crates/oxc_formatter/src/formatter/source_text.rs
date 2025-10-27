@@ -160,6 +160,10 @@ impl<'a> SourceText<'a> {
             && comment.span.end <= start
         {
             start = comment.span.start;
+        } else if start != 0 && matches!(self.byte_at(start - 1), Some(b';')) {
+            // Skip leading semicolon if present
+            // `;(function() {});`
+            start -= 1;
         }
 
         // Count the newlines in the leading trivia of the next node
@@ -200,13 +204,5 @@ impl<'a> SourceText<'a> {
         }
 
         0
-    }
-
-    pub fn is_own_line_comment(&self, comment: &Comment) -> bool {
-        self.has_newline_before(comment.span.start)
-    }
-
-    pub fn is_end_of_line_comment(&self, comment: &Comment) -> bool {
-        self.has_newline_after(comment.span.end)
     }
 }

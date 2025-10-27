@@ -8,6 +8,7 @@ use super::{
     block_statement::is_empty_block,
 };
 use crate::{
+    ast_nodes::AstNode,
     format_args,
     formatter::{
         Buffer, FormatError, FormatResult, Formatter,
@@ -15,7 +16,6 @@ use crate::{
         prelude::*,
         trivia::{DanglingIndentMode, FormatLeadingComments},
     },
-    generated::ast_nodes::AstNode,
     write,
     write::{
         arrow_function_expression::FormatMaybeCachedFunctionBody, semicolon::OptionalSemicolon,
@@ -42,8 +42,8 @@ impl<'a> Deref for FormatFunction<'a, '_> {
     }
 }
 
-impl<'a> FormatWrite<'a> for FormatFunction<'a, '_> {
-    fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+impl<'a> Format<'a> for FormatFunction<'a, '_> {
+    fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
         let head = format_once(|f| {
             write!(
                 f,
@@ -108,9 +108,7 @@ impl<'a> FormatWrite<'a> for FormatFunction<'a, '_> {
 
                 let group_parameters = should_group_function_parameters(
                     self.type_parameters.as_deref(),
-                    params.items.len()
-                        + usize::from(params.rest.is_some())
-                        + usize::from(self.this_param.is_some()),
+                    params.parameters_count() + usize::from(self.this_param.is_some()),
                     self.return_type.as_deref(),
                     &mut format_return_type,
                     f,
@@ -150,7 +148,7 @@ impl<'a> FormatWrite<'a> for FormatFunction<'a, '_> {
 
 impl<'a> FormatWrite<'a, FormatFunctionOptions> for AstNode<'a, Function<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        FormatFunction { function: self, options: FormatFunctionOptions::default() }.write(f)
+        FormatFunction { function: self, options: FormatFunctionOptions::default() }.fmt(f)
     }
 
     fn write_with_options(
@@ -158,7 +156,7 @@ impl<'a> FormatWrite<'a, FormatFunctionOptions> for AstNode<'a, Function<'a>> {
         options: FormatFunctionOptions,
         f: &mut Formatter<'_, 'a>,
     ) -> FormatResult<()> {
-        FormatFunction { function: self, options }.write(f)
+        FormatFunction { function: self, options }.fmt(f)
     }
 }
 

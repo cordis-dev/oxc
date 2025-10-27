@@ -5,6 +5,7 @@ use oxc_syntax::identifier::is_identifier_name;
 
 use crate::{
     Format, FormatResult, FormatTrailingCommas, JsLabels, QuoteProperties, TrailingSeparator,
+    ast_nodes::{AstNode, AstNodes},
     best_fitting, format_args,
     formatter::{
         Formatter,
@@ -12,7 +13,6 @@ use crate::{
         separated::FormatSeparatedIter,
         trivia::{FormatLeadingComments, FormatTrailingComments},
     },
-    generated::ast_nodes::{AstNode, AstNodes},
     write,
     write::semicolon::OptionalSemicolon,
 };
@@ -30,8 +30,7 @@ pub fn format_import_and_export_source_with_clause<'a>(
     with_clause: Option<&AstNode<'a, WithClause>>,
     f: &mut Formatter<'_, 'a>,
 ) -> FormatResult<()> {
-    source.format_leading_comments(f)?;
-    source.write(f)?;
+    source.fmt(f)?;
 
     if let Some(with_clause) = with_clause {
         if f.comments().has_comment_before(with_clause.span.start) {
@@ -145,15 +144,8 @@ impl<'a> Format<'a> for AstNode<'a, Vec<'a, ImportDeclarationSpecifier<'a>>> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, ImportSpecifier<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        let comments = f.context().comments().comments_before(self.local.span.end);
-        let mut len = comments.len();
-        while len != 0 && comments[len - 1].is_block() {
-            len -= 1;
-        }
-        if len != 0 {
-            write!(f, [FormatLeadingComments::Comments(&comments[..len])])?;
-        }
-        write!(f, [self.import_kind()])?;
+        let comments = f.context().comments().line_comments_before(self.local.span.end);
+        write!(f, [FormatLeadingComments::Comments(comments), self.import_kind()])?;
         if self.local.span == self.imported.span() {
             write!(f, [self.local()])
         } else {

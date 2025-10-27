@@ -32,6 +32,7 @@ jobs:
   determine-matrix:
     name: Determine Benchmark
     runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, '0-merge') }}
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
@@ -88,7 +89,7 @@ jobs:
           rm target/codspeed/instrumentation/oxc_benchmark/*.d
 
       - name: Run benchmark
-        uses: CodSpeedHQ/action@6b43a0cd438f6ca5ad26f9ed03ed159ed2df7da9 # v4.1.1
+        uses: CodSpeedHQ/action@4348f634fa7309fe23aac9502e88b999ec90a164 # v4.3.1
         timeout-minutes: 30
         with:
           token: ${{ secrets.CODSPEED_TOKEN }}

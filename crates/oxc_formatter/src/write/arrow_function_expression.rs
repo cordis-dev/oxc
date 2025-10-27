@@ -4,6 +4,7 @@ use oxc_ast::ast::*;
 use oxc_span::GetSpan;
 
 use crate::{
+    ast_nodes::{AstNode, AstNodes},
     format_args,
     formatter::{
         Buffer, Comments, Format, FormatError, FormatResult, Formatter, SourceText,
@@ -11,9 +12,8 @@ use crate::{
         prelude::*,
         trivia::{FormatLeadingComments, format_trailing_comments},
     },
-    generated::ast_nodes::{AstNode, AstNodes},
     options::FormatTrailingCommas,
-    utils::assignment_like::AssignmentLikeLayout,
+    utils::{assignment_like::AssignmentLikeLayout, expression::ExpressionLeftSide},
     write,
     write::function::FormatContentWithCacheMode,
 };
@@ -159,37 +159,19 @@ impl<'a> Format<'a> for FormatJsArrowFunctionExpression<'a, '_> {
                     };
                 }
 
-                #[expect(clippy::match_same_arms)]
-                let body_has_soft_line_break = arrow_expression.is_none_or(|expression| {
-                    match expression {
+                let body_has_soft_line_break =
+                    arrow_expression.is_none_or(|expression| match expression {
                         Expression::ArrowFunctionExpression(_)
                         | Expression::ArrayExpression(_)
                         | Expression::ObjectExpression(_) => {
-                            // TODO: It seems no difference whether check there is a leading comment or not.
-                            // !f.comments().has_leading_own_line_comment(body.span().start)
-                            true
+                            !f.comments().has_leading_own_line_comment(body.span().start)
                         }
                         Expression::JSXElement(_) | Expression::JSXFragment(_) => true,
-                        Expression::TemplateLiteral(template) => {
-                            is_multiline_template_starting_on_same_line(
-                                template.span.start,
-                                template,
-                                f.source_text(),
-                            )
+                        _ => {
+                            is_multiline_template_starting_on_same_line(expression, f.source_text())
                         }
-                        Expression::TaggedTemplateExpression(template) => {
-                            is_multiline_template_starting_on_same_line(
-                                template.span.start,
-                                &template.quasi,
-                                f.source_text(),
-                            )
-                        }
-                        _ => false,
-                    }
-                });
+                    });
 
-                let body_is_condition_type =
-                    matches!(arrow_expression, Some(Expression::ConditionalExpression(_)));
                 if body_has_soft_line_break {
                     write!(f, [formatted_signature, space(), format_body])
                 } else {
@@ -200,11 +182,13 @@ impl<'a> Format<'a> for FormatJsArrowFunctionExpression<'a, '_> {
                         Some(GroupedCallArgumentLayout::GroupedLastArgument)
                     );
 
-                    let should_add_soft_line = (is_last_call_arg
+                    let should_add_soft_line = is_last_call_arg
                         // if it's inside a JSXExpression (e.g. an attribute) we should align the expression's closing } with the line with the opening {.
-                        || matches!(self.arrow.parent, AstNodes::JSXExpressionContainer(_)));
-                    // TODO: it seems no difference whether check there is a comment or not.
-                    //&& !f.context().comments().has_comments(node.syntax());
+                        || (matches!(self.arrow.parent, AstNodes::JSXExpressionContainer(container)
+                            if !f.context().comments().has_comment_in_range(arrow.span.end, container.span.end)));
+
+                    let body_is_condition_type =
+                        matches!(arrow_expression, Some(Expression::ConditionalExpression(_)));
 
                     if body_is_condition_type {
                         write!(
@@ -392,10 +376,15 @@ impl<'a, 'b> ArrowFunctionLayout<'a, 'b> {
 ///
 /// Returns `false` because the template isn't on the same line as the '+' token.
 pub fn is_multiline_template_starting_on_same_line(
-    start: u32,
-    template: &TemplateLiteral,
+    expression: &Expression,
     source_text: SourceText,
 ) -> bool {
+    let (start, template) = match expression {
+        Expression::TemplateLiteral(template) => (template.span.start, template.as_ref()),
+        Expression::TaggedTemplateExpression(tagged) => (tagged.span.start, &tagged.quasi),
+        _ => return false,
+    };
+
     template.quasis.iter().any(|quasi| source_text.contains_newline(quasi.span))
         && !source_text.has_newline_before(start)
 }
@@ -684,131 +673,6 @@ impl<'a> Format<'a> for ArrowChain<'a, '_> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum ExpressionLeftSide<'a, 'b> {
-    Expression(&'b AstNode<'a, Expression<'a>>),
-    AssignmentTarget(&'b AstNode<'a, AssignmentTarget<'a>>),
-    SimpleAssignmentTarget(&'b AstNode<'a, SimpleAssignmentTarget<'a>>),
-}
-
-impl<'a, 'b> From<&'b AstNode<'a, Expression<'a>>> for ExpressionLeftSide<'a, 'b> {
-    fn from(value: &'b AstNode<'a, Expression<'a>>) -> Self {
-        Self::Expression(value)
-    }
-}
-
-impl<'a, 'b> From<&'b AstNode<'a, AssignmentTarget<'a>>> for ExpressionLeftSide<'a, 'b> {
-    fn from(value: &'b AstNode<'a, AssignmentTarget<'a>>) -> Self {
-        Self::AssignmentTarget(value)
-    }
-}
-
-impl<'a, 'b> From<&'b AstNode<'a, SimpleAssignmentTarget<'a>>> for ExpressionLeftSide<'a, 'b> {
-    fn from(value: &'b AstNode<'a, SimpleAssignmentTarget<'a>>) -> Self {
-        Self::SimpleAssignmentTarget(value)
-    }
-}
-
-impl<'a, 'b> ExpressionLeftSide<'a, 'b> {
-    pub fn leftmost(expression: &'b AstNode<'a, Expression<'a>>) -> Self {
-        let mut current: Self = expression.into();
-        loop {
-            match current.left_expression() {
-                None => {
-                    break current;
-                }
-                Some(left) => {
-                    current = left;
-                }
-            }
-        }
-    }
-
-    /// Returns the left side of an expression (an expression where the first child is a `Node` or [None]
-    /// if the expression has no left side.
-    pub fn left_expression(&self) -> Option<Self> {
-        match self {
-            Self::Expression(expression) => match expression.as_ast_nodes() {
-                AstNodes::SequenceExpression(expr) => expr.expressions().first().map(Into::into),
-                AstNodes::StaticMemberExpression(expr) => Some(expr.object().into()),
-                AstNodes::ComputedMemberExpression(expr) => Some(expr.object().into()),
-                AstNodes::PrivateFieldExpression(expr) => Some(expr.object().into()),
-                AstNodes::TaggedTemplateExpression(expr) => Some(expr.tag().into()),
-                AstNodes::NewExpression(expr) => Some(expr.callee().into()),
-                AstNodes::CallExpression(expr) => Some(expr.callee().into()),
-                AstNodes::ConditionalExpression(expr) => Some(expr.test().into()),
-                AstNodes::TSAsExpression(expr) => Some(expr.expression().into()),
-                AstNodes::TSSatisfiesExpression(expr) => Some(expr.expression().into()),
-                AstNodes::TSNonNullExpression(expr) => Some(expr.expression().into()),
-                AstNodes::AssignmentExpression(expr) => Some(Self::AssignmentTarget(expr.left())),
-                AstNodes::UpdateExpression(expr) => {
-                    if expr.prefix {
-                        None
-                    } else {
-                        Some(Self::SimpleAssignmentTarget(expr.argument()))
-                    }
-                }
-                AstNodes::BinaryExpression(binary) => Some(binary.left().into()),
-                AstNodes::LogicalExpression(logical) => Some(logical.left().into()),
-                AstNodes::ChainExpression(chain) => match &chain.expression().as_ast_nodes() {
-                    AstNodes::CallExpression(expr) => Some(expr.callee().into()),
-                    AstNodes::TSNonNullExpression(expr) => Some(expr.expression().into()),
-                    AstNodes::ComputedMemberExpression(expr) => Some(expr.object().into()),
-                    AstNodes::StaticMemberExpression(expr) => Some(expr.object().into()),
-                    AstNodes::PrivateFieldExpression(expr) => Some(expr.object().into()),
-                    _ => {
-                        unreachable!()
-                    }
-                },
-                _ => None,
-            },
-            Self::AssignmentTarget(target) => {
-                Self::get_left_side_of_assignment(target.as_ast_nodes())
-            }
-            Self::SimpleAssignmentTarget(target) => {
-                Self::get_left_side_of_assignment(target.as_ast_nodes())
-            }
-        }
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = ExpressionLeftSide<'a, 'b>> {
-        iter::successors(Some(*self), |f| match f {
-            ExpressionLeftSide::Expression(expression) => {
-                Self::Expression(expression).left_expression()
-            }
-            _ => None,
-        })
-    }
-
-    pub fn iter_expression(&self) -> impl Iterator<Item = &AstNode<'_, Expression<'_>>> {
-        self.iter().filter_map(|left| match left {
-            ExpressionLeftSide::Expression(expression) => Some(expression),
-            _ => None,
-        })
-    }
-
-    pub fn span(&self) -> Span {
-        match self {
-            ExpressionLeftSide::Expression(expression) => expression.span(),
-            ExpressionLeftSide::AssignmentTarget(target) => target.span(),
-            ExpressionLeftSide::SimpleAssignmentTarget(target) => target.span(),
-        }
-    }
-
-    fn get_left_side_of_assignment(node: &'b AstNodes<'a>) -> Option<ExpressionLeftSide<'a, 'b>> {
-        match node {
-            AstNodes::TSAsExpression(expr) => Some(expr.expression().into()),
-            AstNodes::TSSatisfiesExpression(expr) => Some(expr.expression().into()),
-            AstNodes::TSNonNullExpression(expr) => Some(expr.expression().into()),
-            AstNodes::TSTypeAssertion(expr) => Some(expr.expression().into()),
-            AstNodes::ComputedMemberExpression(expr) => Some(expr.object().into()),
-            AstNodes::StaticMemberExpression(expr) => Some(expr.object().into()),
-            AstNodes::PrivateFieldExpression(expr) => Some(expr.object().into()),
-            _ => None,
-        }
-    }
-}
-
 fn should_add_parens(body: &AstNode<'_, FunctionBody<'_>>) -> bool {
     let AstNodes::ExpressionStatement(stmt) = body.statements().first().unwrap().as_ast_nodes()
     else {
@@ -820,14 +684,10 @@ fn should_add_parens(body: &AstNode<'_, FunctionBody<'_>>) -> bool {
     // case and added by the object expression itself
     if matches!(&stmt.expression, Expression::ConditionalExpression(_)) {
         !matches!(
-            ExpressionLeftSide::leftmost(stmt.expression()),
-            ExpressionLeftSide::Expression(
-                e
-            ) if matches!(e.as_ref(),
-                Expression::ObjectExpression(_)
+            ExpressionLeftSide::leftmost(stmt.expression()).as_ref(),
+            Expression::ObjectExpression(_)
                 | Expression::FunctionExpression(_)
                 | Expression::ClassExpression(_)
-            )
         )
     } else {
         false

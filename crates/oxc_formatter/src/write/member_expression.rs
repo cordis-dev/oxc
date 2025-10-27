@@ -4,7 +4,9 @@ use oxc_ast::ast::*;
 use oxc_span::GetSpan;
 
 use crate::{
-    JsLabels, format_args,
+    JsLabels,
+    ast_nodes::{AstNode, AstNodes},
+    format_args,
     formatter::{
         Buffer, Format, FormatResult, Formatter,
         buffer::RemoveSoftLinesBuffer,
@@ -14,7 +16,6 @@ use crate::{
             FormatTrailingComments, format_dangling_comments,
         },
     },
-    generated::ast_nodes::{AstNode, AstNodes},
     options::Expand,
     utils::member_chain::chain_member::FormatComputedMemberExpressionWithoutObject,
     write,
@@ -126,7 +127,8 @@ fn layout<'a>(
             if no_break || is_member_chain {
                 return StaticMemberLayout::NoBreak;
             }
-            true
+
+            false
         }
         AstNodes::StaticMemberExpression(_) | AstNodes::ComputedMemberExpression(_) => true,
         _ => false,
@@ -139,13 +141,17 @@ fn layout<'a>(
     let mut first_non_static_member_ancestor = parent;
     while matches!(
         first_non_static_member_ancestor,
-        AstNodes::StaticMemberExpression(_) | AstNodes::ComputedMemberExpression(_)
+        AstNodes::StaticMemberExpression(_)
+            | AstNodes::ComputedMemberExpression(_)
+            | AstNodes::ChainExpression(_)
     ) {
         first_non_static_member_ancestor = first_non_static_member_ancestor.parent();
     }
 
     match first_non_static_member_ancestor {
-        AstNodes::NewExpression(_) => StaticMemberLayout::NoBreak,
+        AstNodes::Argument(argument) if matches!(argument.parent, AstNodes::NewExpression(_)) => {
+            StaticMemberLayout::NoBreak
+        }
         AstNodes::AssignmentExpression(assignment) => {
             if matches!(assignment.left, AssignmentTarget::AssignmentTargetIdentifier(_)) {
                 StaticMemberLayout::BreakAfterObject

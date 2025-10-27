@@ -3,7 +3,6 @@ use std::{str::FromStr, sync::Arc};
 use futures::future::join_all;
 use log::{debug, info, warn};
 use rustc_hash::FxBuildHasher;
-use serde_json::json;
 use tokio::sync::{OnceCell, RwLock, SetError};
 use tower_lsp_server::{
     Client, LanguageServer,
@@ -11,10 +10,10 @@ use tower_lsp_server::{
     lsp_types::{
         CodeActionParams, CodeActionResponse, ConfigurationItem, Diagnostic,
         DidChangeConfigurationParams, DidChangeTextDocumentParams, DidChangeWatchedFilesParams,
-        DidChangeWatchedFilesRegistrationOptions, DidChangeWorkspaceFoldersParams,
-        DidCloseTextDocumentParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
-        DocumentFormattingParams, ExecuteCommandParams, InitializeParams, InitializeResult,
-        InitializedParams, Registration, ServerInfo, TextEdit, Unregistration, Uri, WorkspaceEdit,
+        DidChangeWorkspaceFoldersParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams,
+        DidSaveTextDocumentParams, DocumentFormattingParams, ExecuteCommandParams,
+        InitializeParams, InitializeResult, InitializedParams, Registration, ServerInfo, TextEdit,
+        Unregistration, Uri, WorkspaceEdit,
     },
 };
 
@@ -204,13 +203,7 @@ impl LanguageServer for Backend {
         // init all file watchers
         if capabilities.dynamic_watchers {
             for worker in workers {
-                registrations.push(Registration {
-                    id: format!("watcher-{}", worker.get_root_uri().as_str()),
-                    method: "workspace/didChangeWatchedFiles".to_string(),
-                    register_options: Some(json!(DidChangeWatchedFilesRegistrationOptions {
-                        watchers: worker.init_watchers().await
-                    })),
-                });
+                registrations.extend(worker.init_watchers().await);
             }
         }
 
@@ -260,8 +253,7 @@ impl LanguageServer for Backend {
     /// See: <https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workspace_didChangeConfiguration>
     async fn did_change_configuration(&self, params: DidChangeConfigurationParams) {
         let workers = self.workspace_workers.read().await;
-        let new_diagnostics: papaya::HashMap<String, Vec<Diagnostic>, FxBuildHasher> =
-            ConcurrentHashMap::default();
+        let mut new_diagnostics = Vec::new();
         let mut removing_registrations = vec![];
         let mut adding_registrations = vec![];
 
@@ -327,7 +319,7 @@ impl LanguageServer for Backend {
                 continue;
             };
 
-            let (diagnostics, watcher, formatter_activated) =
+            let (diagnostics, registrations, unregistrations, formatter_activated) =
                 worker.did_change_configuration(&option.options).await;
 
             if formatter_activated && self.capabilities.get().is_some_and(|c| c.dynamic_formatting)
@@ -336,41 +328,15 @@ impl LanguageServer for Backend {
             }
 
             if let Some(diagnostics) = diagnostics {
-                for (uri, reports) in &diagnostics.pin() {
-                    new_diagnostics.pin().insert(
-                        uri.clone(),
-                        reports.iter().map(|d| d.diagnostic.clone()).collect(),
-                    );
-                }
+                new_diagnostics.extend(diagnostics);
             }
 
-            if let Some(watcher) = watcher
-                && self.capabilities.get().is_some_and(|capabilities| capabilities.dynamic_watchers)
-            {
-                // remove the old watcher
-                removing_registrations.push(Unregistration {
-                    id: format!("watcher-{}", worker.get_root_uri().as_str()),
-                    method: "workspace/didChangeWatchedFiles".to_string(),
-                });
-                // add the new watcher
-                adding_registrations.push(Registration {
-                    id: format!("watcher-{}", worker.get_root_uri().as_str()),
-                    method: "workspace/didChangeWatchedFiles".to_string(),
-                    register_options: Some(json!(DidChangeWatchedFilesRegistrationOptions {
-                        watchers: vec![watcher]
-                    })),
-                });
-            }
+            removing_registrations.extend(unregistrations);
+            adding_registrations.extend(registrations);
         }
 
         if !new_diagnostics.is_empty() {
-            let x = &new_diagnostics
-                .pin()
-                .into_iter()
-                .map(|(key, value)| (key.clone(), value.clone()))
-                .collect::<Vec<_>>();
-
-            self.publish_all_diagnostics(x).await;
+            self.publish_all_diagnostics(&new_diagnostics).await;
         }
 
         // override the existing formatting registration
@@ -403,8 +369,9 @@ impl LanguageServer for Backend {
         let workers = self.workspace_workers.read().await;
         // ToDo: what if an empty changes flag is passed?
         debug!("watched file did change");
-        let all_diagnostics: papaya::HashMap<String, Vec<Diagnostic>, FxBuildHasher> =
-            ConcurrentHashMap::default();
+
+        let mut all_diagnostics = Vec::new();
+
         for file_event in &params.changes {
             // We do not expect multiple changes from the same workspace folder.
             // If we should consider it, we need to map the events to the workers first,
@@ -418,24 +385,12 @@ impl LanguageServer for Backend {
                 continue;
             };
 
-            for (key, value) in &diagnostics.pin() {
-                all_diagnostics
-                    .pin()
-                    .insert(key.clone(), value.iter().map(|d| d.diagnostic.clone()).collect());
-            }
+            all_diagnostics.extend(diagnostics);
         }
 
-        if all_diagnostics.is_empty() {
-            return;
+        if !all_diagnostics.is_empty() {
+            self.publish_all_diagnostics(&all_diagnostics).await;
         }
-
-        let x = &all_diagnostics
-            .pin()
-            .into_iter()
-            .map(|(key, value)| (key.clone(), value.clone()))
-            .collect::<Vec<_>>();
-
-        self.publish_all_diagnostics(x).await;
     }
 
     /// The server will start new [WorkspaceWorker]s for added workspace folders
@@ -487,13 +442,7 @@ impl LanguageServer for Backend {
 
                 worker.start_worker(options).await;
 
-                added_registrations.push(Registration {
-                    id: format!("watcher-{}", worker.get_root_uri().as_str()),
-                    method: "workspace/didChangeWatchedFiles".to_string(),
-                    register_options: Some(json!(DidChangeWatchedFilesRegistrationOptions {
-                        watchers: worker.init_watchers().await
-                    })),
-                });
+                added_registrations.extend(worker.init_watchers().await);
                 workers.push(worker);
             }
         // client does not support the request

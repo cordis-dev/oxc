@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::{ops::Deref, ptr::dangling};
 
 use oxc_allocator::{Address, Vec};
 use oxc_ast::{ast::*, match_expression};
@@ -6,9 +6,10 @@ use oxc_span::GetSpan;
 use oxc_syntax::identifier::{ZWNBSP, is_line_terminator};
 
 use crate::{
-    Buffer, Format, FormatResult, FormatTrailingCommas, TrailingSeparator, format_args,
+    Buffer, Format, FormatResult, FormatTrailingCommas, TrailingSeparator,
+    ast_nodes::{AstNode, AstNodes},
+    format_args,
     formatter::{prelude::*, trivia::FormatTrailingComments},
-    generated::ast_nodes::{AstNode, AstNodes},
     utils::{
         call_expression::is_test_call_expression,
         is_long_curried_call,
@@ -24,8 +25,7 @@ use super::FormatWrite;
 impl<'a> FormatWrite<'a> for AstNode<'a, Program<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
         let format_trailing_comments = format_once(|f| {
-            let comments = f.context().comments().comments_before(self.span.end);
-            write!(f, FormatTrailingComments::Comments(comments))
+            write!(f, FormatTrailingComments::Comments(f.context().comments().unprinted_comments()))
         });
 
         write!(

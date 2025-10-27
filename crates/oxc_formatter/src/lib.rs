@@ -9,10 +9,7 @@
     clippy::struct_field_names
 )] // FIXME: all these needs to be fixed.
 
-mod generated {
-    pub mod ast_nodes;
-    mod format;
-}
+mod ast_nodes;
 mod formatter;
 mod ir_transform;
 mod options;
@@ -40,8 +37,8 @@ pub use crate::service::{
     source_type::{enable_jsx_source_type, get_supported_source_type},
 };
 use crate::{
+    ast_nodes::{AstNode, AstNodes},
     formatter::{FormatContext, Formatted, format_element::document::Document},
-    generated::ast_nodes::{AstNode, AstNodes},
     ir_transform::SortImportsTransform,
 };
 
@@ -58,19 +55,13 @@ impl<'a> Formatter<'a> {
         Self { allocator, source_text: "", options }
     }
 
-    /// Formats the given AST `Program` and returns the IR before printing.
-    pub fn doc(mut self, program: &'a Program<'a>) -> Document<'a> {
-        let formatted = self.format(program);
-        formatted.into_document()
-    }
-
     /// Formats the given AST `Program` and returns the formatted string.
     pub fn build(mut self, program: &Program<'a>) -> String {
         let formatted = self.format(program);
         formatted.print().unwrap().into_code()
     }
 
-    fn format(mut self, program: &'a Program<'a>) -> Formatted<'a> {
+    pub fn format(mut self, program: &'a Program<'a>) -> Formatted<'a> {
         let parent = self.allocator.alloc(AstNodes::Dummy());
         let program_node = AstNode::new(program, parent, self.allocator);
 
@@ -79,9 +70,14 @@ impl<'a> Formatter<'a> {
 
         let experimental_sort_imports = self.options.experimental_sort_imports;
 
-        let context = FormatContext::new(program, self.allocator, self.options);
+        let context = FormatContext::new(
+            program.source_text,
+            program.source_type,
+            &program.comments,
+            self.allocator,
+            self.options,
+        );
         let mut formatted = formatter::format(
-            program,
             context,
             formatter::Arguments::new(&[formatter::Argument::new(&program_node)]),
         )

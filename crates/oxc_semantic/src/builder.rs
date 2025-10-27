@@ -870,11 +870,25 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
         let kind = AstKind::LogicalExpression(self.alloc(expr));
         self.enter_node(kind);
 
+        /* cfg - condition basic block */
+        #[cfg(feature = "cfg")]
+        let (before_logical_graph_ix, start_of_condition_graph_ix) = control_flow!(self, |cfg| {
+            let before_logical_graph_ix = cfg.current_node_ix;
+            let start_of_condition_graph_ix = cfg.new_basic_block_normal();
+            (before_logical_graph_ix, start_of_condition_graph_ix)
+        });
+        /* cfg */
+
+        #[cfg(feature = "cfg")]
+        self.record_ast_nodes();
         self.visit_expression(&expr.left);
+        #[cfg(feature = "cfg")]
+        let left_node_id = self.retrieve_recorded_ast_node();
 
         /* cfg  */
         #[cfg(feature = "cfg")]
         let (left_expr_end_ix, right_expr_start_ix) = control_flow!(self, |cfg| {
+            cfg.append_condition_to(start_of_condition_graph_ix, left_node_id);
             let left_expr_end_ix = cfg.current_node_ix;
             let right_expr_start_ix = cfg.new_basic_block_normal();
             (left_expr_end_ix, right_expr_start_ix)
@@ -888,6 +902,7 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
             let right_expr_end_ix = cfg.current_node_ix;
             let after_logical_expr_ix = cfg.new_basic_block_normal();
 
+            cfg.add_edge(before_logical_graph_ix, start_of_condition_graph_ix, EdgeType::Normal);
             cfg.add_edge(left_expr_end_ix, right_expr_start_ix, EdgeType::Normal);
             cfg.add_edge(left_expr_end_ix, after_logical_expr_ix, EdgeType::Normal);
             cfg.add_edge(right_expr_end_ix, after_logical_expr_ix, EdgeType::Normal);
@@ -913,12 +928,36 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
             self.current_reference_flags = ReferenceFlags::read_write();
         }
 
+        /* cfg - condition basic block */
+        #[cfg(feature = "cfg")]
+        let (before_assignment_graph_ix, start_of_condition_graph_ix) =
+            control_flow!(self, |cfg| {
+                if expr.operator.is_logical() {
+                    let before_assignment_graph_ix = cfg.current_node_ix;
+                    let start_of_condition_graph_ix = cfg.new_basic_block_normal();
+                    (Some(before_assignment_graph_ix), Some(start_of_condition_graph_ix))
+                } else {
+                    (None, None)
+                }
+            });
+        /* cfg */
+
+        #[cfg(feature = "cfg")]
+        if expr.operator.is_logical() {
+            self.record_ast_nodes();
+        }
         self.visit_assignment_target(&expr.left);
+        #[cfg(feature = "cfg")]
+        let target_node_id =
+            if expr.operator.is_logical() { self.retrieve_recorded_ast_node() } else { None };
 
         /* cfg  */
         #[cfg(feature = "cfg")]
         let cfg_ixs = control_flow!(self, |cfg| {
             if expr.operator.is_logical() {
+                if let Some(condition_ix) = start_of_condition_graph_ix {
+                    cfg.append_condition_to(condition_ix, target_node_id);
+                }
                 let target_end_ix = cfg.current_node_ix;
                 let expr_start_ix = cfg.new_basic_block_normal();
                 Some((target_end_ix, expr_start_ix))
@@ -936,6 +975,11 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
                 let expr_end_ix = cfg.current_node_ix;
                 let after_assignment_ix = cfg.new_basic_block_normal();
 
+                if let Some((before_ix, condition_ix)) =
+                    before_assignment_graph_ix.zip(start_of_condition_graph_ix)
+                {
+                    cfg.add_edge(before_ix, condition_ix, EdgeType::Normal);
+                }
                 cfg.add_edge(target_end_ix, expr_start_ix, EdgeType::Normal);
                 cfg.add_edge(target_end_ix, after_assignment_ix, EdgeType::Normal);
                 cfg.add_edge(expr_end_ix, after_assignment_ix, EdgeType::Normal);
@@ -1438,11 +1482,13 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
 
         if let Some(expr) = &case.test {
             #[cfg(feature = "cfg")]
+            let condition_block_ix = control_flow!(self, |cfg| cfg.current_node_ix);
+            #[cfg(feature = "cfg")]
             self.record_ast_nodes();
             self.visit_expression(expr);
             #[cfg(feature = "cfg")]
             let test_node_id = self.retrieve_recorded_ast_node();
-            control_flow!(self, |cfg| cfg.append_condition_to(cfg.current_node_ix, test_node_id));
+            control_flow!(self, |cfg| cfg.append_condition_to(condition_block_ix, test_node_id));
         }
 
         /* cfg */
@@ -1527,12 +1573,7 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
             self.visit_catch_clause(handler);
 
             /* cfg */
-            control_flow!(self, |cfg| {
-                let catch_block_end_ix = cfg.current_node_ix;
-                // TODO: we shouldn't directly change the current node index.
-                cfg.current_node_ix = after_try_block_graph_ix;
-                Some(catch_block_end_ix)
-            })
+            control_flow!(self, |cfg| Some(cfg.current_node_ix))
             /* cfg */
         } else {
             None
@@ -1559,12 +1600,7 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
             self.visit_block_statement(finalizer);
 
             /* cfg */
-            control_flow!(self, |cfg| {
-                let finally_block_end_ix = cfg.current_node_ix;
-                // TODO: we shouldn't directly change the current node index.
-                cfg.current_node_ix = after_try_block_graph_ix;
-                Some(finally_block_end_ix)
-            })
+            control_flow!(self, |cfg| Some(cfg.current_node_ix))
             /* cfg */
         } else {
             None
@@ -1577,7 +1613,6 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
 
         /* cfg */
         control_flow!(self, |cfg| {
-            let after_try_statement_block_ix = cfg.new_basic_block_normal();
             cfg.add_edge(
                 before_try_statement_graph_ix,
                 before_try_block_graph_ix,
@@ -1586,6 +1621,7 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
             if let Some(catch_block_end_ix) = catch_block_end_ix
                 && finally_block_end_ix.is_none()
             {
+                let after_try_statement_block_ix = cfg.new_basic_block_normal();
                 cfg.add_edge(
                     after_try_block_graph_ix,
                     after_try_statement_block_ix,
@@ -1595,6 +1631,7 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
                 cfg.add_edge(catch_block_end_ix, after_try_statement_block_ix, EdgeType::Normal);
             }
             if let Some(finally_block_end_ix) = finally_block_end_ix {
+                let after_try_statement_block_ix = cfg.new_basic_block_normal();
                 if catch_block_end_ix.is_some() {
                     cfg.add_edge(
                         finally_block_end_ix,
@@ -1678,6 +1715,7 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
         /* cfg */
 
         self.visit_expression(&stmt.object);
+        self.enter_scope(ScopeFlags::empty(), &stmt.scope_id);
 
         /* cfg - body basic block */
         #[cfg(feature = "cfg")]
@@ -1697,6 +1735,7 @@ impl<'a> Visit<'a> for SemanticBuilder<'a> {
         });
         /* cfg */
 
+        self.leave_scope();
         self.leave_node(kind);
     }
 

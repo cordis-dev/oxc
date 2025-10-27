@@ -23,15 +23,15 @@ const PATHS_ERROR_MESSAGE: &str = "PATH must not contain \"..\"";
 pub struct FormatCommand {
     #[bpaf(external, fallback(OutputOptions::DefaultWrite))]
     pub output_options: OutputOptions,
-
     #[bpaf(external)]
     pub basic_options: BasicOptions,
-
+    #[bpaf(external)]
+    pub ignore_options: IgnoreOptions,
     #[bpaf(external)]
     pub misc_options: MiscOptions,
-
     /// Single file, single path or list of paths.
     /// If not provided, current working directory is used.
+    /// Glob is supported only for exclude patterns like `'!**/fixtures/*.js'.
     // `bpaf(fallback)` seems to have issues with `many` or `positional`,
     // so we implement the fallback behavior in code instead.
     #[bpaf(positional("PATH"), many, guard(validate_paths, PATHS_ERROR_MESSAGE))]
@@ -41,7 +41,7 @@ pub struct FormatCommand {
 /// Output Options
 #[derive(Debug, Clone, Bpaf)]
 pub enum OutputOptions {
-    /// Default - when no output option is specified, behaves like `--write`
+    /// Default - when no output option is specified, behaves like `--write` mode in Prettier
     #[bpaf(hide)]
     DefaultWrite,
     /// Check mode - check if files are formatted
@@ -58,6 +58,18 @@ pub struct BasicOptions {
     /// Path to the configuration file
     #[bpaf(short, long, argument("PATH"))]
     pub config: Option<PathBuf>,
+}
+
+/// Ignore Options
+#[derive(Debug, Clone, Bpaf)]
+pub struct IgnoreOptions {
+    /// Path to ignore file(s). Can be specified multiple times.
+    /// If not specified, .gitignore and .prettierignore in the current directory are used.
+    #[bpaf(argument("PATH"), many)]
+    pub ignore_path: Vec<PathBuf>,
+    /// Format code in node_modules directory (skipped by default)
+    #[bpaf(switch, hide_usage)]
+    pub with_node_modules: bool,
 }
 
 /// Miscellaneous

@@ -3,9 +3,10 @@ use oxc_span::GetSpan;
 use oxc_syntax::identifier::is_line_terminator;
 
 use crate::{
-    Format, FormatResult, format_args,
+    Format, FormatResult,
+    ast_nodes::AstNode,
+    format_args,
     formatter::{Formatter, comments::Comments, prelude::*},
-    generated::ast_nodes::AstNode,
     write,
     write::{ExpressionLeftSide, semicolon::OptionalSemicolon},
 };
@@ -117,23 +118,21 @@ impl<'a> Format<'a> for FormatAdjacentArgument<'a, '_> {
 /// parentheses will be removed (and be re-added by the return statement, but only if the argument breaks)
 fn has_argument_leading_comments(argument: &AstNode<Expression>, f: &Formatter<'_, '_>) -> bool {
     let source_text = f.source_text();
-    let mut current = Some(ExpressionLeftSide::from(argument));
 
-    while let Some(left_side) = current {
+    for left_side in ExpressionLeftSide::from(argument).iter() {
         let start = left_side.span().start;
-        let comments = f.comments().comments_before(start);
+        let comments = f.context().comments();
+        let leading_comments = comments.comments_before(start);
 
-        if f.comments().comments_before_iter(start).any(|comment| {
-            source_text.contains_newline(comment.span)
-                || source_text.is_end_of_line_comment(comment)
+        if leading_comments.iter().any(|comment| {
+            source_text.contains_newline(comment.span) || comments.is_end_of_line_comment(comment)
         }) {
             return true;
         }
 
-        let is_own_line_comment_or_multi_line_comment = |comments: &[Comment]| {
-            comments.iter().any(|comment| {
-                source_text.is_own_line_comment(comment)
-                    || source_text.contains_newline(comment.span)
+        let is_own_line_comment_or_multi_line_comment = |leading_comments: &[Comment]| {
+            leading_comments.iter().any(|comment| {
+                comments.is_own_line_comment(comment) || source_text.contains_newline(comment.span)
             })
         };
 
@@ -164,8 +163,6 @@ fn has_argument_leading_comments(argument: &AstNode<Expression>, f: &Formatter<'
                 return true;
             }
         }
-
-        current = left_side.left_expression();
     }
 
     false

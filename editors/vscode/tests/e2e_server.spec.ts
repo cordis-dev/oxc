@@ -36,6 +36,7 @@ teardown(async () => {
   await workspace.getConfiguration('oxc').update('tsConfigPath', undefined);
   await workspace.getConfiguration('oxc').update('typeAware', undefined);
   await workspace.getConfiguration('oxc').update('fmt.experimental', undefined);
+  await workspace.getConfiguration('oxc').update('fmt.configPath', undefined);
   await workspace.getConfiguration('editor').update('defaultFormatter', undefined);
   await workspace.saveAll();
 });
@@ -73,6 +74,7 @@ suite('E2E Diagnostics', () => {
   testSingleFolderMode('detects diagnostics on run', async () =>
   {
     await loadFixture('lint_on_run');
+    await sleep(250);
     const diagnostics = await getDiagnosticsWithoutClose(`onType.ts`);
     strictEqual(diagnostics.length, 0);
 
@@ -90,6 +92,7 @@ suite('E2E Diagnostics', () => {
 
   test('empty oxlint configuration behaves like default configuration', async () => {
     await loadFixture('debugger_empty_config');
+    await sleep(250);
     const diagnostics = await getDiagnostics('debugger.js');
 
     strictEqual(diagnostics.length, 1);
@@ -287,5 +290,24 @@ suite('E2E Diagnostics', () => {
     const content = await workspace.fs.readFile(fileUri);
 
     strictEqual(content.toString(), "class X {\n  foo() {\n    return 42;\n  }\n}\n");
+  });
+
+  test('formats code with `oxc.fmt.configPath`', async () => {
+    await loadFixture('formatting_with_config');
+
+    await workspace.getConfiguration('oxc').update('fmt.experimental', true);
+    await workspace.getConfiguration('oxc').update('fmt.configPath', './fixtures/formatter.json');
+    await workspace.getConfiguration('editor').update('defaultFormatter', 'oxc.oxc-vscode');
+
+    await sleep(500); // wait for the server to pick up the new config
+    const fileUri = Uri.joinPath(fixturesWorkspaceUri(), 'fixtures', 'formatting.ts');
+
+    const document = await workspace.openTextDocument(fileUri);
+    await window.showTextDocument(document);
+    await commands.executeCommand('editor.action.formatDocument');
+    await workspace.saveAll();
+    const content = await workspace.fs.readFile(fileUri);
+
+    strictEqual(content.toString(), "class X {\n  foo() {\n    return 42\n  }\n}\n");
   });
 });

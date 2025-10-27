@@ -5,7 +5,9 @@ use oxc_ast::{ast::*, match_expression};
 use oxc_span::GetSpan;
 
 use crate::{
-    Buffer, Format, FormatResult, FormatTrailingCommas, TrailingSeparator, format_args,
+    Buffer, Format, FormatResult, FormatTrailingCommas, TrailingSeparator,
+    ast_nodes::{AstNode, AstNodes},
+    format_args,
     formatter::{
         BufferExtensions, Comments, FormatElement, FormatError, Formatter, SourceText, VecBuffer,
         format_element,
@@ -16,7 +18,6 @@ use crate::{
         separated::FormatSeparatedIter,
         trivia::{DanglingIndentMode, format_dangling_comments},
     },
-    generated::ast_nodes::{AstNode, AstNodes},
     utils::{
         call_expression::is_test_call_expression, is_long_curried_call,
         member_chain::simple_argument::SimpleArgument,
@@ -114,7 +115,7 @@ impl<'a> Format<'a> for AstNode<'a, ArenaVec<'a, Argument<'a>>> {
         });
 
         if has_empty_line
-            || (!matches!(self.parent.parent(), AstNodes::Decorator(_))
+            || (!matches!(self.grand_parent(), AstNodes::Decorator(_))
                 && is_function_composition_args(self))
         {
             return format_all_args_broken_out(self, true, f);
@@ -123,17 +124,14 @@ impl<'a> Format<'a> for AstNode<'a, ArenaVec<'a, Argument<'a>>> {
         if let Some(group_layout) = arguments_grouped_layout(call_like_span, self, f) {
             write_grouped_arguments(self, group_layout, f)
         } else if call_expression.is_some_and(|call| is_long_curried_call(call)) {
+            let trailing_operator = FormatTrailingCommas::All.trailing_separator(f.options());
             write!(
                 f,
                 [
                     l_paren_token,
                     soft_block_indent(&format_once(|f| {
                         f.join_with(soft_line_break_or_space())
-                            .entries_with_trailing_separator(
-                                self.iter(),
-                                ",",
-                                TrailingSeparator::Allowed,
-                            )
+                            .entries_with_trailing_separator(self.iter(), ",", trailing_operator)
                             .finish()
                     })),
                     r_paren_token,
@@ -180,7 +178,9 @@ pub fn is_function_composition_args(args: &[Argument<'_>]) -> bool {
                 };
             }
             Argument::CallExpression(call) => {
-                return is_call_expression_with_arrow_or_function(call);
+                if is_call_expression_with_arrow_or_function(call) {
+                    return true;
+                }
             }
             _ => {}
         }
@@ -190,6 +190,7 @@ pub fn is_function_composition_args(args: &[Argument<'_>]) -> bool {
 }
 
 fn format_all_elements_broken_out<'a, 'b>(
+    node: &'b AstNode<'a, ArenaVec<'a, Argument<'a>>>,
     elements: impl Iterator<Item = (FormatResult<Option<FormatElement<'a>>>, usize)>,
     expand: bool,
     mut buffer: impl Buffer<'a>,
@@ -212,7 +213,11 @@ fn format_all_elements_broken_out<'a, 'b>(
                     }
                 }
 
-                write!(f, FormatTrailingCommas::All)
+                write!(
+                    f,
+                    [(!matches!(node.parent, AstNodes::ImportExpression(_)))
+                        .then_some(FormatTrailingCommas::All)]
+                )
             })),
             ")",
         ))
@@ -242,7 +247,11 @@ fn format_all_args_broken_out<'a, 'b>(
                     write!(f, [argument, (index != last_index).then_some(",")])?;
                 }
 
-                write!(f, FormatTrailingCommas::All)
+                write!(
+                    f,
+                    [(!matches!(node.parent, AstNodes::ImportExpression(_)))
+                        .then_some(FormatTrailingCommas::All)]
+                )
             })),
             ")",
         ))
@@ -638,7 +647,7 @@ fn write_grouped_arguments<'a>(
     // If any of the not grouped elements break, then fall back to the variant where
     // all arguments are printed in expanded mode.
     if non_grouped_breaks {
-        return format_all_elements_broken_out(elements.into_iter(), true, f);
+        return format_all_elements_broken_out(node, elements.into_iter(), true, f);
     }
 
     // We now cache the delimiter tokens. This is needed because `[crate::best_fitting]` will try to
@@ -651,7 +660,7 @@ fn write_grouped_arguments<'a>(
         let mut buffer = VecBuffer::new(f.state_mut());
         buffer.write_element(FormatElement::Tag(Tag::StartEntry))?;
 
-        format_all_elements_broken_out(elements.iter().cloned(), true, &mut buffer);
+        format_all_elements_broken_out(node, elements.iter().cloned(), true, &mut buffer);
 
         buffer.write_element(FormatElement::Tag(Tag::EndEntry))?;
 
@@ -957,19 +966,11 @@ fn is_multiline_template_only_args(arguments: &[Argument], source_text: SourceTe
         return false;
     }
 
-    match arguments.first().unwrap() {
-        Argument::TemplateLiteral(template) => {
-            is_multiline_template_starting_on_same_line(template.span.start, template, source_text)
-        }
-        Argument::TaggedTemplateExpression(template) => {
-            is_multiline_template_starting_on_same_line(
-                template.span.start,
-                &template.quasi,
-                source_text,
-            )
-        }
-        _ => false,
-    }
+    arguments
+        .first()
+        .unwrap()
+        .as_expression()
+        .is_some_and(|expr| is_multiline_template_starting_on_same_line(expr, source_text))
 }
 
 /// This function is used to check if the code is a hook-like code:

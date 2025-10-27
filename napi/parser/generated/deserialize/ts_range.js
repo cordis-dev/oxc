@@ -8,11 +8,9 @@ const textDecoder = new TextDecoder('utf-8', { ignoreBOM: true }),
   { fromCodePoint } = String;
 
 export function deserialize(buffer, sourceText, sourceByteLen) {
-  return deserializeWith(buffer, sourceText, sourceByteLen, null, deserializeRawTransferData);
-}
-
-export function deserializeProgramOnly(buffer, sourceText, sourceByteLen, getLoc) {
-  return deserializeWith(buffer, sourceText, sourceByteLen, getLoc, deserializeProgram);
+  let data = deserializeWith(buffer, sourceText, sourceByteLen, null, deserializeRawTransferData);
+  resetBuffer();
+  return data;
 }
 
 function deserializeWith(buffer, sourceTextInput, sourceByteLenInput, getLocInput, deserialize) {
@@ -22,13 +20,16 @@ function deserializeWith(buffer, sourceTextInput, sourceByteLenInput, getLocInpu
   sourceText = sourceTextInput;
   sourceByteLen = sourceByteLenInput;
   sourceIsAscii = sourceText.length === sourceByteLen;
-  let data = deserialize(uint32[536870902]);
+  return deserialize(uint32[536870902]);
+}
+
+export function resetBuffer() {
+  // Clear buffer and source text string to allow them to be garbage collected
   uint8 =
     uint32 =
     float64 =
     sourceText =
       void 0;
-  return data;
 }
 
 function deserializeProgram(pos) {
@@ -4556,7 +4557,7 @@ function deserializeTSConstructorType(pos) {
     end = deserializeU32(pos + 4),
     node = {
       type: 'TSConstructorType',
-      abstract: deserializeBool(pos + 32),
+      abstract: deserializeBool(pos + 36),
       typeParameters: null,
       params: null,
       returnType: null,
@@ -4856,19 +4857,14 @@ function deserializeCommentKind(pos) {
 }
 
 function deserializeComment(pos) {
-  let type = deserializeCommentKind(pos + 12),
-    start = deserializeU32(pos),
-    end = deserializeU32(pos + 4),
-    node = {
-      type,
-      value: null,
-      start,
-      end,
-      range: [start, end],
-    },
-    endCut = type === 'Line' ? 0 : 2;
-  node.value = sourceText.slice(start + 2, end - endCut);
-  return node;
+  let type = deserializeCommentKind(pos + 12), start = deserializeU32(pos), end = deserializeU32(pos + 4);
+  return {
+    type,
+    value: sourceText.slice(start + 2, end - (type === 'Line' ? 0 : 2)),
+    start,
+    end,
+    range: [start, end],
+  };
 }
 
 function deserializeNameSpan(pos) {

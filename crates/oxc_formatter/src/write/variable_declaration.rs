@@ -6,12 +6,12 @@ use crate::utils::assignment_like::AssignmentLike;
 use crate::write::semicolon::MaybeOptionalSemicolon;
 use crate::write::{OptionalSemicolon, semicolon};
 use crate::{
+    ast_nodes::{AstNode, AstNodes},
     format_args,
     formatter::{
         Buffer, Format, FormatError, FormatResult, Formatter, prelude::*,
         separated::FormatSeparatedIter,
     },
-    generated::ast_nodes::{AstNode, AstNodes},
     options::TrailingSeparator,
     write,
 };
@@ -52,7 +52,7 @@ impl<'a> Format<'a> for AstNode<'a, Vec<'a, VariableDeclarator<'a>>> {
         let length = self.len();
 
         let is_parent_for_loop = matches!(
-            self.parent.parent(),
+            self.grand_parent(),
             AstNodes::ForStatement(_) | AstNodes::ForInStatement(_) | AstNodes::ForOfStatement(_)
         );
 

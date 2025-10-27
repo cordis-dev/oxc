@@ -1899,6 +1899,12 @@ unsafe fn walk_with_statement<'a, State, Tr: Traverse<'a, State>>(
         (node as *mut u8).add(ancestor::OFFSET_WITH_STATEMENT_OBJECT) as *mut Expression,
         ctx,
     );
+    let previous_scope_id = ctx.current_scope_id();
+    let current_scope_id = (*((node as *mut u8).add(ancestor::OFFSET_WITH_STATEMENT_SCOPE_ID)
+        as *mut Cell<Option<ScopeId>>))
+        .get()
+        .unwrap();
+    ctx.set_current_scope_id(current_scope_id);
     ctx.retag_stack(AncestorType::WithStatementBody);
     walk_statement(
         traverser,
@@ -1906,6 +1912,7 @@ unsafe fn walk_with_statement<'a, State, Tr: Traverse<'a, State>>(
         ctx,
     );
     ctx.pop_stack(pop_token);
+    ctx.set_current_scope_id(previous_scope_id);
     traverser.exit_with_statement(&mut *node, ctx);
 }
 
@@ -4736,6 +4743,13 @@ unsafe fn walk_ts_call_signature_declaration<'a, State, Tr: Traverse<'a, State>>
     ctx: &mut TraverseCtx<'a, State>,
 ) {
     traverser.enter_ts_call_signature_declaration(&mut *node, ctx);
+    let previous_scope_id = ctx.current_scope_id();
+    let current_scope_id = (*((node as *mut u8)
+        .add(ancestor::OFFSET_TS_CALL_SIGNATURE_DECLARATION_SCOPE_ID)
+        as *mut Cell<Option<ScopeId>>))
+        .get()
+        .unwrap();
+    ctx.set_current_scope_id(current_scope_id);
     let pop_token = ctx.push_stack(Ancestor::TSCallSignatureDeclarationTypeParameters(
         ancestor::TSCallSignatureDeclarationWithoutTypeParameters(node, PhantomData),
     ));
@@ -4767,6 +4781,7 @@ unsafe fn walk_ts_call_signature_declaration<'a, State, Tr: Traverse<'a, State>>
         walk_ts_type_annotation(traverser, (&mut **field) as *mut _, ctx);
     }
     ctx.pop_stack(pop_token);
+    ctx.set_current_scope_id(previous_scope_id);
     traverser.exit_ts_call_signature_declaration(&mut *node, ctx);
 }
 
@@ -5258,6 +5273,12 @@ unsafe fn walk_ts_constructor_type<'a, State, Tr: Traverse<'a, State>>(
     ctx: &mut TraverseCtx<'a, State>,
 ) {
     traverser.enter_ts_constructor_type(&mut *node, ctx);
+    let previous_scope_id = ctx.current_scope_id();
+    let current_scope_id = (*((node as *mut u8).add(ancestor::OFFSET_TS_CONSTRUCTOR_TYPE_SCOPE_ID)
+        as *mut Cell<Option<ScopeId>>))
+        .get()
+        .unwrap();
+    ctx.set_current_scope_id(current_scope_id);
     let pop_token = ctx.push_stack(Ancestor::TSConstructorTypeTypeParameters(
         ancestor::TSConstructorTypeWithoutTypeParameters(node, PhantomData),
     ));
@@ -5282,6 +5303,7 @@ unsafe fn walk_ts_constructor_type<'a, State, Tr: Traverse<'a, State>>(
         ctx,
     );
     ctx.pop_stack(pop_token);
+    ctx.set_current_scope_id(previous_scope_id);
     traverser.exit_ts_constructor_type(&mut *node, ctx);
 }
 

@@ -3,9 +3,10 @@ import { DATA_POINTER_POS_32, SOURCE_LEN_OFFSET } from '../generated/constants.j
 // We use the deserializer which removes `ParenthesizedExpression`s from AST,
 // and with `range`, `loc`, and `parent` properties on AST nodes, to match ESLint
 // @ts-expect-error we need to generate `.d.ts` file for this module
-import { deserializeProgramOnly } from '../../dist/generated/deserialize.js';
+import { deserializeProgramOnly, resetBuffer } from '../../dist/generated/deserialize.js';
 
 import visitorKeys from '../generated/keys.js';
+import * as commentMethods from './comments.js';
 import {
   getLineColumnFromOffset,
   getNodeLoc,
@@ -14,10 +15,12 @@ import {
   lines,
   resetLines,
 } from './location.js';
+import * as scopeMethods from './scope.js';
+import * as tokenMethods from './tokens.js';
 
 import type { Program } from '../generated/types.d.ts';
-import type { Scope, ScopeManager, Variable } from './scope.ts';
-import type { BufferWithArrays, Comment, Node, NodeOrToken, Ranged, Token } from './types.ts';
+import type { ScopeManager } from './scope.ts';
+import type { BufferWithArrays, Node, NodeOrToken, Ranged } from './types.ts';
 
 const { max } = Math;
 
@@ -65,7 +68,7 @@ export function initAst(): void {
 }
 
 /**
- * Reset source after file has been linted, to free memory.
+ * Reset source and AST after file has been linted, to free memory.
  *
  * Setting `buffer` to `null` also prevents AST being deserialized after linting,
  * at which point the buffer may be being reused for another file.
@@ -74,10 +77,11 @@ export function initAst(): void {
  * With `buffer` set to `null`, accessing `SOURCE_CODE.ast` will still throw, but the error message will be clearer,
  * and no danger of an infinite loop due to a circular AST (unlikely but possible).
  */
-export function resetSource(): void {
+export function resetSourceAndAst(): void {
   buffer = null;
   sourceText = null;
   ast = null;
+  resetBuffer();
   resetLines();
 }
 
@@ -155,45 +159,22 @@ export const SOURCE_CODE = Object.freeze({
   },
 
   /**
-   * Retrieve an array containing all comments in the source code.
-   * @returns Array of `Comment`s in occurrence order.
+   * Get all the ancestors of a given node.
+   * @param node - AST node
+   * @returns All the ancestor nodes in the AST, not including the provided node,
+   *   starting from the root node at index 0 and going inwards to the parent node.
    */
-  getAllComments(): Comment[] {
-    if (ast === null) initAst();
-    // TODO: Deserializing strings is expensive, make this access lazy
-    // @ts-expect-error types are generated from `Program` attributes
-    // which are also twinned with ESTree generation so can't touch it
-    return ast.comments;
-  },
+  getAncestors(node: Node): Node[] {
+    const ancestors = [];
 
-  /**
-   * Get all comment tokens directly before the given node or token.
-   * @param nodeOrToken - The AST node or token to check for adjacent comment tokens.
-   * @returns Array of `Comment`s in occurrence order.
-   */
-  // oxlint-disable-next-line no-unused-vars
-  getCommentsBefore(nodeOrToken: NodeOrToken): Comment[] {
-    throw new Error('`sourceCode.getCommentsBefore` not implemented yet'); // TODO
-  },
+    while (true) {
+      // @ts-expect-error `parent` property should be present on `Node` type
+      node = node.parent;
+      if (node === null) break;
+      ancestors.push(node);
+    }
 
-  /**
-   * Get all comment tokens directly after the given node or token.
-   * @param nodeOrToken - The AST node or token to check for adjacent comment tokens.
-   * @returns Array of `Comment`s in occurrence order.
-   */
-  // oxlint-disable-next-line no-unused-vars
-  getCommentsAfter(nodeOrToken: NodeOrToken): Comment[] {
-    throw new Error('`sourceCode.getCommentsAfter` not implemented yet'); // TODO
-  },
-
-  /**
-   * Get all comment tokens inside the given node.
-   * @param node - The AST node to get the comments for.
-   * @returns Array of `Comment`s in occurrence order.
-   */
-  // oxlint-disable-next-line no-unused-vars
-  getCommentsInside(node: Node): Comment[] {
-    throw new Error('`sourceCode.getCommentsInside` not implemented yet'); // TODO
+    return ancestors.reverse();
   },
 
   /**
@@ -210,248 +191,6 @@ export const SOURCE_CODE = Object.freeze({
   },
 
   /**
-   * Determine whether the given identifier node is a reference to a global variable.
-   * @param node - `Identifier` node to check.
-   * @returns `true` if the identifier is a reference to a global variable.
-   */
-  // oxlint-disable-next-line no-unused-vars
-  isGlobalReference(node: Node): boolean {
-    throw new Error('`sourceCode.isGlobalReference` not implemented yet'); // TODO
-  },
-
-  /**
-   * Get all tokens that are related to the given node.
-   * @param node - The AST node.
-   * @param countOptions? - Options object. If this is a function then it's `options.filter`.
-   * @returns Array of `Token`s.
-   */
-  /**
-   * Get all tokens that are related to the given node.
-   * @param node - The AST node.
-   * @param beforeCount? - The number of tokens before the node to retrieve.
-   * @param afterCount? - The number of tokens after the node to retrieve.
-   * @returns Array of `Token`s.
-   */
-  /* oxlint-disable no-unused-vars */
-  getTokens(
-    node: Node,
-    countOptions?: CountOptions | number | FilterFn | null | undefined,
-    afterCount?: number | null | undefined,
-  ): Token[] {
-    throw new Error('`sourceCode.getTokens` not implemented yet'); // TODO
-  },
-  /* oxlint-enable no-unused-vars */
-
-  /**
-   * Get the first token of the given node.
-   * @param node - The AST node.
-   * @param skipOptions? - Options object. If this is a number then it's `options.skip`.
-   *   If this is a function then it's `options.filter`.
-   * @returns `Token`, or `null` if all were skipped.
-   */
-  // oxlint-disable-next-line no-unused-vars
-  getFirstToken(node: Node, skipOptions?: SkipOptions | number | FilterFn | null | undefined): Token | null {
-    throw new Error('`sourceCode.getFirstToken` not implemented yet'); // TODO
-  },
-
-  /**
-   * Get the first tokens of the given node.
-   * @param node - The AST node.
-   * @param countOptions? - Options object. If this is a number then it's `options.count`.
-   *   If this is a function then it's `options.filter`.
-   * @returns Array of `Token`s.
-   */
-  // oxlint-disable-next-line no-unused-vars
-  getFirstTokens(node: Node, countOptions?: CountOptions | number | FilterFn | null | undefined): Token[] {
-    throw new Error('`sourceCode.getFirstTokens` not implemented yet'); // TODO
-  },
-
-  /**
-   * Get the last token of the given node.
-   * @param node - The AST node.
-   * @param skipOptions? - Options object. Same options as `getFirstToken()`.
-   * @returns `Token`, or `null` if all were skipped.
-   */
-  // oxlint-disable-next-line no-unused-vars
-  getLastToken(node: Node, skipOptions?: SkipOptions | number | FilterFn | null | undefined): Token | null {
-    throw new Error('`sourceCode.getLastToken` not implemented yet'); // TODO
-  },
-
-  /**
-   * Get the last tokens of the given node.
-   * @param node - The AST node.
-   * @param countOptions? - Options object. Same options as `getFirstTokens()`.
-   * @returns Array of `Token`s.
-   */
-  // oxlint-disable-next-line no-unused-vars
-  getLastTokens(node: Node, countOptions?: CountOptions | number | FilterFn | null | undefined): Token[] {
-    throw new Error('`sourceCode.getLastTokens` not implemented yet'); // TODO
-  },
-
-  /**
-   * Get the token that precedes a given node or token.
-   * @param nodeOrToken - The AST node or token.
-   * @param skipOptions? - Options object. Same options as `getFirstToken()`.
-   * @returns `Token`, or `null` if all were skipped.
-   */
-  /* oxlint-disable no-unused-vars */
-  getTokenBefore(
-    nodeOrToken: NodeOrToken | Comment,
-    skipOptions?: SkipOptions | number | FilterFn | null | undefined,
-  ): Token | null {
-    throw new Error('`sourceCode.getTokenBefore` not implemented yet'); // TODO
-  },
-  /* oxlint-enable no-unused-vars */
-
-  /**
-   * Get the tokens that precedes a given node or token.
-   * @param nodeOrToken - The AST node or token.
-   * @param countOptions? - Options object. Same options as `getFirstTokens()`.
-   * @returns Array of `Token`s.
-   */
-  /* oxlint-disable no-unused-vars */
-  getTokensBefore(
-    nodeOrToken: NodeOrToken | Comment,
-    countOptions?: CountOptions | number | FilterFn | null | undefined,
-  ): Token[] {
-    throw new Error('`sourceCode.getTokensBefore` not implemented yet'); // TODO
-  },
-  /* oxlint-enable no-unused-vars */
-
-  /**
-   * Get the token that follows a given node or token.
-   * @param nodeOrToken - The AST node or token.
-   * @param skipOptions? - Options object. Same options as `getFirstToken()`.
-   * @returns `Token`, or `null` if all were skipped.
-   */
-  /* oxlint-disable no-unused-vars */
-  getTokenAfter(
-    nodeOrToken: NodeOrToken | Comment,
-    skipOptions?: SkipOptions | number | FilterFn | null | undefined,
-  ): Token | null {
-    throw new Error('`sourceCode.getTokenAfter` not implemented yet'); // TODO
-  },
-  /* oxlint-enable no-unused-vars */
-
-  /**
-   * Get the tokens that follow a given node or token.
-   * @param nodeOrToken - The AST node or token.
-   * @param countOptions? - Options object. Same options as `getFirstTokens()`.
-   * @returns Array of `Token`s.
-   */
-  /* oxlint-disable no-unused-vars */
-  getTokensAfter(
-    nodeOrToken: NodeOrToken | Comment,
-    countOptions?: CountOptions | number | FilterFn | null | undefined,
-  ): Token[] {
-    throw new Error('`sourceCode.getTokensAfter` not implemented yet'); // TODO
-  },
-  /* oxlint-enable no-unused-vars */
-
-  /**
-   * Get all of the tokens between two non-overlapping nodes.
-   * @param nodeOrToken1 - Node before the desired token range.
-   * @param nodeOrToken2 - Node after the desired token range.
-   * @param countOptions? - Options object. If this is a function then it's `options.filter`.
-   * @returns Array of `Token`s between `nodeOrToken1` and `nodeOrToken2`.
-   */
-  /**
-   * Get all of the tokens between two non-overlapping nodes.
-   * @param nodeOrToken1 - Node before the desired token range.
-   * @param nodeOrToken2 - Node after the desired token range.
-   * @param padding - Number of extra tokens on either side of center.
-   * @returns Array of `Token`s between `nodeOrToken1` and `nodeOrToken2`.
-   */
-  /* oxlint-disable no-unused-vars */
-  getTokensBetween(
-    nodeOrToken1: NodeOrToken | Comment,
-    nodeOrToken2: NodeOrToken | Comment,
-    countOptions?: CountOptions | number | FilterFn | null | undefined,
-  ): Token[] {
-    throw new Error('`sourceCode.getTokensBetween` not implemented yet'); // TODO
-  },
-  /* oxlint-enable no-unused-vars */
-
-  /**
-   * Get the first token between two non-overlapping nodes.
-   * @param nodeOrToken1 - Node before the desired token range.
-   * @param nodeOrToken2 - Node after the desired token range.
-   * @param countOptions? - Options object. Same options as `getFirstToken()`.
-   * @returns `Token`, or `null` if all were skipped.
-   */
-  /* oxlint-disable no-unused-vars */
-  getFirstTokenBetween(
-    nodeOrToken1: NodeOrToken | Comment,
-    nodeOrToken2: NodeOrToken | Comment,
-    skipOptions?: SkipOptions | null | undefined,
-  ): Token | null {
-    throw new Error('`sourceCode.getFirstTokenBetween` not implemented yet'); // TODO
-  },
-  /* oxlint-enable no-unused-vars */
-
-  /**
-   * Get the first tokens between two non-overlapping nodes.
-   * @param nodeOrToken1 - Node before the desired token range.
-   * @param nodeOrToken2 - Node after the desired token range.
-   * @param countOptions? - Options object. Same options as `getFirstTokens()`.
-   * @returns Array of `Token`s between `nodeOrToken1` and `nodeOrToken2`.
-   */
-  /* oxlint-disable no-unused-vars */
-  getFirstTokensBetween(
-    nodeOrToken1: NodeOrToken | Comment,
-    nodeOrToken2: NodeOrToken | Comment,
-    countOptions?: CountOptions | number | FilterFn | null | undefined,
-  ): Token[] {
-    throw new Error('`sourceCode.getFirstTokensBetween` not implemented yet'); // TODO
-  },
-  /* oxlint-enable no-unused-vars */
-
-  /**
-   * Get the last token between two non-overlapping nodes.
-   * @param nodeOrToken1 - Node before the desired token range.
-   * @param nodeOrToken2 - Node after the desired token range.
-   * @param skipOptions? - Options object. Same options as `getFirstToken()`.
-   * @returns `Token`, or `null` if all were skipped.
-   */
-  /* oxlint-disable no-unused-vars */
-  getLastTokenBetween(
-    nodeOrToken1: NodeOrToken | Comment,
-    nodeOrToken2: NodeOrToken | Comment,
-    skipOptions?: SkipOptions | null | undefined,
-  ): Token | null {
-    throw new Error('`sourceCode.getLastTokenBetween` not implemented yet'); // TODO
-  },
-  /* oxlint-enable no-unused-vars */
-
-  /**
-   * Get the last tokens between two non-overlapping nodes.
-   * @param nodeOrToken1 - Node before the desired token range.
-   * @param nodeOrToken2 - Node after the desired token range.
-   * @param countOptions? - Options object. Same options as `getFirstTokens()`.
-   * @returns Array of `Token`s between `nodeOrToken1` and `nodeOrToken2`.
-   */
-  /* oxlint-disable no-unused-vars */
-  getLastTokensBetween(
-    nodeOrToken1: NodeOrToken | Comment,
-    nodeOrToken2: NodeOrToken | Comment,
-    countOptions?: CountOptions | number | FilterFn | null | undefined,
-  ): Token[] {
-    throw new Error('`sourceCode.getLastTokensBetween` not implemented yet'); // TODO
-  },
-  /* oxlint-enable no-unused-vars */
-
-  /**
-   * Get the token starting at the specified index.
-   * @param index - Index of the start of the token's range.
-   * @param options - Options object.
-   * @returns The token starting at index, or `null` if no such token.
-   */
-  // oxlint-disable-next-line no-unused-vars
-  getTokenByRangeStart(index: number, rangeOptions?: RangeOptions | null | undefined): Token | null {
-    throw new Error('`sourceCode.getTokenByRangeStart` not implemented yet'); // TODO
-  },
-
-  /**
    * Get the deepest node containing a range index.
    * @param index Range index of the desired node.
    * @returns The node if found, or `null` if not found.
@@ -461,102 +200,39 @@ export const SOURCE_CODE = Object.freeze({
     throw new Error('`sourceCode.getNodeByRangeIndex` not implemented yet'); // TODO
   },
 
+  // Location methods
   getLocFromIndex: getLineColumnFromOffset,
   getIndexFromLoc: getOffsetFromLineColumn,
 
-  /**
-   * Check whether any comments exist or not between the given 2 nodes.
-   * @param nodeOrToken1 - The node to check.
-   * @param nodeOrToken2 - The node to check.
-   * @returns `true` if one or more comments exist.
-   */
-  // oxlint-disable-next-line no-unused-vars
-  commentsExistBetween(nodeOrToken1: NodeOrToken, nodeOrToken2: NodeOrToken): boolean {
-    throw new Error('`sourceCode.commentsExistBetween` not implemented yet'); // TODO
-  },
+  // Comment methods
+  getAllComments: commentMethods.getAllComments,
+  getCommentsBefore: commentMethods.getCommentsBefore,
+  getCommentsAfter: commentMethods.getCommentsAfter,
+  getCommentsInside: commentMethods.getCommentsInside,
+  commentsExistBetween: commentMethods.commentsExistBetween,
 
-  getAncestors,
+  // Scope methods
+  isGlobalReference: scopeMethods.isGlobalReference,
+  getDeclaredVariables: scopeMethods.getDeclaredVariables,
+  getScope: scopeMethods.getScope,
+  markVariableAsUsed: scopeMethods.markVariableAsUsed,
 
-  /**
-   * Get the variables that `node` defines.
-   * This is a convenience method that passes through to the same method on the `scopeManager`.
-   * @param node - The node for which the variables are obtained.
-   * @returns An array of variable nodes representing the variables that `node` defines.
-   */
-  // oxlint-disable-next-line no-unused-vars
-  getDeclaredVariables(node: Node): Variable[] {
-    throw new Error('`sourceCode.getDeclaredVariables` not implemented yet'); // TODO
-  },
-
-  /**
-   * Get the scope for the given node
-   * @param node - The node to get the scope of.
-   * @returns The scope information for this node.
-   */
-  // oxlint-disable-next-line no-unused-vars
-  getScope(node: Node): Scope {
-    throw new Error('`sourceCode.getScope` not implemented yet'); // TODO
-  },
-
-  /**
-   * Mark a variable as used in the current scope
-   * @param name - The name of the variable to mark as used.
-   * @param refNode? - The closest node to the variable reference.
-   * @returns `true` if the variable was found and marked as used, `false` if not.
-   */
-  // oxlint-disable-next-line no-unused-vars
-  markVariableAsUsed(name: string, refNode: Node): boolean {
-    throw new Error('`sourceCode.markVariableAsUsed` not implemented yet'); // TODO
-  },
+  // Token methods
+  getTokens: tokenMethods.getTokens,
+  getFirstToken: tokenMethods.getFirstToken,
+  getFirstTokens: tokenMethods.getFirstTokens,
+  getLastToken: tokenMethods.getLastToken,
+  getLastTokens: tokenMethods.getLastTokens,
+  getTokenBefore: tokenMethods.getTokenBefore,
+  getTokensBefore: tokenMethods.getTokensBefore,
+  getTokenAfter: tokenMethods.getTokenAfter,
+  getTokensAfter: tokenMethods.getTokensAfter,
+  getTokensBetween: tokenMethods.getTokensBetween,
+  getFirstTokenBetween: tokenMethods.getFirstTokenBetween,
+  getFirstTokensBetween: tokenMethods.getFirstTokensBetween,
+  getLastTokenBetween: tokenMethods.getLastTokenBetween,
+  getLastTokensBetween: tokenMethods.getLastTokensBetween,
+  getTokenByRangeStart: tokenMethods.getTokenByRangeStart,
 });
 
 export type SourceCode = typeof SOURCE_CODE;
-
-/**
- * Get all the ancestors of a given node.
- * @param node - AST node
- * @returns All the ancestor nodes in the AST, not including the provided node,
- *   starting from the root node at index 0 and going inwards to the parent node.
- */
-function getAncestors(node: Node): Node[] {
-  const ancestors = [];
-
-  for (
-    let ancestor = (node as unknown as { parent: Node }).parent;
-    ancestor;
-    ancestor = (ancestor as unknown as { parent: Node }).parent
-  ) {
-    ancestors.push(ancestor);
-  }
-
-  return ancestors.reverse();
-}
-
-// Options for various `SourceCode` methods e.g. `getFirstToken`.
-export interface SkipOptions {
-  // Number of skipping tokens
-  skip?: number;
-  // `true` to include comment tokens in the result
-  includeComments?: boolean;
-  // Function to filter tokens
-  filter?: FilterFn | null;
-}
-
-// Options for various `SourceCode` methods e.g. `getFirstTokens`.
-export interface CountOptions {
-  // Maximum number of tokens to return
-  count?: number;
-  // `true` to include comment tokens in the result
-  includeComments?: boolean;
-  // Function to filter tokens
-  filter?: FilterFn | null;
-}
-
-// Options for various `SourceCode` methods e.g. `getTokenByRangeStart`.
-export interface RangeOptions {
-  // `true` to include comment tokens in the result
-  includeComments?: boolean;
-}
-
-// Filter function, passed as `filter` property of `SkipOptions` and `CountOptions`.
-export type FilterFn = (token: Token) => boolean;

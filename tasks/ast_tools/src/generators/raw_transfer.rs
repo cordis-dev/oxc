@@ -136,6 +136,7 @@ fn generate_deserializers(
     let mut code = format!("
         let uint8, uint32, float64, sourceText, sourceIsAscii, sourceByteLen;
 
+        let astId = 0;
         let parent = null;
         let getLoc;
 
@@ -152,13 +153,19 @@ fn generate_deserializers(
             }}
         }});
 
+        /* IF !LINTER */
         export function deserialize(buffer, sourceText, sourceByteLen) {{
-            return deserializeWith(buffer, sourceText, sourceByteLen, null, deserializeRawTransferData);
+            const data = deserializeWith(buffer, sourceText, sourceByteLen, null, deserializeRawTransferData);
+            resetBuffer();
+            return data;
         }}
+        /* END_IF */
 
+        /* IF LINTER */
         export function deserializeProgramOnly(buffer, sourceText, sourceByteLen, getLoc) {{
             return deserializeWith(buffer, sourceText, sourceByteLen, getLoc, deserializeProgram);
         }}
+        /* END_IF */
 
         function deserializeWith(buffer, sourceTextInput, sourceByteLenInput, getLocInput, deserialize) {{
             uint8 = buffer;
@@ -171,11 +178,17 @@ fn generate_deserializers(
 
             if (LOC) getLoc = getLocInput;
 
-            const data = deserialize(uint32[{data_pointer_pos_32}]);
+            return deserialize(uint32[{data_pointer_pos_32}]);
+        }}
 
+        export function resetBuffer() {{
+            // Clear buffer and source text string to allow them to be garbage collected
             uint8 = uint32 = float64 = sourceText = undefined;
 
-            return data;
+            // Increment `astId` counter.
+            // This prevents `program.comments` being accessed after the AST is done with.
+            // (see `deserializeProgram`)
+            if (COMMENTS) astId++;
         }}
     ");
 
@@ -216,11 +229,11 @@ fn generate_deserializers(
         variant_paths: Vec<String>,
     }
 
-    impl VariantGenerator<6> for VariantGen {
-        const FLAG_NAMES: [&str; 6] =
-            ["IS_TS", "RANGE", "LOC", "PARENT", "PRESERVE_PARENS", "COMMENTS"];
+    impl VariantGenerator<7> for VariantGen {
+        const FLAG_NAMES: [&str; 7] =
+            ["IS_TS", "RANGE", "LOC", "PARENT", "PRESERVE_PARENS", "COMMENTS", "LINTER"];
 
-        fn variants(&mut self) -> Vec<[bool; 6]> {
+        fn variants(&mut self) -> Vec<[bool; 7]> {
             let mut variants = Vec::with_capacity(9);
 
             // Parser deserializers
@@ -237,6 +250,7 @@ fn generate_deserializers(
                         variants.push([
                             is_ts, range, /* loc */ false, parent,
                             /* preserve_parens */ true, /* comments */ false,
+                            /* linter */ false,
                         ]);
                     }
                 }
@@ -247,15 +261,16 @@ fn generate_deserializers(
             variants.push([
                 /* is_ts */ true, /* range */ true, /* loc */ true,
                 /* parent */ true, /* preserve_parens */ false, /* comments */ true,
+                /* linter */ true,
             ]);
 
             variants
         }
 
         fn pre_process_variant<'a>(
-            &mut self,
+            &self,
             program: &mut Program<'a>,
-            flags: [bool; 6],
+            flags: [bool; 7],
             allocator: &'a Allocator,
         ) {
             if flags[2] {
@@ -319,7 +334,8 @@ fn generate_struct(
 
         generator.generate_struct_fields(struct_def, 0, DeserializerType::Both);
 
-        let has_type_field = generator.fields.contains_key("type");
+        let needs_parent_field =
+            generator.fields.contains_key("type") && !struct_def.estree.no_parent;
 
         let mut all_fields_inline = true;
         for (field_name, StructFieldValue { value, deser_type, inline }) in generator.fields {
@@ -330,7 +346,7 @@ fn generate_struct(
                     DeserializerType::JsOnly => write_it!(fields_str, "...(!IS_TS && {value}),"),
                     DeserializerType::TsOnly => write_it!(fields_str, "...(IS_TS && {value}),"),
                 }
-            } else if inline || !has_type_field {
+            } else if inline || !needs_parent_field {
                 let value = if generator.dependent_field_names.contains(&field_name) {
                     write_it!(inline_preamble_str, "const {field_name} = {value};\n");
                     &field_name
@@ -378,7 +394,7 @@ fn generate_struct(
         }
 
         let mut parent_assignment_str = "";
-        if has_type_field {
+        if needs_parent_field {
             fields_str.push_str("...(PARENT && { parent }),\n");
 
             if !all_fields_inline {

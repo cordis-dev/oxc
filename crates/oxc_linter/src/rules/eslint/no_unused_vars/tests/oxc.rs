@@ -526,15 +526,20 @@ fn test_vars_catch() {
 
 #[test]
 fn test_vars_using() {
-    let pass = vec![("using a = 1; console.log(a)", None)];
+    let pass = vec![
+        ("using a = 1; console.log(a)", None),
+        ("using a = 1;", Some(serde_json::json!([{ "ignoreUsingDeclarations": true }]))),
+        ("await using a = 1;", Some(serde_json::json!([{ "ignoreUsingDeclarations": true }]))),
+    ];
 
-    let fail = vec![("using a = 1;", None)];
+    let fail = vec![("using a = 1;", None), ("await using a = 1;", None)];
 
     Tester::new(NoUnusedVars::NAME, NoUnusedVars::PLUGIN, pass, fail)
         .intentionally_allow_no_fix_tests()
         .with_snapshot_suffix("oxc-vars-using")
         .test_and_snapshot();
 }
+
 #[test]
 fn test_functions() {
     let pass = vec![
@@ -1282,9 +1287,16 @@ fn test_ts_in_assignment() {
 
 #[test]
 fn test_loops() {
-    let pass: Vec<&str> = vec![];
+    let pass: Vec<&str> = vec![
+        "for (let len = 10; len-- > 0;) {}",
+        "for (let len = 10; len < 0; len++) {}",
+        "for (let len = 10; len;) {}",
+        "for (let len = 10;; len++) {}",
+        "for (let len = 10; len < 0; len += 1) {}",
+        "for (const _unused of []) {}",
+    ];
 
-    let fail: Vec<&str> = vec![];
+    let fail: Vec<&str> = vec!["for (let len = 10;;) {}"];
     let fix = vec![
         ("for (const unused of arr) {}", "for (const _unused of arr) {}"),
         ("for (const unused in arr) {}", "for (const _unused in arr) {}"),
@@ -1292,6 +1304,7 @@ fn test_loops() {
             "for (const foo of arr) { console.log(foo); const unused = 1; }",
             "for (const foo of arr) { console.log(foo);  }",
         ),
+        ("for (let len = 10;;) {}", "for (;;) {}"),
     ];
 
     Tester::new(NoUnusedVars::NAME, NoUnusedVars::PLUGIN, pass, fail).expect_fix(fix).test();

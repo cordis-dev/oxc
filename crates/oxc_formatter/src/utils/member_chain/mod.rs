@@ -5,9 +5,10 @@ pub mod simple_argument;
 use std::iter;
 
 use crate::{
-    JsLabels, best_fitting,
+    JsLabels,
+    ast_nodes::{AstNode, AstNodes},
+    best_fitting,
     formatter::{Buffer, Format, FormatResult, Formatter, SourceText, prelude::*},
-    generated::ast_nodes::{AstNode, AstNodes},
     utils::{
         call_expression::is_test_call_expression,
         is_long_curried_call,
@@ -21,6 +22,8 @@ use crate::{
 };
 use oxc_ast::{AstKind, ast::*};
 use oxc_span::{GetSpan, Span};
+
+use super::typecast::is_type_cast_node;
 
 #[derive(Debug)]
 pub struct MemberChain<'a, 'b> {
@@ -94,7 +97,7 @@ impl<'a, 'b> MemberChain<'a, 'b> {
                 has_computed_property ||
                 is_factory(&identifier.name) ||
                 // If an identifier has a name that is shorter than the tab with, then we join it with the "head"
-                (matches!(parent, AstNodes::ExpressionStatement(_))
+                (matches!(parent, AstNodes::ExpressionStatement(stmt) if !stmt.is_arrow_function_body())
                     && has_short_name(&identifier.name, f.options().indent_width.value()))
             } else {
                 matches!(node.as_ref(), Expression::ThisExpression(_))
@@ -228,8 +231,7 @@ impl<'a> Format<'a> for MemberChain<'a, '_> {
             }
             Ok(())
         });
-
-        let format_expanded = format_with(|f| write!(f, [self.head, indent(&group(&format_tail))]));
+        let format_expanded = format_with(|f| write!(f, [self.head, indent(&format_tail)]));
 
         let format_content = format_with(|f| {
             if has_comment || has_new_line_or_comment_between || self.groups_should_break(f) {
@@ -418,13 +420,7 @@ fn chain_members_iter<'a, 'b>(
 
         let expression = next.take()?;
 
-        if f.comments().get_type_cast_comment_index(expression.span()).is_some()
-            || f.comments()
-                .printed_comments()
-                .last()
-                .is_some_and(|c| f.comments().is_type_cast_comment(c))
-                && f.source_text().next_non_whitespace_byte_is(expression.span().end, b')')
-        {
+        if is_type_cast_node(expression, f).is_some() {
             return ChainMember::Node(expression).into();
         }
 

@@ -461,12 +461,13 @@ const _: () = {
     assert!(offset_of!(ReturnStatement, span) == 0);
     assert!(offset_of!(ReturnStatement, argument) == 8);
 
-    // Padding: 0 bytes
-    assert!(size_of::<WithStatement>() == 40);
+    // Padding: 4 bytes
+    assert!(size_of::<WithStatement>() == 48);
     assert!(align_of::<WithStatement>() == 8);
     assert!(offset_of!(WithStatement, span) == 0);
     assert!(offset_of!(WithStatement, object) == 8);
     assert!(offset_of!(WithStatement, body) == 24);
+    assert!(offset_of!(WithStatement, scope_id) == 40);
 
     // Padding: 4 bytes
     assert!(size_of::<SwitchStatement>() == 56);
@@ -1329,14 +1330,15 @@ const _: () = {
     assert!(offset_of!(TSIndexSignature, readonly) == 40);
     assert!(offset_of!(TSIndexSignature, r#static) == 41);
 
-    // Padding: 0 bytes
-    assert!(size_of::<TSCallSignatureDeclaration>() == 40);
+    // Padding: 4 bytes
+    assert!(size_of::<TSCallSignatureDeclaration>() == 48);
     assert!(align_of::<TSCallSignatureDeclaration>() == 8);
     assert!(offset_of!(TSCallSignatureDeclaration, span) == 0);
     assert!(offset_of!(TSCallSignatureDeclaration, type_parameters) == 8);
     assert!(offset_of!(TSCallSignatureDeclaration, this_param) == 16);
     assert!(offset_of!(TSCallSignatureDeclaration, params) == 24);
     assert!(offset_of!(TSCallSignatureDeclaration, return_type) == 32);
+    assert!(offset_of!(TSCallSignatureDeclaration, scope_id) == 40);
 
     assert!(size_of::<TSMethodSignatureKind>() == 1);
     assert!(align_of::<TSMethodSignatureKind>() == 1);
@@ -1466,14 +1468,15 @@ const _: () = {
     assert!(offset_of!(TSFunctionType, return_type) == 32);
     assert!(offset_of!(TSFunctionType, scope_id) == 40);
 
-    // Padding: 7 bytes
+    // Padding: 3 bytes
     assert!(size_of::<TSConstructorType>() == 40);
     assert!(align_of::<TSConstructorType>() == 8);
     assert!(offset_of!(TSConstructorType, span) == 0);
-    assert!(offset_of!(TSConstructorType, r#abstract) == 32);
+    assert!(offset_of!(TSConstructorType, r#abstract) == 36);
     assert!(offset_of!(TSConstructorType, type_parameters) == 8);
     assert!(offset_of!(TSConstructorType, params) == 16);
     assert!(offset_of!(TSConstructorType, return_type) == 24);
+    assert!(offset_of!(TSConstructorType, scope_id) == 32);
 
     // Padding: 2 bytes
     assert!(size_of::<TSMappedType>() == 56);
@@ -2066,11 +2069,12 @@ const _: () = if cfg!(target_family = "wasm") || align_of::<u64>() == 8 {
     assert!(offset_of!(ReturnStatement, argument) == 8);
 
     // Padding: 0 bytes
-    assert!(size_of::<WithStatement>() == 24);
+    assert!(size_of::<WithStatement>() == 28);
     assert!(align_of::<WithStatement>() == 4);
     assert!(offset_of!(WithStatement, span) == 0);
     assert!(offset_of!(WithStatement, object) == 8);
     assert!(offset_of!(WithStatement, body) == 16);
+    assert!(offset_of!(WithStatement, scope_id) == 24);
 
     // Padding: 0 bytes
     assert!(size_of::<SwitchStatement>() == 36);
@@ -2934,13 +2938,14 @@ const _: () = if cfg!(target_family = "wasm") || align_of::<u64>() == 8 {
     assert!(offset_of!(TSIndexSignature, r#static) == 29);
 
     // Padding: 0 bytes
-    assert!(size_of::<TSCallSignatureDeclaration>() == 24);
+    assert!(size_of::<TSCallSignatureDeclaration>() == 28);
     assert!(align_of::<TSCallSignatureDeclaration>() == 4);
     assert!(offset_of!(TSCallSignatureDeclaration, span) == 0);
     assert!(offset_of!(TSCallSignatureDeclaration, type_parameters) == 8);
     assert!(offset_of!(TSCallSignatureDeclaration, this_param) == 12);
     assert!(offset_of!(TSCallSignatureDeclaration, params) == 16);
     assert!(offset_of!(TSCallSignatureDeclaration, return_type) == 20);
+    assert!(offset_of!(TSCallSignatureDeclaration, scope_id) == 24);
 
     assert!(size_of::<TSMethodSignatureKind>() == 1);
     assert!(align_of::<TSMethodSignatureKind>() == 1);
@@ -3071,13 +3076,14 @@ const _: () = if cfg!(target_family = "wasm") || align_of::<u64>() == 8 {
     assert!(offset_of!(TSFunctionType, scope_id) == 24);
 
     // Padding: 3 bytes
-    assert!(size_of::<TSConstructorType>() == 24);
+    assert!(size_of::<TSConstructorType>() == 28);
     assert!(align_of::<TSConstructorType>() == 4);
     assert!(offset_of!(TSConstructorType, span) == 0);
-    assert!(offset_of!(TSConstructorType, r#abstract) == 20);
+    assert!(offset_of!(TSConstructorType, r#abstract) == 24);
     assert!(offset_of!(TSConstructorType, type_parameters) == 8);
     assert!(offset_of!(TSConstructorType, params) == 12);
     assert!(offset_of!(TSConstructorType, return_type) == 16);
+    assert!(offset_of!(TSConstructorType, scope_id) == 20);
 
     // Padding: 2 bytes
     assert!(size_of::<TSMappedType>() == 36);

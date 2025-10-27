@@ -7,6 +7,7 @@ use oxc_diagnostics::OxcDiagnostic;
 use oxc_macros::declare_oxc_lint;
 use oxc_semantic::AstNode;
 use oxc_span::{CompactStr, Span};
+use schemars::JsonSchema;
 
 use crate::{
     context::LintContext,
@@ -23,8 +24,10 @@ fn use_hook(span: Span) -> OxcDiagnostic {
         .with_label(span)
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase", default)]
 pub struct RequireHookConfig {
+    /// An array of function names that are allowed to be called outside of hooks.
     allowed_function_calls: Vec<CompactStr>,
 }
 
@@ -157,7 +160,8 @@ declare_oxc_lint!(
     /// ```
     RequireHook,
     jest,
-    style
+    style,
+    config = RequireHookConfig
 );
 
 impl Rule for RequireHook {
@@ -173,34 +177,35 @@ impl Rule for RequireHook {
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        let kind = node.kind();
-
-        if let AstKind::Program(program) = kind {
-            self.check_block_body(node, &program.body, ctx);
-        } else if let AstKind::CallExpression(call_expr) = kind {
-            if !is_type_of_jest_fn_call(
-                call_expr,
-                &PossibleJestNode { node, original: None },
-                ctx,
-                &[JestFnKind::General(JestGeneralFnKind::Describe)],
-            ) || call_expr.arguments.len() < 2
-            {
-                return;
+        match node.kind() {
+            AstKind::Program(program) => {
+                self.check_block_body(node, &program.body, ctx);
             }
-
-            match &call_expr.arguments[1] {
-                Argument::FunctionExpression(func_expr) => {
-                    if let Some(func_body) = &func_expr.body {
-                        self.check_block_body(node, &func_body.statements, ctx);
-                    }
+            AstKind::CallExpression(call_expr) => {
+                if !is_type_of_jest_fn_call(
+                    call_expr,
+                    &PossibleJestNode { node, original: None },
+                    ctx,
+                    &[JestFnKind::General(JestGeneralFnKind::Describe)],
+                ) || call_expr.arguments.len() < 2
+                {
+                    return;
                 }
-                Argument::ArrowFunctionExpression(arrow_func_expr) => {
-                    if !arrow_func_expr.expression {
-                        self.check_block_body(node, &arrow_func_expr.body.statements, ctx);
+                match &call_expr.arguments[1] {
+                    Argument::FunctionExpression(func_expr) => {
+                        if let Some(func_body) = &func_expr.body {
+                            self.check_block_body(node, &func_body.statements, ctx);
+                        }
                     }
+                    Argument::ArrowFunctionExpression(arrow_func_expr) => {
+                        if !arrow_func_expr.expression {
+                            self.check_block_body(node, &arrow_func_expr.body.statements, ctx);
+                        }
+                    }
+                    _ => (),
                 }
-                _ => (),
             }
+            _ => {}
         }
     }
 }

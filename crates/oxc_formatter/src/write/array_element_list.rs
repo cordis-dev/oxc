@@ -4,15 +4,14 @@ use oxc_span::GetSpan;
 
 use crate::{
     Expand, FormatTrailingCommas,
+    ast_nodes::AstNode,
     formatter::{
         Buffer, Comments, Format, FormatResult, Formatter, GroupId, prelude::*,
         separated::FormatSeparatedIter,
     },
-    generated::ast_nodes::AstNode,
+    utils::array::write_array_node,
     write,
 };
-
-use super::utils::array::write_array_node;
 
 pub struct ArrayElementList<'a, 'b> {
     elements: &'b AstNode<'a, Vec<'a, ArrayExpressionElement<'a>>>,
@@ -118,7 +117,6 @@ pub fn can_concisely_print_array_list(
         return false;
     }
 
-    let source_text = f.source_text();
     let comments = f.comments();
 
     let mut comments_iter = comments.comments_before_iter(array_expression_span.end);
@@ -152,11 +150,10 @@ pub fn can_concisely_print_array_list(
     // ]
     // ```
 
-    let source_text = f.source_text();
     !comments.comments_before_iter(array_expression_span.end).any(|comment| {
         comment.is_line()
-            && !source_text.is_own_line_comment(comment)
-            && source_text.is_end_of_line_comment(comment)
+            && !comments.is_own_line_comment(comment)
+            && comments.is_end_of_line_comment(comment)
     })
 }
 

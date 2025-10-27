@@ -121,6 +121,8 @@ impl Program<'_> {
 /// `Program` span start is 0 (not 5).
 #[ast_meta]
 #[estree(raw_deser = "
+    const localAstId = astId;
+
     const start = IS_TS ? 0 : DESER[u32](POS_OFFSET.span.start),
         end = DESER[u32](POS_OFFSET.span.end);
 
@@ -129,7 +131,17 @@ impl Program<'_> {
         body: null,
         sourceType: DESER[ModuleKind](POS_OFFSET.source_type.module_kind),
         hashbang: null,
-        ...(COMMENTS && { comments: DESER[Vec<Comment>](POS_OFFSET.comments) }),
+        /* IF COMMENTS */
+        get comments() {
+            // Check AST in buffer is still the same AST (buffers are reused)
+            if (localAstId !== astId) throw new Error('Comments are only accessible while linting the file');
+            // Deserialize the comments.
+            // Replace this getter with the comments array, so we don't deserialize twice.
+            const comments = DESER[Vec<Comment>](POS_OFFSET.comments);
+            Object.defineProperty(this, 'comments', { value: comments });
+            return comments;
+        },
+        /* END_IF */
         start,
         end,
         ...(RANGE && { range: [start, end] }),
@@ -235,10 +247,7 @@ fn get_ts_start_span(program: &Program<'_>) -> u32 {
 #[ast_meta]
 #[estree(
     ts_type = "string",
-    raw_deser = "
-        const endCut = THIS.type === 'Line' ? 0 : 2;
-        SOURCE_TEXT.slice(THIS.start + 2, THIS.end - endCut)
-    "
+    raw_deser = "SOURCE_TEXT.slice(THIS.start + 2, THIS.end - (THIS.type === 'Line' ? 0 : 2))"
 )]
 pub struct CommentValue<'b>(#[expect(dead_code)] pub &'b Comment);
 

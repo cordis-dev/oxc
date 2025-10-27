@@ -2,12 +2,12 @@ use oxc_ast::ast::*;
 use oxc_span::GetSpan;
 
 use crate::{
+    ast_nodes::{AstNode, AstNodeIterator, AstNodes},
     format_args,
     formatter::{
         Format, FormatResult, Formatter, prelude::*, separated::FormatSeparatedIter,
         trivia::FormatTrailingComments,
     },
-    generated::ast_nodes::{AstNode, AstNodeIterator, AstNodes},
     options::{FormatTrailingCommas, TrailingSeparator},
     utils::call_expression::is_test_call_expression,
     write,
@@ -27,6 +27,8 @@ pub fn get_this_param<'a>(parent: &AstNodes<'a>) -> Option<&'a AstNode<'a, TSThi
 
 impl<'a> FormatWrite<'a> for AstNode<'a, FormalParameters<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+        // `function foo /**/ () {}`
+        //               ^^^ keep comments printed before parameters
         let comments = f.context().comments().comments_before(self.span.start);
         if !comments.is_empty() {
             write!(f, [space(), FormatTrailingComments::Comments(comments)])?;
@@ -49,10 +51,10 @@ impl<'a> FormatWrite<'a> for AstNode<'a, FormalParameters<'a>> {
         let layout = if !self.has_parameter() && this_param.is_none() {
             ParameterLayout::NoParameters
         } else if can_hug || {
-            // `self.parent`: Function
-            // `self.parent.parent()`: Argument
-            // `self.parent.parent().parent()` CallExpression
-            if let AstNodes::CallExpression(call) = self.parent.parent().parent() {
+            // `self`: Function
+            // `self.ancestors().nth(1)`: Argument
+            // `self.ancestors().nth(2)`: CallExpression
+            if let Some(AstNodes::CallExpression(call)) = self.ancestors().nth(2) {
                 is_test_call_expression(call)
             } else {
                 false
@@ -77,13 +79,9 @@ impl<'a> FormatWrite<'a> for AstNode<'a, FormalParameters<'a>> {
             ParameterLayout::Default => {
                 write!(
                     f,
-                    soft_block_indent(&format_args!(
-                        &ParameterList::with_layout(self, this_param, layout),
-                        format_once(|f| {
-                            let comments = f.context().comments().comments_before(self.span.end);
-                            write!(f, [FormatTrailingComments::Comments(comments)])
-                        })
-                    ))
+                    soft_block_indent(&format_args!(&ParameterList::with_layout(
+                        self, this_param, layout
+                    )))
                 );
             }
         }
@@ -111,9 +109,22 @@ impl<'a> FormatWrite<'a> for AstNode<'a, FormalParameter<'a>> {
             write!(f, self.pattern())
         });
 
+        let is_hug_parameter = matches!(self.parent, AstNodes::FormalParameters(params) if {
+            let this_param = get_this_param(self.parent);
+            let parentheses_not_needed = if let AstNodes::ArrowFunctionExpression(arrow) = params.parent {
+                can_avoid_parentheses(arrow, f)
+            } else {
+                false
+            };
+            should_hug_function_parameters(params, this_param, parentheses_not_needed, f)
+        });
+
         let decorators = self.decorators();
-        if decorators.is_empty() {
-            write!(f, [decorators, content])
+
+        if is_hug_parameter && decorators.is_empty() {
+            write!(f, [&content])
+        } else if decorators.is_empty() {
+            write!(f, [group(&content)])
         } else {
             write!(f, [group(&decorators), group(&content)])
         }

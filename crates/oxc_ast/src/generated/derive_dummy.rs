@@ -855,6 +855,7 @@ impl<'a> Dummy<'a> for WithStatement<'a> {
             span: Dummy::dummy(allocator),
             object: Dummy::dummy(allocator),
             body: Dummy::dummy(allocator),
+            scope_id: Dummy::dummy(allocator),
         }
     }
 }
@@ -2423,6 +2424,7 @@ impl<'a> Dummy<'a> for TSCallSignatureDeclaration<'a> {
             this_param: Dummy::dummy(allocator),
             params: Dummy::dummy(allocator),
             return_type: Dummy::dummy(allocator),
+            scope_id: Dummy::dummy(allocator),
         }
     }
 }
@@ -2682,6 +2684,7 @@ impl<'a> Dummy<'a> for TSConstructorType<'a> {
             type_parameters: Dummy::dummy(allocator),
             params: Dummy::dummy(allocator),
             return_type: Dummy::dummy(allocator),
+            scope_id: Dummy::dummy(allocator),
         }
     }
 }

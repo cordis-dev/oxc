@@ -3201,6 +3201,7 @@ impl<'new_alloc> CloneIn<'new_alloc> for WithStatement<'_> {
             span: CloneIn::clone_in(&self.span, allocator),
             object: CloneIn::clone_in(&self.object, allocator),
             body: CloneIn::clone_in(&self.body, allocator),
+            scope_id: Default::default(),
         }
     }
 
@@ -3209,6 +3210,7 @@ impl<'new_alloc> CloneIn<'new_alloc> for WithStatement<'_> {
             span: CloneIn::clone_in_with_semantic_ids(&self.span, allocator),
             object: CloneIn::clone_in_with_semantic_ids(&self.object, allocator),
             body: CloneIn::clone_in_with_semantic_ids(&self.body, allocator),
+            scope_id: CloneIn::clone_in_with_semantic_ids(&self.scope_id, allocator),
         }
     }
 }
@@ -7044,6 +7046,7 @@ impl<'new_alloc> CloneIn<'new_alloc> for TSCallSignatureDeclaration<'_> {
             this_param: CloneIn::clone_in(&self.this_param, allocator),
             params: CloneIn::clone_in(&self.params, allocator),
             return_type: CloneIn::clone_in(&self.return_type, allocator),
+            scope_id: Default::default(),
         }
     }
 
@@ -7054,6 +7057,7 @@ impl<'new_alloc> CloneIn<'new_alloc> for TSCallSignatureDeclaration<'_> {
             this_param: CloneIn::clone_in_with_semantic_ids(&self.this_param, allocator),
             params: CloneIn::clone_in_with_semantic_ids(&self.params, allocator),
             return_type: CloneIn::clone_in_with_semantic_ids(&self.return_type, allocator),
+            scope_id: CloneIn::clone_in_with_semantic_ids(&self.scope_id, allocator),
         }
     }
 }
@@ -7528,6 +7532,7 @@ impl<'new_alloc> CloneIn<'new_alloc> for TSConstructorType<'_> {
             type_parameters: CloneIn::clone_in(&self.type_parameters, allocator),
             params: CloneIn::clone_in(&self.params, allocator),
             return_type: CloneIn::clone_in(&self.return_type, allocator),
+            scope_id: Default::default(),
         }
     }
 
@@ -7538,6 +7543,7 @@ impl<'new_alloc> CloneIn<'new_alloc> for TSConstructorType<'_> {
             type_parameters: CloneIn::clone_in_with_semantic_ids(&self.type_parameters, allocator),
             params: CloneIn::clone_in_with_semantic_ids(&self.params, allocator),
             return_type: CloneIn::clone_in_with_semantic_ids(&self.return_type, allocator),
+            scope_id: CloneIn::clone_in_with_semantic_ids(&self.scope_id, allocator),
         }
     }
 }

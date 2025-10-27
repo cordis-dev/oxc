@@ -1,0 +1,24 @@
+---
+source: crates/oxc_formatter/tests/fixtures/mod.rs
+---
+==================== Input ====================
+expect(genCode(createVNodeCall(null, `"div"`, mockProps)))
+  .toMatchInlineSnapshot(`
+  `)
+
+expect(genCode(createVNodeCall(null, `"div"`, mockProps)))
+  .toMatchInlineSnapshot(`
+  `).toMatchInlineSnapshot(`
+    `)
+
+==================== Output ====================
+expect(genCode(createVNodeCall(null, `"div"`, mockProps)))
+  .toMatchInlineSnapshot(`
+  `);
+
+expect(genCode(createVNodeCall(null, `"div"`, mockProps)))
+  .toMatchInlineSnapshot(`
+  `).toMatchInlineSnapshot(`
+    `);
+
+===================== End =====================

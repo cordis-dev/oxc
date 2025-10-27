@@ -13,7 +13,23 @@ input_file: crates/oxc_semantic/tests/fixtures/typescript-eslint/type-declaratio
         "symbols": []
       },
       {
-        "children": [],
+        "children": [
+          {
+            "children": [],
+            "flags": "ScopeFlags(StrictMode)",
+            "id": 3,
+            "node": "TSConstructorType",
+            "symbols": [
+              {
+                "flags": "SymbolFlags(FunctionScopedVariable)",
+                "id": 2,
+                "name": "arg",
+                "node": "FormalParameter(arg)",
+                "references": []
+              }
+            ]
+          }
+        ],
         "flags": "ScopeFlags(StrictMode)",
         "id": 2,
         "node": "TSTypeAliasDeclaration",

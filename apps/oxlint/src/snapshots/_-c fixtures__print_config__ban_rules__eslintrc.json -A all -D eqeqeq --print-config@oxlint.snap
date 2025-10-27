@@ -11,7 +11,6 @@ working directory:
     "typescript",
     "oxc"
   ],
-  "jsPlugins": null,
   "categories": {},
   "rules": {
     "eqeqeq": [
@@ -43,6 +42,9 @@ working directory:
       "implementsReplacesDocs": false,
       "exemptDestructuredRootsFromChecks": false,
       "tagNamePreference": {}
+    },
+    "vitest": {
+      "typecheck": false
     }
   },
   "env": {

@@ -1,45 +1,58 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Oxfmtrc",
+  "description": "Configuration options for the formatter.\nMost options are the same as Prettier's options.\nSee also <https://prettier.io/docs/options>",
   "type": "object",
   "properties": {
-    "arrowParentheses": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "attributePosition": {
-      "type": [
-        "string",
-        "null"
+    "arrowParens": {
+      "description": "Include parentheses around a sole arrow function parameter. (Default: \"always\")",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ArrowParensConfig"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "bracketSameLine": {
+      "description": "Put the > of a multi-line JSX element at the end of the last line instead of being alone on the next line. (Default: false)",
       "type": [
         "boolean",
         "null"
       ]
     },
     "bracketSpacing": {
+      "description": "Print spaces between brackets in object literals. (Default: true)",
       "type": [
         "boolean",
         "null"
       ]
     },
-    "expand": {
-      "type": [
-        "string",
-        "null"
+    "endOfLine": {
+      "description": "Which end of line characters to apply. (Default: \"lf\")",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/EndOfLineConfig"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "experimentalOperatorPosition": {
-      "type": [
-        "string",
-        "null"
+      "description": "Experimental: Position of operators in expressions. (Default: \"end\")",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/OperatorPositionConfig"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "experimentalSortImports": {
+      "description": "Experimental: Sort import statements. Disabled by default.",
       "anyOf": [
         {
           "$ref": "#/definitions/SortImportsConfig"
@@ -49,33 +62,36 @@
         }
       ]
     },
-    "indentStyle": {
+    "ignorePatterns": {
+      "description": "Ignore files matching these glob patterns. Current working directory is used as the root.",
       "type": [
-        "string",
-        "null"
-      ]
-    },
-    "indentWidth": {
-      "type": [
-        "integer",
+        "array",
         "null"
       ],
-      "format": "uint8",
-      "minimum": 0.0
+      "items": {
+        "type": "string"
+      }
     },
-    "jsxQuoteStyle": {
+    "jsxSingleQuote": {
+      "description": "Use single quotes instead of double quotes in JSX. (Default: false)",
       "type": [
-        "string",
+        "boolean",
         "null"
       ]
     },
-    "lineEnding": {
-      "type": [
-        "string",
-        "null"
+    "objectWrap": {
+      "description": "How to wrap object literals when they could fit on one line or span multiple lines. (Default: \"preserve\")\nNOTE: In addition to Prettier's \"preserve\" and \"collapse\", we also support \"always\".",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ObjectWrapConfig"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
-    "lineWidth": {
+    "printWidth": {
+      "description": "The line length that the printer will wrap on. (Default: 80)",
       "type": [
         "integer",
         "null"
@@ -83,32 +99,104 @@
       "format": "uint16",
       "minimum": 0.0
     },
-    "quoteProperties": {
+    "quoteProps": {
+      "description": "Change when properties in objects are quoted. (Default: \"as-needed\")",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/QuotePropsConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "semi": {
+      "description": "Print semicolons at the ends of statements. (Default: true)",
       "type": [
-        "string",
+        "boolean",
         "null"
       ]
     },
-    "quoteStyle": {
+    "singleAttributePerLine": {
+      "description": "Put each attribute on a new line in JSX. (Default: false)",
       "type": [
-        "string",
+        "boolean",
         "null"
       ]
     },
-    "semicolons": {
+    "singleQuote": {
+      "description": "Use single quotes instead of double quotes. (Default: false)",
       "type": [
-        "string",
+        "boolean",
         "null"
       ]
     },
-    "trailingCommas": {
+    "tabWidth": {
+      "description": "Number of spaces per indentation level. (Default: 2)",
       "type": [
-        "string",
+        "integer",
+        "null"
+      ],
+      "format": "uint8",
+      "minimum": 0.0
+    },
+    "trailingComma": {
+      "description": "Print trailing commas wherever possible. (Default: \"all\")",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/TrailingCommaConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "useTabs": {
+      "description": "Use tabs for indentation or spaces. (Default: false)",
+      "type": [
+        "boolean",
         "null"
       ]
     }
   },
   "definitions": {
+    "ArrowParensConfig": {
+      "type": "string",
+      "enum": [
+        "always",
+        "avoid"
+      ]
+    },
+    "EndOfLineConfig": {
+      "type": "string",
+      "enum": [
+        "lf",
+        "crlf",
+        "cr"
+      ]
+    },
+    "ObjectWrapConfig": {
+      "type": "string",
+      "enum": [
+        "preserve",
+        "collapse",
+        "always"
+      ]
+    },
+    "OperatorPositionConfig": {
+      "type": "string",
+      "enum": [
+        "start",
+        "end"
+      ]
+    },
+    "QuotePropsConfig": {
+      "type": "string",
+      "enum": [
+        "as-needed",
+        "preserve"
+      ]
+    },
     "SortImportsConfig": {
       "type": "object",
       "properties": {
@@ -117,8 +205,14 @@
           "type": "boolean"
         },
         "order": {
-          "default": "asc",
-          "type": "string"
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SortOrderConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "partitionByComment": {
           "default": false,
@@ -133,6 +227,21 @@
           "type": "boolean"
         }
       }
+    },
+    "SortOrderConfig": {
+      "type": "string",
+      "enum": [
+        "asc",
+        "desc"
+      ]
+    },
+    "TrailingCommaConfig": {
+      "type": "string",
+      "enum": [
+        "all",
+        "es5",
+        "none"
+      ]
     }
   }
 }

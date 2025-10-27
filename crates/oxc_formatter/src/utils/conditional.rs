@@ -5,8 +5,9 @@ use oxc_span::{GetSpan, Span};
 
 use crate::{
     Format, FormatResult, FormatWrite,
+    ast_nodes::{AstNode, AstNodes},
+    format_args,
     formatter::{Formatter, prelude::*, trivia::FormatTrailingComments},
-    generated::ast_nodes::{AstNode, AstNodes},
     utils::format_node_without_trailing_comments::FormatNodeWithoutTrailingComments,
     write,
 };
@@ -145,7 +146,7 @@ fn format_trailing_comments<'a>(
                 return &comments[..index];
             }
             // If this comment is a line comment or an end of line comment, so we stop here and return the comments with this comment
-            else if comment.is_line() || source_text.is_end_of_line_comment(comment) {
+            else if comment.is_line() || f.comments().is_end_of_line_comment(comment) {
                 return &comments[..=index];
             }
             // Store the index of the comment before the operator, if no line comment or no new line is found, then return all comments before operator
@@ -373,41 +374,34 @@ impl<'a> FormatConditionalLike<'a, '_> {
         f: &mut Formatter<'f, 'a>,
         layout: ConditionalLayout,
     ) -> FormatResult<()> {
-        let format_inner = format_with(|f| match self.conditional {
-            ConditionalLike::ConditionalExpression(conditional) => {
-                write!(f, FormatNodeWithoutTrailingComments(conditional.test()))?;
-                format_trailing_comments(
-                    conditional.test.span().end,
-                    conditional.consequent.span().start,
-                    b'?',
-                    f,
-                )
-            }
-            ConditionalLike::TSConditionalType(conditional) => {
-                write!(
-                    f,
-                    [
-                        conditional.check_type(),
-                        space(),
-                        "extends",
-                        space(),
-                        FormatNodeWithoutTrailingComments(conditional.extends_type())
-                    ]
-                )?;
+        let format_inner = format_with(|f| {
+            let (start, end) = match self.conditional {
+                ConditionalLike::ConditionalExpression(conditional) => {
+                    write!(f, FormatNodeWithoutTrailingComments(conditional.test()))?;
+                    (conditional.test.span().end, conditional.consequent.span().start)
+                }
+                ConditionalLike::TSConditionalType(conditional) => {
+                    write!(
+                        f,
+                        [
+                            conditional.check_type(),
+                            space(),
+                            "extends",
+                            space(),
+                            FormatNodeWithoutTrailingComments(conditional.extends_type())
+                        ]
+                    )?;
+                    (conditional.extends_type.span().end, conditional.true_type.span().start)
+                }
+            };
 
-                format_trailing_comments(
-                    conditional.extends_type.span().end,
-                    conditional.true_type.span().start,
-                    b'?',
-                    f,
-                )
-            }
+            format_trailing_comments(start, end, b'?', f)
         });
 
         if layout.is_nested_alternate() {
             write!(f, [align(2, &format_inner)])
         } else {
-            format_inner.fmt(f)
+            write!(f, format_inner)
         }
     }
 
@@ -420,27 +414,19 @@ impl<'a> FormatConditionalLike<'a, '_> {
         write!(f, [soft_line_break_or_space(), "?", space()])?;
 
         let format_consequent = format_with(|f| {
-            let format_consequent_with_trailing_comments =
-                format_once(|f| match self.conditional {
+            let format_consequent_with_trailing_comments = format_once(|f| {
+                let (start, end) = match self.conditional {
                     ConditionalLike::ConditionalExpression(conditional) => {
                         write!(f, FormatNodeWithoutTrailingComments(conditional.consequent()))?;
-                        format_trailing_comments(
-                            conditional.consequent.span().end,
-                            conditional.alternate.span().start,
-                            b':',
-                            f,
-                        )
+                        (conditional.consequent.span().end, conditional.alternate.span().start)
                     }
                     ConditionalLike::TSConditionalType(conditional) => {
                         write!(f, FormatNodeWithoutTrailingComments(conditional.true_type()))?;
-                        format_trailing_comments(
-                            conditional.true_type.span().end,
-                            conditional.false_type.span().start,
-                            b':',
-                            f,
-                        )
+                        (conditional.true_type.span().end, conditional.false_type.span().start)
                     }
-                });
+                };
+                format_trailing_comments(start, end, b':', f)
+            });
 
             let format_consequent_with_proper_indentation = format_with(|f| {
                 if f.options().indent_style.is_space() {
@@ -478,10 +464,10 @@ impl<'a> FormatConditionalLike<'a, '_> {
 
         let format_alternative = format_with(|f| match self.conditional {
             ConditionalLike::ConditionalExpression(conditional) => {
-                write!(f, [conditional.alternate()])
+                write!(f, [FormatNodeWithoutTrailingComments(conditional.alternate())])
             }
             ConditionalLike::TSConditionalType(conditional) => {
-                write!(f, [conditional.false_type()])
+                write!(f, [FormatNodeWithoutTrailingComments(conditional.false_type())])
             }
         });
         let format_alternative = format_with(|f| {
@@ -606,7 +592,11 @@ impl<'a> Format<'a> for FormatConditionalLike<'a, '_> {
         });
 
         let grouped = format_with(|f| {
-            if layout.is_root() { write!(f, [group(&format_inner)]) } else { format_inner.fmt(f) }
+            if layout.is_root() || layout.is_nested_test() {
+                write!(f, [group(&format_inner)])
+            } else {
+                format_inner.fmt(f)
+            }
         });
 
         if layout.is_nested_test() || should_extra_indent {

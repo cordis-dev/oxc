@@ -189,7 +189,8 @@ declare_oxc_lint!(
     NoUnusedVars,
     eslint,
     correctness,
-    dangerous_suggestion
+    dangerous_suggestion,
+    config = NoUnusedVarsOptions
 );
 
 impl Deref for NoUnusedVars {
@@ -223,8 +224,7 @@ impl Rule for NoUnusedVars {
         //    we can't detect
         !ctx.source_type().is_typescript_definition()
             && !ctx
-                .file_path()
-                .extension()
+                .file_extension()
                 .is_some_and(|ext| ext == "vue" || ext == "svelte" || ext == "astro")
     }
 }
@@ -353,6 +353,15 @@ impl NoUnusedVars {
             // ambient namespaces
             || flags == AMBIENT_NAMESPACE_FLAGS
             || (symbol.is_in_ts() && symbol.is_in_declare_global())
+        {
+            return true;
+        }
+
+        let node_id = symbol.declaration().id();
+        if flags.intersects(SymbolFlags::FunctionScopedVariable)
+            && let AstKind::FormalParameters(formal_parameters) =
+                symbol.nodes().parent_node(node_id).kind()
+            && formal_parameters.kind.is_signature()
         {
             return true;
         }

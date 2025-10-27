@@ -2,7 +2,7 @@
   "name": "oxc-vscode",
   "description": "oxc vscode extension",
   "license": "MIT",
-  "version": "1.23.0",
+  "version": "1.24.0",
   "icon": "icon.png",
   "publisher": "oxc",
   "displayName": "Oxc",
@@ -158,6 +158,15 @@
           "scope": "resource",
           "default": false,
           "description": "Enable experimental formatting support. This feature is experimental and might not work as expected."
+        },
+        "oxc.fmt.configPath": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "scope": "resource",
+          "default": null,
+          "description": "Path to an oxfmt configuration file"
         }
       }
     },
@@ -207,14 +216,14 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.9",
-    "@types/node": "^24.0.0",
+    "@types/node": "catalog:",
     "@types/vscode": "1.93.0",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.4.1",
     "@vscode/vsce": "^3.0.0",
     "cross-env": "^10.0.0",
     "ovsx": "^0.10.0",
-    "rolldown": "1.0.0-beta.42",
+    "rolldown": "1.0.0-beta.44",
     "tinyglobby": "^0.2.15",
     "typescript": "catalog:"
   },
