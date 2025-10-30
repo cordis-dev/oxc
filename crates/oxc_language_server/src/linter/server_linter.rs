@@ -86,6 +86,8 @@ impl ServerLinterDiagnostics {
 }
 
 impl ServerLinter {
+    /// # Panics
+    /// Panics if the root URI cannot be converted to a file path.
     pub fn new(root_uri: &Uri, options: &LSPLintOptions) -> Self {
         let root_path = root_uri.to_file_path().unwrap();
         let mut nested_ignore_patterns = Vec::new();
@@ -177,7 +179,7 @@ impl ServerLinter {
             lint_on_run: options.run,
             diagnostics: ServerLinterDiagnostics::default(),
             tsgo_linter: if options.type_aware {
-                Arc::new(Some(TsgoLinter::new(&root_path, config_store)))
+                Arc::new(Some(TsgoLinter::new(&root_path, config_store, fix_kind)))
             } else {
                 Arc::new(None)
             },
@@ -513,7 +515,12 @@ mod test {
     fn test_lint_on_run_on_type_on_save() {
         Tester::new(
             "fixtures/linter/lint_on_run/on_save",
-            Some(LintOptions { type_aware: true, run: Run::OnType, ..Default::default() }),
+            Some(LintOptions {
+                type_aware: true,
+                run: Run::OnType,
+                fix_kind: LintFixKindFlag::All,
+                ..Default::default()
+            }),
         )
         .test_and_snapshot_single_file_with_run_type("on-save.ts", Run::OnSave);
     }
@@ -533,7 +540,12 @@ mod test {
     fn test_lint_on_run_on_save_on_save() {
         Tester::new(
             "fixtures/linter/lint_on_run/on_type",
-            Some(LintOptions { type_aware: true, run: Run::OnSave, ..Default::default() }),
+            Some(LintOptions {
+                type_aware: true,
+                run: Run::OnSave,
+                fix_kind: LintFixKindFlag::All,
+                ..Default::default()
+            }),
         )
         .test_and_snapshot_single_file_with_run_type("on-save.ts", Run::OnSave);
     }
@@ -662,7 +674,12 @@ mod test {
     fn test_tsgo_lint() {
         let tester = Tester::new(
             "fixtures/linter/tsgolint",
-            Some(LintOptions { type_aware: true, run: Run::OnSave, ..Default::default() }),
+            Some(LintOptions {
+                type_aware: true,
+                run: Run::OnSave,
+                fix_kind: LintFixKindFlag::All,
+                ..Default::default()
+            }),
         );
         tester.test_and_snapshot_single_file("no-floating-promises/index.ts");
     }

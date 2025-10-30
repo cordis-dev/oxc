@@ -28,6 +28,7 @@ use crate::{
 
 use super::{
     FormatWrite,
+    jsx::element,
     type_parameters::{FormatTSTypeParameters, FormatTSTypeParametersOptions},
 };
 
@@ -44,9 +45,9 @@ impl<'a> Format<'a> for AstNode<'a, Vec<'a, ClassElement<'a>>> {
         let mut join = f.join_nodes_with_hardline();
         // Iterate through pairs of consecutive elements to handle semicolons properly
         // Each element is paired with the next one (or None for the last element)
-        for (e1, e2) in self.iter().zip(self.iter().skip(1).map(Some).chain(std::iter::once(None)))
-        {
-            join.entry(e1.span(), &(e1, e2));
+        let mut iter = self.iter().peekable();
+        while let Some(element) = iter.next() {
+            join.entry(element.span(), &(element, iter.peek().copied()));
         }
         join.finish()
     }
@@ -54,25 +55,14 @@ impl<'a> Format<'a> for AstNode<'a, Vec<'a, ClassElement<'a>>> {
 
 impl<'a> Format<'a> for (&AstNode<'a, ClassElement<'a>>, Option<&AstNode<'a, ClassElement<'a>>>) {
     fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        let decorators = match self.0.as_ast_nodes() {
-            AstNodes::MethodDefinition(method) => {
-                write!(f, [method.decorators(), method])
-            }
-            AstNodes::PropertyDefinition(property) => {
-                write!(f, [property.decorators(), property])
-            }
-            AstNodes::AccessorProperty(accessor) => {
-                write!(f, [accessor.decorators(), accessor])
-            }
-            _ => write!(f, self.0),
-        };
-
-        write!(f, [ClassPropertySemicolon::new(self.0, self.1)])
+        FormatClassElementWithSemicolon::new(self.0, self.1).fmt(f)
     }
 }
 
 impl<'a> FormatWrite<'a> for AstNode<'a, MethodDefinition<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+        write!(f, [self.decorators()])?;
+
         if let Some(accessibility) = &self.accessibility {
             write!(f, [accessibility.as_str(), space()])?;
         }
@@ -160,6 +150,8 @@ impl<'a> FormatWrite<'a> for AstNode<'a, StaticBlock<'a>> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, AccessorProperty<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+        write!(f, [self.decorators()])?;
+
         if let Some(accessibility) = self.accessibility() {
             write!(f, [accessibility.as_str(), space()])?;
         }
@@ -560,12 +552,12 @@ fn should_group<'a>(class: &Class<'a>, f: &Formatter<'_, 'a>) -> bool {
     false
 }
 
-pub struct ClassPropertySemicolon<'a, 'b> {
+pub struct FormatClassElementWithSemicolon<'a, 'b> {
     element: &'b AstNode<'a, ClassElement<'a>>,
     next_element: Option<&'b AstNode<'a, ClassElement<'a>>>,
 }
 
-impl<'a, 'b> ClassPropertySemicolon<'a, 'b> {
+impl<'a, 'b> FormatClassElementWithSemicolon<'a, 'b> {
     pub fn new(
         element: &'b AstNode<'a, ClassElement<'a>>,
         next_element: Option<&'b AstNode<'a, ClassElement<'a>>>,
@@ -613,23 +605,22 @@ impl<'a, 'b> ClassPropertySemicolon<'a, 'b> {
     }
 }
 
-impl<'a> Format<'a> for ClassPropertySemicolon<'a, '_> {
+impl<'a> Format<'a> for FormatClassElementWithSemicolon<'a, '_> {
     fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        if !matches!(
+        write!(f, [self.element])?;
+
+        let needs_semi = matches!(
             self.element.as_ref(),
             ClassElement::PropertyDefinition(_) | ClassElement::AccessorProperty(_)
-        ) {
-            return Ok(());
-        }
+        );
 
-        if match f.options().semicolons {
-            Semicolons::Always => true,
-            Semicolons::AsNeeded => self.needs_semicolon(),
-        } {
-            write!(f, ";")
-        } else {
-            Ok(())
-        }
+        let needs_semi = needs_semi
+            && match f.options().semicolons {
+                Semicolons::Always => true,
+                Semicolons::AsNeeded => self.needs_semicolon(),
+            };
+
+        write!(f, needs_semi.then_some(";"))
     }
 }
 
