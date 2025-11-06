@@ -30,7 +30,7 @@ fn no_warning_comments_diagnostic(term: &str, comment: &str, span: Span) -> OxcD
 
     let display = if truncated { format!("{comment_to_display}...") } else { comment_to_display };
 
-    OxcDiagnostic::warn(format!("Unexpected '{term}' comment: {display}"))
+    OxcDiagnostic::warn(format!("Unresolved '{term}' comment."))
         .with_help("Remove or rephrase this comment")
         .with_label(span)
 }
