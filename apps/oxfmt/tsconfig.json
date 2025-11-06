@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "target": "ESNext",
+    "noImplicitAny": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src-js",
+    "test/**/*.ts"
+  ],
+  "exclude": [
+    "test/fixtures"
+  ]
+}

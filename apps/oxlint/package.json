@@ -1,6 +1,6 @@
 {
   "name": "oxlint",
-  "version": "1.25.0",
+  "version": "1.26.0",
   "type": "module",
   "main": "dist/index.js",
   "bin": "dist/cli.js",
@@ -36,13 +36,14 @@
     "dist"
   ],
   "devDependencies": {
+    "@typescript-eslint/scope-manager": "^8.46.2",
     "@types/esquery": "^1.5.4",
     "@types/estree": "^1.0.8",
     "eslint": "^9.36.0",
     "esquery": "^1.6.0",
     "execa": "^9.6.0",
     "jiti": "^2.6.0",
-    "tsdown": "^0.15.5",
+    "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
@@ -59,9 +60,5 @@
       "darwin-x64",
       "darwin-arm64"
     ]
-  },
-  "dependencies": {
-    "@typescript-eslint/scope-manager": "^8.46.2",
-    "@typescript-eslint/types": "^8.46.2"
   }
 }

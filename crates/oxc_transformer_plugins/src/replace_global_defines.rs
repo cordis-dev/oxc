@@ -260,9 +260,8 @@ impl<'a> Traverse<'a, ()> for ReplaceGlobalDefines<'a> {
         }
         if self.replace_define_with_assignment_expr(node, ctx) {
             self.mark_as_changed();
-            // `AssignmentExpression` is stored in a `Box`, so we can use `from_ptr` to get
-            // the stable address
-            self.ast_node_lock = Some(Address::from_ptr(node));
+            // `AssignmentExpression` is stored in a `Box`, so has a stable memory location
+            self.ast_node_lock = Some(Address::from_ref(node));
         }
     }
 
@@ -271,7 +270,8 @@ impl<'a> Traverse<'a, ()> for ReplaceGlobalDefines<'a> {
         node: &mut AssignmentExpression<'a>,
         _: &mut TraverseCtx<'a>,
     ) {
-        if self.ast_node_lock == Some(Address::from_ptr(node)) {
+        // `AssignmentExpression` is stored in a `Box`, so has a stable memory location
+        if self.ast_node_lock == Some(Address::from_ref(node)) {
             self.ast_node_lock = None;
         }
     }
@@ -614,6 +614,25 @@ impl<'a> ReplaceGlobalDefines<'a> {
                     }
                     Expression::ThisExpression(_) if should_replace_this_expr => {
                         cur_part_name = &THIS_ATOM;
+                        None
+                    }
+                    Expression::MetaProperty(meta) => {
+                        // Handle import.meta
+                        // When we encounter a MetaProperty, we need to verify that the remaining
+                        // parts match ["import", "meta"]
+                        if meta.meta.name == "import" && meta.property.name == "meta" {
+                            // At this point, i is the current position we're checking
+                            // We need the next two parts (going backwards) to be "meta" then "import"
+                            // i.e., parts[i-1] == "meta" and parts[i-2] == "import"
+                            if i >= 2
+                                && dot_define.parts[i - 1].as_str() == "meta"
+                                && dot_define.parts[i - 2].as_str() == "import"
+                            {
+                                // Successfully matched import.meta at the expected position
+                                // Return true if we've consumed all parts (i == 2)
+                                return i == 2;
+                            }
+                        }
                         None
                     }
                     _ => None,

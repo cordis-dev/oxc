@@ -8,6 +8,7 @@ use oxc_ast::{
 use oxc_diagnostics::OxcDiagnostic;
 use oxc_macros::declare_oxc_lint;
 use oxc_span::{GetSpan, Span};
+use schemars::JsonSchema;
 
 use crate::{
     AstNode,
@@ -22,16 +23,22 @@ fn missing_type_prop(span: Span) -> OxcDiagnostic {
         .with_label(span)
 }
 
-fn invalid_type_prop(span: Span) -> OxcDiagnostic {
+fn invalid_type_prop(span: Span, allowed_types: &str) -> OxcDiagnostic {
     OxcDiagnostic::warn("`button` elements must have a valid `type` attribute.")
-        .with_help("Change the `type` attribute to one of the allowed values: `button`, `submit`, or `reset`.")
+        .with_help(format!(
+            "Change the `type` attribute to one of the allowed values: {allowed_types}."
+        ))
         .with_label(span)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
+#[serde(rename_all = "camelCase", default)]
 pub struct ButtonHasType {
+    /// If true, allow `type="button"`.
     button: bool,
+    /// If true, allow `type="submit"`.
     submit: bool,
+    /// If true, allow `type="reset"`.
     reset: bool,
 }
 
@@ -67,7 +74,8 @@ declare_oxc_lint!(
     /// ```
     ButtonHasType,
     react,
-    restriction
+    restriction,
+    config = ButtonHasType,
 );
 
 impl Rule for ButtonHasType {
@@ -89,7 +97,11 @@ impl Rule for ButtonHasType {
                     },
                     |button_type_prop| {
                         if !self.is_valid_button_type_prop(button_type_prop) {
-                            ctx.diagnostic(invalid_type_prop(button_type_prop.span()));
+                            let allowed_types = self.allowed_types_message();
+                            ctx.diagnostic(invalid_type_prop(
+                                button_type_prop.span(),
+                                &allowed_types,
+                            ));
                         }
                     },
                 );
@@ -124,7 +136,11 @@ impl Rule for ButtonHasType {
                                 |type_prop| {
                                     if !self.is_valid_button_type_prop_expression(&type_prop.value)
                                     {
-                                        ctx.diagnostic(invalid_type_prop(type_prop.span));
+                                        let allowed_types = self.allowed_types_message();
+                                        ctx.diagnostic(invalid_type_prop(
+                                            type_prop.span,
+                                            &allowed_types,
+                                        ));
                                     }
                                 },
                             );
@@ -159,6 +175,29 @@ impl Rule for ButtonHasType {
 }
 
 impl ButtonHasType {
+    fn allowed_types_message(&self) -> String {
+        let mut types = Vec::new();
+        if self.button {
+            types.push("`button`");
+        }
+        if self.submit {
+            types.push("`submit`");
+        }
+        if self.reset {
+            types.push("`reset`");
+        }
+
+        match types.len() {
+            0 => String::new(),
+            1 => types[0].to_string(),
+            2 => format!("{} or {}", types[0], types[1]),
+            _ => {
+                let last = types.pop().unwrap();
+                format!("{}, or {}", types.join(", "), last)
+            }
+        }
+    }
+
     fn is_valid_button_type_prop(&self, item: &JSXAttributeItem) -> bool {
         match get_prop_value(item) {
             Some(JSXAttributeValue::ExpressionContainer(container)) => {
@@ -238,6 +277,10 @@ fn test() {
             Some(serde_json::json!([{ "reset": false }])),
         ),
         (
+            r#"React.createElement("button", {type: "button"})"#,
+            Some(serde_json::json!([{ "reset": false, "submit": false }])),
+        ),
+        (
             r#"
 			        function MyComponent(): ReactElement {
 			          const buttonProps: (Required<Attributes> & ButtonHTMLAttributes<HTMLButtonElement>)[] = [
@@ -305,6 +348,10 @@ fn test() {
         (
             r#"React.createElement("button", {type: condition ? "reset" : "button"})"#,
             Some(serde_json::json!([{ "reset": false }])),
+        ),
+        (
+            r#"React.createElement("button", {type: condition ? "reset" : "button"})"#,
+            Some(serde_json::json!([{ "reset": false, "submit": false }])),
         ),
         (r#"Foo.createElement("button")"#, None),
         (

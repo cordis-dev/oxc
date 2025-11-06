@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use log::warn;
+use log::{debug, warn};
 use oxc_allocator::Allocator;
 use oxc_data_structures::rope::{Rope, get_line_column};
 use oxc_formatter::{
@@ -15,15 +15,92 @@ use tower_lsp_server::{
 
 use crate::formatter::options::FormatOptions as LSPFormatOptions;
 use crate::{FORMAT_CONFIG_FILES, utils::normalize_path};
+
+pub struct ServerFormatterBuilder {
+    root_uri: Uri,
+    options: LSPFormatOptions,
+}
+
+impl ServerFormatterBuilder {
+    pub fn new(root_uri: Uri, options: serde_json::Value) -> Self {
+        let options = match serde_json::from_value::<LSPFormatOptions>(options) {
+            Ok(opts) => opts,
+            Err(err) => {
+                warn!(
+                    "Failed to deserialize LSPFormatOptions from JSON: {err}, falling back to default options"
+                );
+                LSPFormatOptions::default()
+            }
+        };
+        Self { root_uri, options }
+    }
+
+    pub fn build(self) -> Option<ServerFormatter> {
+        if !self.options.experimental {
+            return None;
+        }
+        debug!("experimental formatter enabled");
+
+        let root_path = self.root_uri.to_file_path().unwrap();
+
+        Some(ServerFormatter::new(Self::get_format_options(
+            &root_path,
+            self.options.config_path.as_ref(),
+        )))
+    }
+
+    fn get_format_options(root_path: &Path, config_path: Option<&String>) -> FormatOptions {
+        let oxfmtrc = if let Some(config) = Self::search_config_file(root_path, config_path) {
+            if let Ok(oxfmtrc) = Oxfmtrc::from_file(&config) {
+                oxfmtrc
+            } else {
+                warn!("Failed to initialize oxfmtrc config: {}", config.to_string_lossy());
+                Oxfmtrc::default()
+            }
+        } else {
+            warn!(
+                "Config file not found: {}, fallback to default config",
+                config_path.unwrap_or(&FORMAT_CONFIG_FILES.join(", "))
+            );
+            Oxfmtrc::default()
+        };
+
+        match oxfmtrc.into_format_options() {
+            Ok(options) => options,
+            Err(err) => {
+                warn!("Failed to parse oxfmtrc config: {err}, fallback to default config");
+                FormatOptions::default()
+            }
+        }
+    }
+
+    fn search_config_file(root_path: &Path, config_path: Option<&String>) -> Option<PathBuf> {
+        if let Some(config_path) = config_path {
+            let config = normalize_path(root_path.join(config_path));
+            if config.try_exists().is_ok_and(|exists| exists) {
+                return Some(config);
+            }
+
+            warn!(
+                "Config file not found: {}, searching for `{}` in the root path",
+                config.to_string_lossy(),
+                FORMAT_CONFIG_FILES.join(", ")
+            );
+        }
+
+        FORMAT_CONFIG_FILES.iter().find_map(|&file| {
+            let config = normalize_path(root_path.join(file));
+            config.try_exists().is_ok_and(|exists| exists).then_some(config)
+        })
+    }
+}
 pub struct ServerFormatter {
     options: FormatOptions,
 }
 
 impl ServerFormatter {
-    pub fn new(root_uri: &Uri, options: &LSPFormatOptions) -> Self {
-        let root_path = root_uri.to_file_path().unwrap();
-
-        Self { options: Self::get_format_options(&root_path, options.config_path.as_ref()) }
+    pub fn new(options: FormatOptions) -> Self {
+        Self { options }
     }
 
     pub fn run_single(&self, uri: &Uri, content: Option<String>) -> Option<Vec<TextEdit>> {
@@ -71,55 +148,10 @@ impl ServerFormatter {
         )])
     }
 
-    fn search_config_file(root_path: &Path, config_path: Option<&String>) -> Option<PathBuf> {
-        if let Some(config_path) = config_path {
-            let config = normalize_path(root_path.join(config_path));
-            if config.try_exists().is_ok_and(|exists| exists) {
-                return Some(config);
-            }
-
-            warn!(
-                "Config file not found: {}, searching for `{}` in the root path",
-                config.to_string_lossy(),
-                FORMAT_CONFIG_FILES.join(", ")
-            );
-        }
-
-        FORMAT_CONFIG_FILES.iter().find_map(|&file| {
-            let config = normalize_path(root_path.join(file));
-            config.try_exists().is_ok_and(|exists| exists).then_some(config)
-        })
-    }
-
-    fn get_format_options(root_path: &Path, config_path: Option<&String>) -> FormatOptions {
-        let oxfmtrc = if let Some(config) = Self::search_config_file(root_path, config_path) {
-            if let Ok(oxfmtrc) = Oxfmtrc::from_file(&config) {
-                oxfmtrc
-            } else {
-                warn!("Failed to initialize oxfmtrc config: {}", config.to_string_lossy());
-                Oxfmtrc::default()
-            }
-        } else {
-            warn!(
-                "Config file not found: {}, fallback to default config",
-                config_path.unwrap_or(&FORMAT_CONFIG_FILES.join(", "))
-            );
-            Oxfmtrc::default()
-        };
-
-        match oxfmtrc.into_format_options() {
-            Ok(options) => options,
-            Err(err) => {
-                warn!("Failed to parse oxfmtrc config: {err}, fallback to default config");
-                FormatOptions::default()
-            }
-        }
-    }
-
     #[expect(clippy::unused_self)]
     pub fn get_watcher_patterns(&self, options: &LSPFormatOptions) -> Vec<Pattern> {
         if let Some(config_path) = options.config_path.as_ref() {
-            return vec![config_path.to_string()];
+            return vec![config_path.clone()];
         }
 
         FORMAT_CONFIG_FILES.iter().map(|file| (*file).to_string()).collect()
@@ -181,8 +213,10 @@ fn compute_minimal_text_edit<'a>(
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+
     use super::compute_minimal_text_edit;
-    use crate::formatter::{options::FormatOptions, tester::Tester};
+    use crate::formatter::tester::Tester;
 
     #[test]
     #[should_panic(expected = "assertion failed")]
@@ -269,7 +303,9 @@ mod tests {
     fn test_formatter() {
         Tester::new(
             "fixtures/formatter/basic",
-            Some(FormatOptions { experimental: true, ..Default::default() }),
+            json!({
+                "fmt.experimental": true
+            }),
         )
         .format_and_snapshot_single_file("basic.ts");
     }
@@ -278,7 +314,9 @@ mod tests {
     fn test_root_config_detection() {
         Tester::new(
             "fixtures/formatter/root_config",
-            Some(FormatOptions { experimental: true, ..Default::default() }),
+            json!({
+                "fmt.experimental": true
+            }),
         )
         .format_and_snapshot_single_file("semicolons-as-needed.ts");
     }
@@ -287,9 +325,9 @@ mod tests {
     fn test_custom_config_path() {
         Tester::new(
             "fixtures/formatter/custom_config_path",
-            Some(FormatOptions {
-                experimental: true,
-                config_path: Some("./format.json".to_string()),
+            json!({
+                "fmt.experimental": true,
+                "fmt.configPath": "./format.json",
             }),
         )
         .format_and_snapshot_single_file("semicolons-as-needed.ts");

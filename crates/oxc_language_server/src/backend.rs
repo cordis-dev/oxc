@@ -23,8 +23,8 @@ use crate::{
     code_actions::CODE_ACTION_KIND_SOURCE_FIX_ALL_OXC,
     commands::{FIX_ALL_COMMAND_ID, FixAllCommandArgs},
     file_system::LSPFileSystem,
-    linter::server_linter::ServerLinterRun,
-    options::{Options, WorkspaceOption},
+    linter::options::Run,
+    options::WorkspaceOption,
     worker::WorkspaceWorker,
 };
 
@@ -73,7 +73,7 @@ impl LanguageServer for Backend {
     async fn initialize(&self, params: InitializeParams) -> Result<InitializeResult> {
         let server_version = env!("CARGO_PKG_VERSION");
         // initialization_options can be anything, so we are requesting `workspace/configuration` when no initialize options are provided
-        let options = params.initialization_options.and_then(|mut value| {
+        let options = params.initialization_options.and_then(|value| {
             // the client supports the new settings object
             if let Ok(new_settings) = serde_json::from_value::<Vec<WorkspaceOption>>(value.clone())
             {
@@ -81,15 +81,14 @@ impl LanguageServer for Backend {
                 return Some(new_settings);
             }
 
-            let deprecated_settings =
-                serde_json::from_value::<Options>(value.get_mut("settings")?.take()).ok();
+            let deprecated_settings = value.get("settings");
 
             // the client has deprecated settings and has a deprecated root uri.
             // handle all things like the old way
             if deprecated_settings.is_some() && params.root_uri.is_some() {
                 return Some(vec![WorkspaceOption {
                     workspace_uri: params.root_uri.clone().unwrap(),
-                    options: deprecated_settings.unwrap(),
+                    options: deprecated_settings.unwrap().clone(),
                 }]);
             }
 
@@ -132,7 +131,7 @@ impl LanguageServer for Backend {
                     .map(|workspace_options| workspace_options.options.clone())
                     .unwrap_or_default();
 
-                worker.start_worker(option).await;
+                worker.start_worker(option.clone()).await;
             }
         }
 
@@ -186,15 +185,13 @@ impl LanguageServer for Backend {
                 self.request_workspace_configuration(needed_configurations.keys().collect()).await
             } else {
                 // every worker should be initialized already in `initialize` request
-                vec![Some(Options::default()); needed_configurations.len()]
+                vec![serde_json::Value::Null; needed_configurations.len()]
             };
-            let default_options = Options::default();
 
             for (index, worker) in needed_configurations.values().enumerate() {
-                let configuration =
-                    configurations.get(index).unwrap_or(&None).as_ref().unwrap_or(&default_options);
+                let configuration = configurations.get(index).unwrap_or(&serde_json::Value::Null);
 
-                worker.start_worker(configuration).await;
+                worker.start_worker(configuration.clone()).await;
             }
         }
 
@@ -262,14 +259,12 @@ impl LanguageServer for Backend {
             .ok()
             .or_else(|| {
                 // fallback to old configuration
-                let options = serde_json::from_value::<Options>(params.settings).ok()?;
-
                 // for all workers (default only one)
                 let options = workers
                     .iter()
                     .map(|worker| WorkspaceOption {
                         workspace_uri: worker.get_root_uri().clone(),
-                        options: options.clone(),
+                        options: params.settings.clone(),
                     })
                     .collect();
 
@@ -295,12 +290,9 @@ impl LanguageServer for Backend {
             configs
                 .iter()
                 .enumerate()
-                // filter out results where the client did not return a configuration
-                .filter_map(|(index, config)| {
-                    config.as_ref().map(|options| WorkspaceOption {
-                        workspace_uri: workers[index].get_root_uri().clone(),
-                        options: options.clone(),
-                    })
+                .map(|(index, config)| WorkspaceOption {
+                    workspace_uri: workers[index].get_root_uri().clone(),
+                    options: config.clone(),
                 })
                 .collect::<Vec<_>>()
         } else {
@@ -320,7 +312,7 @@ impl LanguageServer for Backend {
             };
 
             let (diagnostics, registrations, unregistrations, formatter_activated) =
-                worker.did_change_configuration(&option.options).await;
+                worker.did_change_configuration(option.options).await;
 
             if formatter_activated && self.capabilities.get().is_some_and(|c| c.dynamic_formatting)
             {
@@ -423,8 +415,6 @@ impl LanguageServer for Backend {
 
         self.publish_all_diagnostics(&cleared_diagnostics).await;
 
-        let default_options = Options::default();
-
         // client support `workspace/configuration` request
         if self.capabilities.get().is_some_and(|capabilities| capabilities.workspace_configuration)
         {
@@ -437,10 +427,8 @@ impl LanguageServer for Backend {
             for (index, folder) in params.event.added.iter().enumerate() {
                 let worker = WorkspaceWorker::new(folder.uri.clone());
                 // get the configuration from the response and init the linter
-                let options = configurations.get(index).unwrap_or(&None);
-                let options = options.as_ref().unwrap_or(&default_options);
-
-                worker.start_worker(options).await;
+                let options = configurations.get(index).unwrap_or(&serde_json::Value::Null);
+                worker.start_worker(options.clone()).await;
 
                 added_registrations.extend(worker.init_watchers().await);
                 workers.push(worker);
@@ -450,7 +438,7 @@ impl LanguageServer for Backend {
             for folder in params.event.added {
                 let worker = WorkspaceWorker::new(folder.uri);
                 // use default options
-                worker.start_worker(&default_options).await;
+                worker.start_worker(serde_json::Value::Null).await;
                 workers.push(worker);
             }
         }
@@ -488,7 +476,11 @@ impl LanguageServer for Backend {
             self.file_system.write().await.remove(uri);
         }
 
-        if let Some(diagnostics) = worker.lint_file(uri, None, ServerLinterRun::OnSave).await {
+        if !worker.should_lint_on_run_type(Run::OnSave).await {
+            return;
+        }
+
+        if let Some(diagnostics) = worker.lint_file(uri, None).await {
             self.client
                 .publish_diagnostics(
                     uri.clone(),
@@ -513,10 +505,14 @@ impl LanguageServer for Backend {
         if self.capabilities.get().is_some_and(|option| option.dynamic_formatting)
             && let Some(content) = &content
         {
-            self.file_system.write().await.set(uri, content.to_string());
+            self.file_system.write().await.set(uri, content.clone());
         }
 
-        if let Some(diagnostics) = worker.lint_file(uri, content, ServerLinterRun::OnType).await {
+        if !worker.should_lint_on_run_type(Run::OnType).await {
+            return;
+        }
+
+        if let Some(diagnostics) = worker.lint_file(uri, content).await {
             self.client
                 .publish_diagnostics(
                     uri.clone(),
@@ -541,12 +537,10 @@ impl LanguageServer for Backend {
         let content = params.text_document.text;
 
         if self.capabilities.get().is_some_and(|option| option.dynamic_formatting) {
-            self.file_system.write().await.set(uri, content.to_string());
+            self.file_system.write().await.set(uri, content.clone());
         }
 
-        if let Some(diagnostics) =
-            worker.lint_file(uri, Some(content), ServerLinterRun::Always).await
-        {
+        if let Some(diagnostics) = worker.lint_file(uri, Some(content)).await {
             self.client
                 .publish_diagnostics(
                     uri.clone(),
@@ -669,7 +663,7 @@ impl Backend {
     /// Request the workspace configuration from the client
     /// and return the options for each workspace folder.
     /// The check if the client support workspace configuration, should be done before.
-    async fn request_workspace_configuration(&self, uris: Vec<&Uri>) -> Vec<Option<Options>> {
+    async fn request_workspace_configuration(&self, uris: Vec<&Uri>) -> Vec<serde_json::Value> {
         let length = uris.len();
         let config_items = uris
             .into_iter()
@@ -682,20 +676,15 @@ impl Backend {
         let Ok(configs) = self.client.configuration(config_items).await else {
             debug!("failed to get configuration");
             // return none for each workspace folder
-            return vec![None; length];
+            return vec![serde_json::Value::Null; length];
         };
 
-        let mut options = vec![];
-        for config in configs {
-            options.push(serde_json::from_value::<Options>(config).ok());
-        }
-
         debug_assert!(
-            options.len() == length,
+            configs.len() == length,
             "the number of configuration items should be the same as the number of workspace folders"
         );
 
-        options
+        configs
     }
 
     /// Clears all diagnostics for workspace folders

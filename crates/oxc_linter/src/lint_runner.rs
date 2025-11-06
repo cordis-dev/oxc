@@ -14,6 +14,9 @@ use crate::{
     TsGoLintState,
 };
 
+#[cfg(feature = "language_server")]
+use crate::Message;
+
 /// Unified runner that orchestrates both regular (oxc) and type-aware (tsgolint) linting
 /// with centralized disable directives handling.
 pub struct LintRunner {
@@ -102,9 +105,7 @@ impl DirectivesStore {
                     &source_text,
                     diagnostics,
                 );
-                tx_error
-                    .send((path.clone(), wrapped))
-                    .expect("failed to send unused directive diagnostics");
+                tx_error.send(wrapped).expect("failed to send unused directive diagnostics");
             }
         }
     }
@@ -225,6 +226,31 @@ impl LintRunner {
         }
 
         Ok(self)
+    }
+
+    /// Run both regular and type-aware linting on files
+    /// # Errors
+    /// Returns an error if type-aware linting fails.
+    #[cfg(feature = "language_server")]
+    pub fn run_source(
+        &mut self,
+        file: &Arc<OsStr>,
+        source_text: String,
+        file_system: Box<dyn crate::RuntimeFileSystem + Sync + Send>,
+    ) -> Vec<Message> {
+        self.lint_service.with_paths(vec![Arc::clone(file)]);
+        self.lint_service.with_file_system(file_system);
+
+        let mut messages = self.lint_service.run_source();
+
+        if let Some(type_aware_linter) = &self.type_aware_linter
+            && let Ok(tso_messages) =
+                type_aware_linter.lint_source(file, source_text, self.directives_store.map())
+        {
+            messages.extend(tso_messages);
+        }
+
+        messages
     }
 
     /// Report unused disable directives

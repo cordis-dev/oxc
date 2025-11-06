@@ -10,6 +10,9 @@
 )] // FIXME: all these needs to be fixed.
 
 mod ast_nodes;
+#[cfg(feature = "detect_code_removal")]
+mod detect_code_removal;
+mod embedded_formatter;
 mod formatter;
 mod ir_transform;
 mod options;
@@ -31,6 +34,7 @@ use oxc_ast::{AstKind, ast::*};
 use rustc_hash::{FxHashMap, FxHashSet};
 use write::FormatWrite;
 
+pub use crate::embedded_formatter::{EmbeddedFormatter, EmbeddedFormatterCallback};
 pub use crate::options::*;
 pub use crate::service::{oxfmtrc::Oxfmtrc, parse_utils::*};
 use crate::{
@@ -45,11 +49,22 @@ pub struct Formatter<'a> {
     allocator: &'a Allocator,
     source_text: &'a str,
     options: FormatOptions,
+    embedded_formatter: Option<EmbeddedFormatter>,
 }
 
 impl<'a> Formatter<'a> {
     pub fn new(allocator: &'a Allocator, options: FormatOptions) -> Self {
-        Self { allocator, source_text: "", options }
+        Self { allocator, source_text: "", options, embedded_formatter: None }
+    }
+
+    /// Set the embedded formatter for handling embedded languages in templates
+    #[must_use]
+    pub fn with_embedded_formatter(
+        mut self,
+        embedded_formatter: Option<EmbeddedFormatter>,
+    ) -> Self {
+        self.embedded_formatter = embedded_formatter;
+        self
     }
 
     /// Formats the given AST `Program` and returns the formatted string.
@@ -67,13 +82,15 @@ impl<'a> Formatter<'a> {
 
         let experimental_sort_imports = self.options.experimental_sort_imports;
 
-        let context = FormatContext::new(
+        let mut context = FormatContext::new(
             program.source_text,
             program.source_type,
             &program.comments,
             self.allocator,
             self.options,
         );
+        context.set_embedded_formatter(self.embedded_formatter);
+
         let mut formatted = formatter::format(
             context,
             formatter::Arguments::new(&[formatter::Argument::new(&program_node)]),
@@ -85,6 +102,30 @@ impl<'a> Formatter<'a> {
         if let Some(sort_imports_options) = experimental_sort_imports {
             let sort_imports = SortImportsTransform::new(sort_imports_options);
             formatted.apply_transform(|doc| sort_imports.transform(doc));
+        }
+
+        // If the feature is enabled, perform extra checks to detect code removal.
+        #[cfg(feature = "detect_code_removal")]
+        {
+            // Use the same source type
+            let source_type = program.source_type;
+
+            let before_text = program.source_text;
+            let before_stats = detect_code_removal::collect(before_text, source_type);
+
+            let after_text = formatted.print().unwrap().into_code();
+            let after_stats = detect_code_removal::collect(&after_text, source_type);
+
+            if let Some(diff) = detect_code_removal::diff(&before_stats, &after_stats) {
+                unreachable!(
+                    r"🚨 Code removal detected during formatting!
+Difference found ==========================
+{diff}
+Original code =============================
+{before_text}
+==========================================="
+                );
+            }
         }
 
         formatted

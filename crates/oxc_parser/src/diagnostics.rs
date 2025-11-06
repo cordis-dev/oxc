@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use oxc_ast::ast::REGEXP_FLAGS_LIST;
 use oxc_diagnostics::OxcDiagnostic;
 use oxc_span::Span;
 
@@ -44,6 +45,38 @@ pub fn expect_token(x0: &str, x1: &str, span: Span) -> OxcDiagnostic {
 }
 
 #[cold]
+pub fn expect_closing_or_separator(
+    expected_closing: &str,
+    expected_separator: &str,
+    actual: &str,
+    span: Span,
+    opening_span: Span,
+) -> OxcDiagnostic {
+    OxcDiagnostic::error(format!(
+        "Expected `{expected_separator}` or `{expected_closing}` but found `{actual}`"
+    ))
+    .with_labels([
+        span.primary_label(format!("`{expected_separator}` or `{expected_closing}` expected")),
+        opening_span.label("Opened here"),
+    ])
+}
+
+#[cold]
+pub fn expect_conditional_alternative(x: &str, span: Span, question_span: Span) -> OxcDiagnostic {
+    OxcDiagnostic::error(format!("Expected `:` but found `{x}`")).with_labels([
+        span.primary_label("`:` expected"),
+        question_span.label("Conditional starts here"),
+    ])
+}
+
+#[cold]
+pub fn unexpected_trailing_comma(name: &'static str, span: Span) -> OxcDiagnostic {
+    OxcDiagnostic::error(format!("{name} may not have a trailing comma."))
+        .with_label(span)
+        .with_help("Remove the trailing comma here")
+}
+
+#[cold]
 pub fn invalid_escape_sequence(span: Span) -> OxcDiagnostic {
     OxcDiagnostic::error("Invalid escape sequence").with_label(span)
 }
@@ -77,12 +110,14 @@ pub fn unterminated_string(span: Span) -> OxcDiagnostic {
 pub fn reg_exp_flag(x0: char, span1: Span) -> OxcDiagnostic {
     OxcDiagnostic::error(format!("Unexpected flag {x0} in regular expression literal"))
         .with_label(span1)
+        .with_help(format!("The allowed flags are `{REGEXP_FLAGS_LIST}`"))
 }
 
 #[cold]
 pub fn reg_exp_flag_twice(x0: char, span1: Span) -> OxcDiagnostic {
     OxcDiagnostic::error(format!("Flag {x0} is mentioned twice in regular expression literal"))
         .with_label(span1)
+        .with_help("Remove the duplicated flag here")
 }
 
 #[cold]
@@ -116,23 +151,29 @@ pub fn auto_semicolon_insertion(span: Span) -> OxcDiagnostic {
     OxcDiagnostic::error(
         "Expected a semicolon or an implicit semicolon after a statement, but found none",
     )
-    .with_help("Try insert a semicolon here")
+    .with_help("Try inserting a semicolon here")
     .with_label(span)
 }
 
 #[cold]
 pub fn lineterminator_before_arrow(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error("Line terminator not permitted before arrow").with_label(span)
+    OxcDiagnostic::error("Line terminator not permitted before arrow")
+        .with_label(span)
+        .with_help("Remove the line break before here")
 }
 
 #[cold]
-pub fn invalid_destrucuring_declaration(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error("Missing initializer in destructuring declaration").with_label(span)
+pub fn invalid_destructuring_declaration(span: Span) -> OxcDiagnostic {
+    OxcDiagnostic::error("Missing initializer in destructuring declaration")
+        .with_label(span)
+        .with_help("Add an initializer (e.g. ` = undefined`) here")
 }
 
 #[cold]
-pub fn missinginitializer_in_const(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error("Missing initializer in const declaration").with_label(span)
+pub fn missing_initializer_in_const(span: Span) -> OxcDiagnostic {
+    OxcDiagnostic::error("Missing initializer in const declaration")
+        .with_label(span)
+        .with_help("Add an initializer (e.g. ` = undefined`) here")
 }
 
 #[cold]
@@ -160,12 +201,14 @@ pub fn await_expression(span: Span) -> OxcDiagnostic {
         "`await` is only allowed within async functions and at the top levels of modules",
     )
     .with_label(span)
+    .with_help("Either remove this `await` or add the `async` keyword to the enclosing function")
 }
 
 #[cold]
 pub fn yield_expression(span: Span) -> OxcDiagnostic {
     OxcDiagnostic::error("A 'yield' expression is only allowed in a generator body.")
         .with_label(span)
+        .with_help("Either remove this `yield` or change the enclosing function to a generator function (`function*`)")
 }
 
 #[cold]
@@ -191,14 +234,21 @@ pub fn extends_clause_already_seen(span: Span) -> OxcDiagnostic {
 
 // 'extends' clause must precede 'implements' clause. ts(1173)
 #[cold]
-pub fn extends_clause_must_precede_implements(span: Span) -> OxcDiagnostic {
-    ts_error("1173", "'extends' clause must precede 'implements' clause").with_label(span)
+pub fn extends_clause_must_precede_implements(span: Span, implements_span: Span) -> OxcDiagnostic {
+    ts_error("1173", "'extends' clause must precede 'implements' clause")
+        .with_labels([
+            implements_span.label("'implements' clause found here"),
+            span.primary_label("'extends' clause found here"),
+        ])
+        .with_help("Move the 'extends' clause before the 'implements' clause")
 }
 
 // 'implements' clause already seen. ts(1175)
 #[cold]
-pub fn implements_clause_already_seen(span: Span) -> OxcDiagnostic {
-    ts_error("1175", "'implements' clause already seen").with_label(span)
+pub fn implements_clause_already_seen(span: Span, seen_span: Span) -> OxcDiagnostic {
+    ts_error("1175", "'implements' clause already seen")
+        .with_labels([seen_span, span])
+        .with_help("Merge the two 'implements' clauses into one by a ','")
 }
 
 #[cold]
@@ -218,8 +268,7 @@ pub fn spread_last_element(span: Span) -> OxcDiagnostic {
 
 #[cold]
 pub fn rest_element_trailing_comma(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error("A rest parameter or binding pattern may not have a trailing comma.")
-        .with_label(span)
+    unexpected_trailing_comma("A rest parameter or binding pattern", span)
 }
 
 #[cold]
@@ -231,7 +280,9 @@ pub fn invalid_binding_rest_element(span: Span) -> OxcDiagnostic {
 
 #[cold]
 pub fn a_rest_parameter_cannot_be_optional(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error("A rest parameter cannot be optional").with_label(span)
+    OxcDiagnostic::error("A rest parameter cannot be optional")
+        .with_label(span)
+        .with_help("Remove this `?`. The default value is an empty array")
 }
 
 #[cold]
@@ -268,12 +319,19 @@ pub fn decorator_optional(span: Span) -> OxcDiagnostic {
 pub fn for_loop_async_of(span: Span) -> OxcDiagnostic {
     OxcDiagnostic::error("The left-hand side of a `for...of` statement may not be `async`")
         .with_label(span)
+        .with_help("Did you mean to use a for await...of statement?")
+}
+
+pub fn for_loop_let_reserved_word(span: Span) -> OxcDiagnostic {
+    OxcDiagnostic::error("The left-hand side of a `for...of` statement may not start with `let`")
+        .with_label(span)
 }
 
 #[cold]
 pub fn for_await(span: Span) -> OxcDiagnostic {
     OxcDiagnostic::error("await can only be used in conjunction with `for...of` statements")
         .with_label(span)
+        .with_help("Did you mean to use a for...of statement?")
 }
 
 #[cold]
@@ -288,7 +346,8 @@ pub fn private_name_constructor(span: Span) -> OxcDiagnostic {
 
 #[cold]
 pub fn static_prototype(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error("Classes may not have a static property named prototype").with_label(span)
+    OxcDiagnostic::error("Classes may not have a static property named 'prototype'")
+        .with_label(span)
 }
 
 #[cold]
@@ -303,7 +362,9 @@ pub fn constructor_async(span: Span) -> OxcDiagnostic {
 
 #[cold]
 pub fn optional_accessor_property(span: Span) -> OxcDiagnostic {
-    ts_error("1276", "An 'accessor' property cannot be declared optional.").with_label(span)
+    ts_error("1276", "An 'accessor' property cannot be declared optional.")
+        .with_label(span)
+        .with_help("Remove this `?`")
 }
 
 #[cold]
@@ -438,7 +499,9 @@ pub fn expect_function_name(span: Span) -> OxcDiagnostic {
 
 #[cold]
 pub fn expect_catch_finally(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error("Missing catch or finally clause").with_label(span)
+    OxcDiagnostic::error("Missing catch or finally clause")
+        .with_label(span)
+        .with_help("Either unwrap this try block or add catch / finally clause")
 }
 
 #[cold]
@@ -449,7 +512,7 @@ pub fn v8_intrinsic_spread_elem(span: Span) -> OxcDiagnostic {
 
 #[cold]
 pub fn a_set_accessor_cannot_have_a_return_type_annotation(span: Span) -> OxcDiagnostic {
-    ts_error("1095", " A 'set' accessor cannot have a return type annotation.").with_label(span)
+    ts_error("1095", "A 'set' accessor cannot have a return type annotation.").with_label(span)
 }
 
 #[cold]
@@ -469,6 +532,7 @@ pub fn await_using_declaration_not_allowed_in_for_in_statement(span: Span) -> Ox
         "The left-hand side of a for...in statement cannot be an await using declaration.",
     )
     .with_label(span)
+    .with_help("Did you mean to use a for...of statement?")
 }
 
 #[cold]
@@ -477,11 +541,21 @@ pub fn using_declaration_not_allowed_in_for_in_statement(span: Span) -> OxcDiagn
         "The left-hand side of a for...in statement cannot be an using declaration.",
     )
     .with_label(span)
+    .with_help("Did you mean to use a for...of statement?")
 }
 
 #[cold]
 pub fn using_declarations_must_be_initialized(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error("Using declarations must have an initializer.").with_label(span)
+    OxcDiagnostic::error("Using declarations must have an initializer.")
+        .with_label(span)
+        .with_help("Add an initializer (e.g. ` = undefined`) here")
+}
+
+#[cold]
+pub fn using_declaration_cannot_be_exported(identifier: &str, span: Span) -> OxcDiagnostic {
+    OxcDiagnostic::error("Using declarations cannot be exported directly.")
+        .with_label(span)
+        .with_help(format!("Remove the `export` here and add `export {{ {identifier} }}` as a separate statement to export the declaration"))
 }
 
 #[cold]
@@ -638,13 +712,15 @@ pub fn accessibility_modifier_on_private_property(modifier: &Modifier) -> OxcDia
 #[cold]
 pub fn type_modifier_on_named_type_import(span: Span) -> OxcDiagnostic {
     ts_error("2206", "The 'type' modifier cannot be used on a named import when 'import type' is used on its import statement.")
-             .with_label(span)
+        .with_label(span)
+        .with_help("Remove this 'type' modifier")
 }
 
 #[cold]
 pub fn type_modifier_on_named_type_export(span: Span) -> OxcDiagnostic {
     ts_error("2207", "The 'type' modifier cannot be used on a named export when 'export type' is used on its export statement.")
          .with_label(span)
+         .with_help("Remove this 'type' modifier")
 }
 
 #[cold]
@@ -737,6 +813,7 @@ pub fn decorators_are_not_valid_here(span: Span) -> OxcDiagnostic {
 pub fn decorator_on_overload(span: Span) -> OxcDiagnostic {
     ts_error("1249", "A decorator can only decorate a method implementation, not an overload.")
         .with_label(span)
+        .with_help("Move this after all the overloads")
 }
 
 #[cold]
@@ -797,11 +874,18 @@ pub fn reg_exp_flag_u_and_v(span: Span) -> OxcDiagnostic {
         "The 'u' and 'v' regular expression flags cannot be enabled at the same time",
     )
     .with_label(span)
+    .with_help("v flag enables additional syntax over u flag")
 }
 
 #[cold]
-pub fn setter_with_parameters(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error("A 'set' accessor must have exactly one parameter.").with_label(span)
+pub fn setter_with_parameters(span: Span, parameters_count: usize) -> OxcDiagnostic {
+    OxcDiagnostic::error("A 'set' accessor must have exactly one parameter.")
+        .with_label(span)
+        .with_help(if parameters_count == 0 {
+            "Add a parameter here"
+        } else {
+            "Remove parameters except the first one here"
+        })
 }
 
 #[cold]
@@ -815,7 +899,9 @@ pub fn setter_with_assignment_pattern(span: Span) -> OxcDiagnostic {
 
 #[cold]
 pub fn getter_parameters(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::error("A 'get' accessor must not have any formal parameters.").with_label(span)
+    OxcDiagnostic::error("A 'get' accessor must not have any formal parameters.")
+        .with_label(span)
+        .with_help("Remove these parameters here")
 }
 
 #[cold]
@@ -834,6 +920,13 @@ pub fn variable_declarator_definite_type_assertion(span: Span) -> OxcDiagnostic 
         "Declarations with definite assignment assertions must also have type annotations.",
     )
     .with_label(span)
+}
+
+#[cold]
+pub fn invalid_assignment_target_default_value_operator(span: Span) -> OxcDiagnostic {
+    OxcDiagnostic::error("Only '=' operator can be used for specifying default value.")
+        .with_label(span)
+        .with_help("Replace this operator with `=`.")
 }
 
 #[cold]

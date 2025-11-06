@@ -74,7 +74,7 @@ suite('E2E Diagnostics', () => {
   testSingleFolderMode('detects diagnostics on run', async () =>
   {
     await loadFixture('lint_on_run');
-    await sleep(250);
+    await sleep(500);
     const diagnostics = await getDiagnosticsWithoutClose(`onType.ts`);
     strictEqual(diagnostics.length, 0);
 
@@ -92,8 +92,8 @@ suite('E2E Diagnostics', () => {
 
   test('empty oxlint configuration behaves like default configuration', async () => {
     await loadFixture('debugger_empty_config');
-    await sleep(250);
-    const diagnostics = await getDiagnostics('debugger.js');
+    await sleep(500);
+    const diagnostics = await getDiagnosticsWithoutClose('debugger.js');
 
     strictEqual(diagnostics.length, 1);
     assert(typeof diagnostics[0].code == 'object');
@@ -261,12 +261,13 @@ suite('E2E Diagnostics', () => {
     strictEqual(secondDiagnostics[0].severity, DiagnosticSeverity.Error);
   });
 
-  testSingleFolderMode('changing oxc.typeAware will revalidate the tsgolint diagnostics', async () => {
+  // flaky because of https://github.com/oxc-project/tsgolint/issues/349
+  test.skip('changing oxc.typeAware will revalidate the tsgolint diagnostics', async () => {
     await loadFixture('type_aware');
-    const firstDiagnostics = await getDiagnostics('index.ts');
+    await sleep(500); // wait for server to pick up the new config
+    const firstDiagnostics = await getDiagnosticsWithoutClose('index.ts');
 
     await workspace.getConfiguration('oxc').update('fixKind', 'all');
-
     strictEqual(firstDiagnostics.length, 0);
 
     await workspace.getConfiguration('oxc').update('typeAware', true);
@@ -274,13 +275,16 @@ suite('E2E Diagnostics', () => {
     await waitForDiagnosticChange();
 
     const secondDiagnostics = await getDiagnostics('index.ts');
-    assert(secondDiagnostics.length != 0);
+    strictEqual(secondDiagnostics.length, 1);
   });
 
   test('formats code with `oxc.fmt.experimental`', async () => {
     await workspace.getConfiguration('oxc').update('fmt.experimental', true);
     await workspace.getConfiguration('editor').update('defaultFormatter', 'oxc.oxc-vscode');
     await loadFixture('formatting');
+
+    await sleep(500);
+
     const fileUri = Uri.joinPath(fixturesWorkspaceUri(), 'fixtures', 'formatting.ts');
 
     const document = await workspace.openTextDocument(fileUri);

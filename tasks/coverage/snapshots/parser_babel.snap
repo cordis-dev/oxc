@@ -2,67 +2,21 @@ commit: 4cc3d888
 
 parser_babel Summary:
 AST Parsed     : 2422/2440 (99.26%)
-Positive Passed: 2395/2440 (98.16%)
-Negative Passed: 1670/1760 (94.89%)
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/categorized/invalid-startindex-and-startline-specified-without-startcolumn/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/categorized/startline-and-startcolumn-specified/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/categorized/startline-specified/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/sourcetype-commonjs/invalid-allowAwaitOutsideFunction-false/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/sourcetype-commonjs/invalid-allowNewTargetOutsideFunction-false/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/sourcetype-commonjs/invalid-allowNewTargetOutsideFunction-true/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/sourcetype-commonjs/invalid-allowReturnOutsideFunction-false/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/sourcetype-commonjs/invalid-allowReturnOutsideFunction-true/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2015/destructuring/error-operator-for-default/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2015/for-of/invalid-let-as-identifier/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2015/uncategorised/335/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2017/async-functions/async-await-as-arrow-binding-identifier/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2017/async-functions/await-binding-inside-arrow-params-inside-async-arrow-params/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2018/object-rest-spread/comma-after-rest/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2018/object-rest-spread/comma-after-spread-for-in/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2018/object-rest-spread/comma-after-spread-nested/input.js
-
+Positive Passed: 2396/2440 (98.20%)
+Negative Passed: 1685/1752 (96.18%)
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2022/private-in/invalid-private-followed-by-in-2/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-in-single-statement-context-async/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-in-single-statement-context-sync/input.js
 
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-module-bare-case-await-using-binding/input.js
 
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-script-bare-case-await-using-binding/input.js
 
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-script-top-level-labeled-using-binding/input.js
-
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-script-top-level-using-binding/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-in-single-statement-context/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-labeled-using-binding/input.js
 
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-module-bare-case-using-binding/input.js
 
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-script-bare-case-using-binding/input.js
 
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-script-top-level-labeled-using-binding/input.js
-
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-script-top-level-using-binding/input.js
-
-Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/esprima/es2015-generator/generator-parameter-binding-property-reserved/input.js
 
 Expect Syntax Error: tasks/coverage/babel/packages/babel-parser/test/fixtures/estree/class-private-property/typescript-invalid-abstract/input.ts
 
@@ -212,7 +166,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/o
    ·           ──────────
  2 │ const y = () => new.target;
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
   × Unexpected new.target expression
    ╭─[babel/packages/babel-parser/test/fixtures/core/opts/allowNewTargetOutsideFunction-true/input.js:2:17]
@@ -220,7 +174,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/o
  2 │ const y = () => new.target;
    ·                 ──────────
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
 Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/opts/allowSuperOutsideMethod-true/input.js
 
@@ -293,7 +247,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/s
  1 │ new.target;
    · ──────────
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
 Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/sourcetype-commonjs/top-level-return/input.js
 
@@ -312,16 +266,6 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/core/s
  2 │ {}
    ╰────
 
-Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2022/class-properties/arguments-in-key/input.js
-
-  × 'arguments' is not allowed in class field initializer
-   ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-properties/arguments-in-key/input.js:3:6]
- 2 │   class A {
- 3 │     [arguments] = 2;
-   ·      ─────────
- 4 │   }
-   ╰────
-
 Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2022/class-properties/new-target/input.js
 
   × Unexpected new.target expression
@@ -331,7 +275,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2022
    ·              ──────────
  3 │   static b = (foo = 1 + bar(new.target));
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
   × Unexpected new.target expression
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-properties/new-target/input.js:3:29]
@@ -340,7 +284,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2022
    ·                             ──────────
  4 │   static c = () => new.target;
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
   × Unexpected new.target expression
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-properties/new-target/input.js:4:20]
@@ -349,7 +293,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2022
    ·                    ──────────
  5 │   static d = (foo = new.target) => {};
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
   × Unexpected new.target expression
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-properties/new-target/input.js:5:21]
@@ -358,7 +302,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2022
    ·                     ──────────
  6 │   e = new.target;
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
   × Unexpected new.target expression
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-properties/new-target/input.js:6:7]
@@ -367,7 +311,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2022
    ·       ──────────
  7 │   f = (foo = 1 + bar(new.target));
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
   × Unexpected new.target expression
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-properties/new-target/input.js:7:22]
@@ -376,7 +320,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2022
    ·                      ──────────
  8 │   g = () => new.target;
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
   × Unexpected new.target expression
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-properties/new-target/input.js:8:13]
@@ -385,7 +329,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2022
    ·             ──────────
  9 │   h = (foo = new.target) => {};
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
   × Unexpected new.target expression
     ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-properties/new-target/input.js:9:14]
@@ -394,7 +338,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2022
     ·              ──────────
  10 │ }
     ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
 Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2022/class-static-block/duplicate-function-var-name/input.js
 
@@ -418,6 +362,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2022
    · ─────
  2 │ 
    ╰────
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
 
 Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/valid-module-block-top-level-using-binding/input.js
 
@@ -427,7 +372,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026
    ·                 ▲
  2 │   await using foo = bar();
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
 Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/valid-for-await-using-binding-escaped-of-of/input.mjs
 
@@ -477,7 +422,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/es2026
    ·       ▲
  2 │   using foo = bar();
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
 Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typescript/arrow-function/generic-tsx-babel-7/input.ts
 
@@ -1032,7 +977,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ ([...(a)]) => {}
    ·           ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Cannot assign to this expression
    ╭─[babel/packages/babel-parser/test/fixtures/core/create-parenthesized-expressions/valid-parenthesized-assignment-array-pattern-3/input.js:1:2]
@@ -1286,38 +1231,42 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ ({ get prop(x) {} })
    ·            ───
    ╰────
+  help: Remove these parameters here
 
   × A 'set' accessor must have exactly one parameter.
    ╭─[babel/packages/babel-parser/test/fixtures/core/object/invalid-setter-no-param/input.js:1:9]
  1 │ ({ set x(){} })
    ·         ──
    ╰────
+  help: Add a parameter here
 
   × A 'set' accessor must have exactly one parameter.
    ╭─[babel/packages/babel-parser/test/fixtures/core/object/invalid-setter-two-params/input.js:1:12]
  1 │ ({ set prop(x, y) {} })
    ·            ──────
    ╰────
+  help: Remove parameters except the first one here
 
   × `await` is only allowed within async functions and at the top levels of modules
    ╭─[babel/packages/babel-parser/test/fixtures/core/opts/allowAwaitOutsideFunction-false/input.js:1:5]
  1 │ for await (const i of imports) {}
    ·     ─────
    ╰────
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
 
   × Unexpected new.target expression
    ╭─[babel/packages/babel-parser/test/fixtures/core/opts/allowNewTargetOutsideFunction-false/input.js:1:11]
  1 │ const x = new.target;
    ·           ──────────
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
   × Unexpected new.target expression
    ╭─[babel/packages/babel-parser/test/fixtures/core/opts/allowNewTargetOutsideFunction-false-2/input.js:1:17]
  1 │ const y = () => new.target;
    ·                 ──────────
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
   × TS(1108): A 'return' statement can only be used within a function body.
    ╭─[babel/packages/babel-parser/test/fixtures/core/opts/allowReturnOutsideFunction-true-invalid-in-static-block/input.js:3:5]
@@ -1372,6 +1321,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ yield 1;
    · ─────
    ╰────
+  help: Either remove this `yield` or change the enclosing function to a generator function (`function*`)
 
   × A 'yield' expression is only allowed in a generator body.
    ╭─[babel/packages/babel-parser/test/fixtures/core/opts/allowYieldOutsideFunction-true/input.js:1:1]
@@ -1379,6 +1329,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    · ─────
  2 │ 
    ╰────
+  help: Either remove this `yield` or change the enclosing function to a generator function (`function*`)
 
   × A 'yield' expression is only allowed in a generator body.
    ╭─[babel/packages/babel-parser/test/fixtures/core/opts/allowYieldOutsideFunction-true/input.js:4:3]
@@ -1387,6 +1338,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ─────
  5 │ }
    ╰────
+  help: Either remove this `yield` or change the enclosing function to a generator function (`function*`)
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/core/regression/13694-invalid-dot-bracketL-member/input.js:1:3]
@@ -1412,7 +1364,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ 07.5
    ·   ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Identifier `foo` has already been declared
    ╭─[babel/packages/babel-parser/test/fixtures/core/scope/dupl-bind-2nd-lvl-lex/input.js:2:5]
@@ -1722,19 +1674,21 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ await Promise.resolve();
    · ─────
    ╰────
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
 
   × A 'yield' expression is only allowed in a generator body.
    ╭─[babel/packages/babel-parser/test/fixtures/core/sourcetype-commonjs/invalid-top-level-yield/input.js:1:1]
  1 │ yield 0;
    · ─────
    ╰────
+  help: Either remove this `yield` or change the enclosing function to a generator function (`function*`)
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/core/uncategorised/108/input.js:1:17]
  1 │ var x = /[P QR]/\u0067
    ·                 ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected `}` but found `EOF`
    ╭─[babel/packages/babel-parser/test/fixtures/core/uncategorised/345/input.js:1:2]
@@ -1867,7 +1821,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ var x = /[a-z]/\ux
    ·                ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Cannot assign to this expression
    ╭─[babel/packages/babel-parser/test/fixtures/core/uncategorised/367/input.js:1:1]
@@ -2002,14 +1956,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ { set 1 }
    ·      ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/core/uncategorised/389/input.js:1:6]
  1 │ { get 2 }
    ·      ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/core/uncategorised/390/input.js:1:11]
@@ -2023,25 +1977,28 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·          ─
    ╰────
 
-  × Expected `,` but found `{`
+  × Expected `,` or `}` but found `{`
    ╭─[babel/packages/babel-parser/test/fixtures/core/uncategorised/392/input.js:1:13]
  1 │ ({ set: s() { } })
-   ·             ┬
-   ·             ╰── `,` expected
+   ·  ┬          ┬
+   ·  │          ╰── `,` or `}` expected
+   ·  ╰── Opened here
    ╰────
 
-  × Expected `,` but found `{`
+  × Expected `,` or `}` but found `{`
    ╭─[babel/packages/babel-parser/test/fixtures/core/uncategorised/393/input.js:1:17]
  1 │ ({ set: s(a, b) { } })
-   ·                 ┬
-   ·                 ╰── `,` expected
+   ·  ┬              ┬
+   ·  │              ╰── `,` or `}` expected
+   ·  ╰── Opened here
    ╰────
 
-  × Expected `,` but found `{`
+  × Expected `,` or `}` but found `{`
    ╭─[babel/packages/babel-parser/test/fixtures/core/uncategorised/394/input.js:1:14]
  1 │ ({ get: g(d) { } })
-   ·              ┬
-   ·              ╰── `,` expected
+   ·  ┬           ┬
+   ·  │           ╰── `,` or `}` expected
+   ·  ╰── Opened here
    ╰────
 
   × Unexpected token
@@ -2113,7 +2070,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ a b;
    ·  ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected `(` but found `.`
    ╭─[babel/packages/babel-parser/test/fixtures/core/uncategorised/406/input.js:1:3]
@@ -2127,14 +2084,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ a if;
    ·  ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/core/uncategorised/408/input.js:1:2]
  1 │ a class;
    ·  ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Illegal break statement
    ╭─[babel/packages/babel-parser/test/fixtures/core/uncategorised/409/input.js:1:1]
@@ -2232,6 +2189,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ╭─[babel/packages/babel-parser/test/fixtures/core/uncategorised/425/input.js:1:8]
  1 │ try { }
    ╰────
+  help: Either unwrap this try block or add catch / finally clause
 
   × Invalid Character `‿`
    ╭─[babel/packages/babel-parser/test/fixtures/core/uncategorised/426/input.js:1:1]
@@ -2864,6 +2822,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ const a;
    ·       ─
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × The keyword 'public' is reserved
    ╭─[babel/packages/babel-parser/test/fixtures/core/uncategorised/544/input.js:2:9]
@@ -2913,18 +2872,21 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ [...a,] = [];
    ·      ─
    ╰────
+  help: Remove the trailing comma here
 
   × A rest parameter or binding pattern may not have a trailing comma.
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/array-rest-spread/comma-after-spread-for-in/input.js:1:11]
  1 │ for ([...a,] in []);
    ·           ─
    ╰────
+  help: Remove the trailing comma here
 
   × A rest parameter or binding pattern may not have a trailing comma.
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/array-rest-spread/comma-after-spread-nested/input.js:1:7]
  1 │ [[...a,]] = [];
    ·       ─
    ╰────
+  help: Remove the trailing comma here
 
   × Spread must be last element
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/array-rest-spread/invalid-location/input.js:1:2]
@@ -2937,62 +2899,63 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ (...rest,) => {}
    ·         ─
    ╰────
+  help: Remove the trailing comma here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/arrow-functions/inner-parens/input.js:1:18]
  1 │ var foo = ((foo)) => {};
    ·                  ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/arrow-functions/inner-parens-2/input.js:1:9]
  1 │ (a, (b)) => 42
    ·         ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/arrow-functions/inner-parens-array-pattern/input.js:1:8]
  1 │ ([(a)]) => {}
    ·        ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/arrow-functions/inner-parens-array-pattern-2/input.js:1:22]
  1 │ ([ [(a)] = [] ] = []) => {}
    ·                      ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/arrow-functions/inner-parens-array-pattern-3/input.js:1:19]
  1 │ ([(a) = [] ] = []) => {}
    ·                   ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/arrow-functions/inner-parens-object-pattern/input.js:1:20]
  1 │ ({ a: (foo) } = {}) => {}
    ·                    ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/arrow-functions/inner-parens-object-pattern-member/input.js:1:24]
  1 │ ({ a: (foo.qux) } = {}) => {}
    ·                        ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/arrow-functions/invalid-arrow-before-in/input.js:1:9]
  1 │ () => {} in x
    ·         ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/arrow-functions/invalid-rest-in-params/input.js:3:5]
@@ -3007,14 +2970,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ () => {} || true
    ·         ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/arrow-functions/no-callee/input.js:1:9]
  1 │ () => {}()
    ·         ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Cannot assign to this expression
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/arrow-functions/no-for-in-init-concise-binary-in/input.js:1:6]
@@ -3027,7 +2990,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ () => {} ? 1 : 2;
    ·         ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × 'with' statements are not allowed
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/class/extends-strict/input.js:2:3]
@@ -3135,7 +3098,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  3 │ }
    ╰────
 
-  × Classes may not have a static property named prototype
+  × Classes may not have a static property named 'prototype'
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/class-methods/disallow-static-generator-prototype/input.js:2:11]
  1 │ class A {
  2 │   static *prototype() {}
@@ -3143,7 +3106,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  3 │ }
    ╰────
 
-  × Classes may not have a static property named prototype
+  × Classes may not have a static property named 'prototype'
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/class-methods/disallow-static-prototype/input.js:2:10]
  1 │ class A {
  2 │   static prototype() {}
@@ -3158,6 +3121,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·            ─────
  3 │ }
    ╰────
+  help: Remove these parameters here
 
   × 'super' can only be used with function calls or in property accesses
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/class-methods/malformed-super-expression/input.js:3:5]
@@ -3193,6 +3157,13 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·            ┬
    ·            ╰── `:` expected
    ╰────
+
+  × Only '=' operator can be used for specifying default value.
+   ╭─[babel/packages/babel-parser/test/fixtures/es2015/destructuring/error-operator-for-default/input.js:1:3]
+ 1 │ ([a += a] = a)
+   ·   ──────
+   ╰────
+  help: Replace this operator with `=`.
 
   × Expected `,` but found `(`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/destructuring/invalid-object-method/input.js:1:12]
@@ -3303,6 +3274,28 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                ╰── `)` expected
    ╰────
 
+  × The left-hand side of a `for...of` statement may not start with `let`
+   ╭─[babel/packages/babel-parser/test/fixtures/es2015/for-of/invalid-let-as-identifier/input.js:1:6]
+ 1 │ for (let.foo of []);
+   ·      ───────
+ 2 │ for (let().bar of []);
+   ╰────
+
+  × The left-hand side of a `for...of` statement may not start with `let`
+   ╭─[babel/packages/babel-parser/test/fixtures/es2015/for-of/invalid-let-as-identifier/input.js:2:6]
+ 1 │ for (let.foo of []);
+ 2 │ for (let().bar of []);
+   ·      ─────────
+ 3 │ for (let``.bar of []);
+   ╰────
+
+  × The left-hand side of a `for...of` statement may not start with `let`
+   ╭─[babel/packages/babel-parser/test/fixtures/es2015/for-of/invalid-let-as-identifier/input.js:3:6]
+ 2 │ for (let().bar of []);
+ 3 │ for (let``.bar of []);
+   ·      ─────────
+   ╰────
+
   × Keywords cannot contain escape characters
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/generators/invalid-escape-yield/input.js:1:17]
  1 │ (function* () { y\u0069eld; })
@@ -3372,7 +3365,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ le\u0074 x = 5
    ·         ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Lexical declaration cannot appear in a single-statement context
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/let/let-array-with-newline/input.js:1:4]
@@ -3476,7 +3469,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ──────────
  3 │ }
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
   × The only valid meta property for new is new.target
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/meta-properties/new-invalid-prop/input.js:2:3]
@@ -3491,7 +3484,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ new.target
    · ──────────
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
   × Keywords cannot contain escape characters
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/meta-properties/new-target-invalid-escaped-new/input.js:1:16]
@@ -3977,7 +3970,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                   ▲
  2 │     return `<div class="bar">Hola</div>`;
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/modules/export-default-variable-declaration3/input.js:1:16]
@@ -4022,12 +4015,15 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    · ─
    ╰────
 
-  × Expected `,` but found `Identifier`
+  × Expected `,` or `}` but found `Identifier`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/object/async-method-linebreak/input.js:3:5]
+ 1 │ ({
+   ·  ┬
+   ·  ╰── Opened here
  2 │     async
  3 │     foo() {}
    ·     ─┬─
-   ·      ╰── `,` expected
+   ·      ╰── `,` or `}` expected
  4 │ })
    ╰────
 
@@ -4041,12 +4037,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  3 │ })
    ╰────
 
-  × Expected `,` but found `*`
+  × Expected `,` or `}` but found `*`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/object/invalid-accessor-generator/input.js:2:9]
  1 │ ({
+   ·  ┬
+   ·  ╰── Opened here
  2 │     get *iterator() { },
    ·         ┬
-   ·         ╰── `,` expected
+   ·         ╰── `,` or `}` expected
  3 │     set *iterator(iter) { }
    ╰────
 
@@ -4087,6 +4085,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ /./gii;
    ·      ─
    ╰────
+  help: Remove the duplicated flag here
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/regex/duplicate-flags/input.js:1:1]
@@ -4160,7 +4159,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ foo: let bar;
    ·         ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Bad escape sequence in untagged template literal
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/template/error-after-newline/input.js:1:2]
@@ -4376,7 +4375,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  2 │  is y
    ·    ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/225/input.js:2:6]
@@ -4384,7 +4383,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  2 │  isnt y
    ·      ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected `Identifier` but found `default`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/226/input.js:1:10]
@@ -4533,14 +4532,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ (10) => 00
    ·     ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/252/input.js:1:9]
  1 │ (10, 20) => 00
    ·         ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected `]` but found `,`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/255/input.js:1:10]
@@ -4554,6 +4553,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ (function() { "use strict"; f(yield v) })
    ·                               ─────
    ╰────
+  help: Either remove this `yield` or change the enclosing function to a generator function (`function*`)
 
   × Expected `(` but found `**`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/261/input.js:1:18]
@@ -4664,7 +4664,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ ([ 5 ]) => {}
    ·        ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected `:` but found `}`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/285/input.js:1:6]
@@ -4731,19 +4731,21 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ ({ get test() { } }) => 42
    ·                     ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Missing initializer in destructuring declaration
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/324/input.js:1:5]
  1 │ let [x]
    ·     ───
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Missing initializer in destructuring declaration
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/325/input.js:1:5]
  1 │ var [x]
    ·     ───
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Invalid Character `𖫵`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/326/input.js:1:6]
@@ -4756,7 +4758,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ var _𖫵 = 11;
    ·      ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Invalid Character `𫠞`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/327/input.js:1:5]
@@ -4769,7 +4771,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ if (1) let x = 10;
    ·           ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Lexical declaration cannot appear in a single-statement context
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/329/input.js:1:10]
@@ -4795,6 +4797,12 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/334/input.js:1:5]
  1 │ [...eval] = arr
    ·     ────
+   ╰────
+
+  × Cannot use `yield` as an identifier in a generator context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/335/input.js:1:14]
+ 1 │ function* y({yield}) {}
+   ·              ─────
    ╰────
 
   × Bad escape sequence in untagged template literal
@@ -4839,18 +4847,21 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ class A { get prop(x) {} }
    ·                   ───
    ╰────
+  help: Remove these parameters here
 
   × A 'set' accessor must have exactly one parameter.
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/346/input.js:1:19]
  1 │ class A { set prop() {} }
    ·                   ──
    ╰────
+  help: Add a parameter here
 
   × A 'set' accessor must have exactly one parameter.
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/347/input.js:1:19]
  1 │ class A { set prop(x, y) {} }
    ·                   ──────
    ╰────
+  help: Remove parameters except the first one here
 
   × Identifier `__proto__` has already been declared
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/349/input.js:1:4]
@@ -4876,6 +4887,12 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/359/input.js:1:7]
  1 │ const await = foo();
    ·       ─────
+   ╰────
+
+  × Cannot use `await` as an identifier in an async context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/361/input.js:1:9]
+ 1 │ const { await } = foo();
+   ·         ─────
    ╰────
 
   × The keyword 'await' is reserved
@@ -4931,7 +4948,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ ([a.a]) => 42
    ·        ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Identifier expected. 'enum' is a reserved word that cannot be used here.
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/370/input.js:1:7]
@@ -5038,11 +5055,12 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·        ─────
    ╰────
 
-  × Expected `,` but found `:`
+  × Expected `,` or `}` but found `:`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/392/input.js:1:18]
  1 │ import foo, { bar: { a } } from 'my-module';
-   ·                  ┬
-   ·                  ╰── `,` expected
+   ·             ┬    ┬
+   ·             │    ╰── `,` or `}` expected
+   ·             ╰── Opened here
    ╰────
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
@@ -5050,7 +5068,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ ([a.a]) => 42
    ·        ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected `from` but found `EOF`
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/uncategorised/84/input.js:1:9]
@@ -5103,6 +5121,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ yield 10
    · ─────
    ╰────
+  help: Either remove this `yield` or change the enclosing function to a generator function (`function*`)
 
   × Cannot assign to this expression
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/yield/in-iterator-stmt/input.js:2:8]
@@ -5117,6 +5136,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ (function () { yield 10 })
    ·                ─────
    ╰────
+  help: Either remove this `yield` or change the enclosing function to a generator function (`function*`)
 
   × yield expression not allowed in formal parameter
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/yield/parameter-default-inside-arrow-inside-generator-1/input.js:2:8]
@@ -5207,7 +5227,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·             ▲
  3 │ }
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Cannot use `yield` as an identifier in a generator context
    ╭─[babel/packages/babel-parser/test/fixtures/es2015/yield/parameter-name-arrow-inside-generator-3/input.js:2:10]
@@ -5339,6 +5359,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ─────────────
  3 │ }
    ╰────
+  help: Wrap this function with an IIFE with a 'use strict' directive that returns this function
 
   × Illegal 'use strict' directive in function with non-simple parameter list
    ╭─[babel/packages/babel-parser/test/fixtures/es2016/simple-parameter-list/array-pattern-default/input.js:2:3]
@@ -5347,6 +5368,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ─────────────
  3 │ }
    ╰────
+  help: Wrap this function with an IIFE with a 'use strict' directive that returns this function
 
   × Illegal 'use strict' directive in function with non-simple parameter list
    ╭─[babel/packages/babel-parser/test/fixtures/es2016/simple-parameter-list/arrow-function/input.js:2:3]
@@ -5355,6 +5377,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ─────────────
  3 │ };
    ╰────
+  help: Wrap this function with an IIFE with a 'use strict' directive that returns this function
 
   × Illegal 'use strict' directive in function with non-simple parameter list
    ╭─[babel/packages/babel-parser/test/fixtures/es2016/simple-parameter-list/async-arrow-function/input.js:2:3]
@@ -5363,20 +5386,21 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ─────────────
  3 │ };
    ╰────
+  help: Wrap this function with an IIFE with a 'use strict' directive that returns this function
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2016/simple-parameter-list/async-arrow-function-after-binary-operator/input.js:1:12]
  1 │ 3 + async() => 2
    ·            ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2016/simple-parameter-list/async-arrow-function-after-unary-operator/input.js:1:16]
  1 │ delete async () => 3;
    ·                ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Illegal 'use strict' directive in function with non-simple parameter list
    ╭─[babel/packages/babel-parser/test/fixtures/es2016/simple-parameter-list/async-function/input.js:2:3]
@@ -5385,6 +5409,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ─────────────
  3 │ }
    ╰────
+  help: Wrap this function with an IIFE with a 'use strict' directive that returns this function
 
   × Illegal 'use strict' directive in function with non-simple parameter list
    ╭─[babel/packages/babel-parser/test/fixtures/es2016/simple-parameter-list/default/input.js:2:3]
@@ -5393,6 +5418,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ─────────────
  3 │ }
    ╰────
+  help: Wrap this function with an IIFE with a 'use strict' directive that returns this function
 
   × Illegal 'use strict' directive in function with non-simple parameter list
    ╭─[babel/packages/babel-parser/test/fixtures/es2016/simple-parameter-list/generator-function/input.js:2:3]
@@ -5401,6 +5427,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ─────────────
  3 │ }
    ╰────
+  help: Wrap this function with an IIFE with a 'use strict' directive that returns this function
 
   × Illegal 'use strict' directive in function with non-simple parameter list
    ╭─[babel/packages/babel-parser/test/fixtures/es2016/simple-parameter-list/generator-method/input.js:3:5]
@@ -5409,6 +5436,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·     ─────────────
  4 │   }
    ╰────
+  help: Wrap this function with an IIFE with a 'use strict' directive that returns this function
 
   × Illegal 'use strict' directive in function with non-simple parameter list
    ╭─[babel/packages/babel-parser/test/fixtures/es2016/simple-parameter-list/method/input.js:3:5]
@@ -5417,6 +5445,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·     ─────────────
  4 │   }
    ╰────
+  help: Wrap this function with an IIFE with a 'use strict' directive that returns this function
 
   × Illegal 'use strict' directive in function with non-simple parameter list
    ╭─[babel/packages/babel-parser/test/fixtures/es2016/simple-parameter-list/object-pattern/input.js:2:3]
@@ -5425,6 +5454,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ─────────────
  3 │ }
    ╰────
+  help: Wrap this function with an IIFE with a 'use strict' directive that returns this function
 
   × Illegal 'use strict' directive in function with non-simple parameter list
    ╭─[babel/packages/babel-parser/test/fixtures/es2016/simple-parameter-list/object-pattern-default/input.js:2:3]
@@ -5433,6 +5463,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ─────────────
  3 │ }
    ╰────
+  help: Wrap this function with an IIFE with a 'use strict' directive that returns this function
 
   × Illegal 'use strict' directive in function with non-simple parameter list
    ╭─[babel/packages/babel-parser/test/fixtures/es2016/simple-parameter-list/rest/input.js:2:3]
@@ -5441,55 +5472,56 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ─────────────
  3 │ }
    ╰────
+  help: Wrap this function with an IIFE with a 'use strict' directive that returns this function
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-arrow/parenthesized-array-pattern-nested/input.js:1:28]
  1 │ async ([ [(a)] = [] ] = []) => {};
    ·                            ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-arrow/parenthesized-array-pattern-nested-2/input.js:1:24]
  1 │ async ([(a) = []] = []) => {}
    ·                        ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-arrow/parenthesized-binding-identifier/input.js:1:24]
  1 │ var foo = async ((foo)) => {};
    ·                        ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-arrow/parenthesized-binding-member-expression/input.js:1:26]
  1 │ async ([(a.b) = []] = []) => {}
    ·                          ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-arrow/parenthesized-binding-pattern/input.js:1:26]
  1 │ var foo = async ([(foo)]) => {};
    ·                          ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-arrow/parenthesized-rest-array/input.js:1:29]
  1 │ var foo = async ([...(foo)]) => {};
    ·                             ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-arrow/parenthesized-rest-object/input.js:1:29]
  1 │ var foo = async ({...(foo)}) => {};
    ·                             ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Identifier `__proto__` has already been declared
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-call/parenthesized-argument-object-double-proto/input.js:1:9]
@@ -5519,7 +5551,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  2 │ (x) => x + 1;
    ·    ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/2/input.js:2:8]
@@ -5560,13 +5592,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ async () => {}()
    ·               ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × `await` is only allowed within async functions and at the top levels of modules
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/9/input.js:1:25]
  1 │ function foo(promise) { await promise; }
    ·                         ─────
    ╰────
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
 
   × `await` is only allowed within async functions and at the top levels of modules
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/allow-await-outside-function-throw/input.js:2:10]
@@ -5575,18 +5608,31 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·          ─────
  3 │ }
    ╰────
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
+
+  × Cannot use `await` as an identifier in an async context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/async-await-as-arrow-binding-identifier/input.js:1:7]
+ 1 │ async await => {}
+   ·       ─────
+   ╰────
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/async-function-and-non-bmp-character/input.js:1:6]
  1 │ async function𝐬 f() {}
    ·      ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Cannot use `await` as an identifier in an async context
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/await-async-function-expression-name/input.js:1:17]
  1 │ (async function await() {});
    ·                 ─────
+   ╰────
+
+  × Cannot use `await` as an identifier in an async context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/await-binding-inside-arrow-params-inside-async-arrow-params/input.js:1:15]
+ 1 │ async (a = ({ await }) => {}) => {};
+   ·               ─────
    ╰────
 
   × Cannot use `await` as an identifier in an async context
@@ -5611,6 +5657,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ () => { await x }
    ·         ─────
    ╰────
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
 
   × await expression not allowed in formal parameter
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/await-inside-parameters/input.js:1:23]
@@ -5651,6 +5698,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                    ─────
  3 │ }
    ╰────
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
 
   × await expression not allowed in formal parameter
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/await-inside-parameters-of-nested-function/input.js:2:20]
@@ -5672,7 +5720,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ export default async functionX () {}
    ·                     ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/invalid-await-with-object-exp-in-function/input.js:2:8]
@@ -5681,7 +5729,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·        ▲
  3 │ }
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Keywords cannot contain escape characters
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/invalid-escape-async-class-method/input.js:1:11]
@@ -5801,27 +5849,28 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  2 │ => {}
    · ──
    ╰────
+  help: Remove the line break before here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/invalid-parens-async-arrow/input.js:1:11]
  1 │ (async)(a) => {}
    ·           ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/invalid-parens-async-func/input.js:1:8]
  1 │ (async) function x (a) {}
    ·        ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/multiple-await-in-async-arrow-params/input.js:1:41]
  1 │ async ({ x = [ await ], y = { await } }) => {}
    ·                                         ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Invalid assignment in object literal
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/multiple-await-in-async-arrow-params/input.js:1:10]
@@ -5843,6 +5892,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  2 │ => x
    · ──
    ╰────
+  help: Remove the line break before here
 
   × Constructor can't be an async method
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/async-functions/no-constructor/input.js:2:9]
@@ -5857,6 +5907,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ async (...a,) => {};
    ·            ─
    ╰────
+  help: Remove the trailing comma here
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/trailing-function-commas/5/input.js:1:5]
@@ -5870,12 +5921,12 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·              ─
    ╰────
 
-  × Expected `)` but found `,`
+  × Parenthesized expressions may not have a trailing comma.
    ╭─[babel/packages/babel-parser/test/fixtures/es2017/trailing-function-commas/7/input.js:1:7]
  1 │ ('foo',)
-   ·       ┬
-   ·       ╰── `)` expected
+   ·       ─
    ╰────
+  help: Remove the trailing comma here
 
   × `await` is only allowed within async functions and at the top levels of modules
    ╭─[babel/packages/babel-parser/test/fixtures/es2018/async-generators/for-await-async-context/input.js:2:7]
@@ -5884,6 +5935,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·       ─────
  3 │ }
    ╰────
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
 
   × Cannot assign to this expression
    ╭─[babel/packages/babel-parser/test/fixtures/es2018/async-generators/for-await-async-of-arrow/input.js:2:14]
@@ -5900,6 +5952,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ────────────────────────────
  3 │ }
    ╰────
+  help: Did you mean to use a for...of statement?
 
   × await can only be used in conjunction with `for...of` statements
    ╭─[babel/packages/babel-parser/test/fixtures/es2018/async-generators/for-await-no-in/input.js:2:3]
@@ -5908,6 +5961,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ──────────────────────
  3 │ }
    ╰────
+  help: Did you mean to use a for...of statement?
 
   × await can only be used in conjunction with `for...of` statements
    ╭─[babel/packages/babel-parser/test/fixtures/es2018/async-generators/for-await-no-semi-1/input.js:2:3]
@@ -5916,6 +5970,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ───────────────────
  3 │ }
    ╰────
+  help: Did you mean to use a for...of statement?
 
   × await can only be used in conjunction with `for...of` statements
    ╭─[babel/packages/babel-parser/test/fixtures/es2018/async-generators/for-await-no-semi-2/input.js:2:3]
@@ -5924,6 +5979,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ────────────────────────────
  3 │ }
    ╰────
+  help: Did you mean to use a for...of statement?
 
   × await can only be used in conjunction with `for...of` statements
    ╭─[babel/packages/babel-parser/test/fixtures/es2018/async-generators/for-await-no-semi-3/input.js:2:3]
@@ -5932,6 +5988,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ────────────────────────
  3 │ }
    ╰────
+  help: Did you mean to use a for...of statement?
 
   × Duplicated export 'foo'
    ╭─[babel/packages/babel-parser/test/fixtures/es2018/object-rest-spread/11/input.js:1:14]
@@ -6130,12 +6187,34 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ let { x, y, ...z, } = obj;
    ·                 ─
    ╰────
+  help: Remove the trailing comma here
 
   × A rest element must be last in a destructuring pattern
    ╭─[babel/packages/babel-parser/test/fixtures/es2018/object-rest-spread/9/input.js:1:10]
  1 │ let { x, ...y, ...z } = obj;
    ·          ────
    ╰────
+
+  × A rest parameter or binding pattern may not have a trailing comma.
+   ╭─[babel/packages/babel-parser/test/fixtures/es2018/object-rest-spread/comma-after-rest/input.js:1:7]
+ 1 │ ({...a,} = {});
+   ·       ─
+   ╰────
+  help: Remove the trailing comma here
+
+  × A rest parameter or binding pattern may not have a trailing comma.
+   ╭─[babel/packages/babel-parser/test/fixtures/es2018/object-rest-spread/comma-after-spread-for-in/input.js:1:11]
+ 1 │ for ({...a,} in []);
+   ·           ─
+   ╰────
+  help: Remove the trailing comma here
+
+  × A rest parameter or binding pattern may not have a trailing comma.
+   ╭─[babel/packages/babel-parser/test/fixtures/es2018/object-rest-spread/comma-after-spread-nested/input.js:1:7]
+ 1 │ [{...a,}] = [];
+   ·       ─
+   ╰────
+  help: Remove the trailing comma here
 
   × Spread must be last element
    ╭─[babel/packages/babel-parser/test/fixtures/es2018/object-rest-spread/expression-rest-not-last-invalid/input.js:1:3]
@@ -6396,6 +6475,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·      ─────
  2 │ 
    ╰────
+  help: Did you mean to use a for await...of statement?
 
   × The left-hand side of a `for...of` statement may not be `async`
    ╭─[babel/packages/babel-parser/test/fixtures/es2021/for-async-of/forbidden/input.js:4:8]
@@ -6404,6 +6484,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·        ─────
  5 │ }
    ╰────
+  help: Did you mean to use a for await...of statement?
 
   × Cannot assign to this expression
    ╭─[babel/packages/babel-parser/test/fixtures/es2021/for-async-of/forbidden-arrow-function/input.js:1:6]
@@ -6417,6 +6498,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  3 │ for (async of = x);
    ·      ─────
    ╰────
+  help: Did you mean to use a for await...of statement?
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/es2021/for-async-of/forbidden-equals/input.js:3:15]
@@ -8463,6 +8545,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·           ─────────
  4 │   }
    ╰────
+  help: Assign the 'arguments' variable to a temporary variable outside
 
   × 'arguments' is not allowed in class field initializer
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-properties/arguments-in-arrow-function/input.js:3:17]
@@ -8471,6 +8554,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                 ─────────
  4 │   }
    ╰────
+  help: Assign the 'arguments' variable to a temporary variable outside
 
   × 'arguments' is not allowed in class field initializer
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-properties/arguments-in-nested-class-decorator-call-expression/input.js:3:26]
@@ -8479,6 +8563,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                          ─────────
  4 │   }
    ╰────
+  help: Assign the 'arguments' variable to a temporary variable outside
 
   × Expected `;` but found `{`
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-properties/asi-failure-computed/input.js:3:10]
@@ -8512,14 +8597,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ async( x = class { [await] = x }) => {}
    ·                                  ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Unexpected new.target expression
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-properties/new-target-invalid/input.js:1:9]
  1 │ var x = new.target;
    ·         ──────────
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
   × Expected `(` but found `}`
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-properties/no-ctor/input.js:3:1]
@@ -8538,7 +8623,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  4 │ }
    ╰────
 
-  × Classes may not have a static property named prototype
+  × Classes may not have a static property named 'prototype'
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-properties/no-static-prototype/input.js:2:10]
  1 │ class Foo {
  2 │   static prototype
@@ -8546,7 +8631,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  3 │ }
    ╰────
 
-  × Classes may not have a static property named prototype
+  × Classes may not have a static property named 'prototype'
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-properties/no-static-prototype-2/input.js:2:10]
  1 │ class Foo {
  2 │   static prototype
@@ -8617,6 +8702,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                ─────────
  4 │   }
    ╰────
+  help: Assign the 'arguments' variable to a temporary variable outside
 
   × Cannot use await in class static initialization block
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/class-static-block/invalid-await/input.js:5:7]
@@ -8684,6 +8770,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·       ─────
  6 │     }
    ╰────
+  help: Either remove this `yield` or change the enclosing function to a generator function (`function*`)
 
   × Duplicated export 'foo'
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/module-string-names/duplicate-exported-binding-check/input.js:2:10]
@@ -8795,6 +8882,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ () => await 0;
    ·       ─────
    ╰────
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
 
   × `await` is only allowed within async functions and at the top levels of modules
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/top-level-await-module/inside-class-property/input.js:2:7]
@@ -8803,6 +8891,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·       ─────
  3 │ }
    ╰────
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
 
   × `await` is only allowed within async functions and at the top levels of modules
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/top-level-await-module/inside-function/input.js:2:3]
@@ -8811,18 +8900,21 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ─────
  3 │ }
    ╰────
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
 
   × `await` is only allowed within async functions and at the top levels of modules
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/top-level-await-script/for-await/input.js:1:5]
  1 │ for await (const a of b);
    ·     ─────
    ╰────
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
 
   × `await` is only allowed within async functions and at the top levels of modules
    ╭─[babel/packages/babel-parser/test/fixtures/es2022/top-level-await-script/top-level/input.js:1:1]
  1 │ await 0;
    · ─────
    ╰────
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
 
   × Invalid regular expression: Invalid unicode flags combination `u` and `v`
    ╭─[babel/packages/babel-parser/test/fixtures/es2024/regexp-unicode-sets/uv-error/input.js:1:6]
@@ -8835,6 +8927,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ /a/ugv;
    · ──────
    ╰────
+  help: v flag enables additional syntax over u flag
 
   × Invalid regular expression: Invalid unicode flags combination `u` and `v`
    ╭─[babel/packages/babel-parser/test/fixtures/es2024/regexp-unicode-sets/vu-error/input.js:1:5]
@@ -8847,6 +8940,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ /a/vu;
    · ─────
    ╰────
+  help: v flag enables additional syntax over u flag
 
   × Expected `{` but found `(`
    ╭─[babel/packages/babel-parser/test/fixtures/es2025/import-attributes/import-with-call-expression/input.js:2:6]
@@ -8869,7 +8963,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  2 │ export { foo } with { type: "json" };
    ·               ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/es2025/import-attributes/invalid-spread-element-import-call/input.js:1:22]
@@ -8964,18 +9058,19 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  8 │   }
    ╰────
 
-  × Unexpected token
+  × Using declarations cannot be exported directly.
    ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-export-await-using/input.js:1:8]
  1 │ export await using basic = reader();
-   ·        ─────
+   ·        ─────────────────
    ╰────
+  help: Remove the `export` here and add `export { basic }` as a separate statement to export the declaration
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-export-default-await-using/input.js:1:27]
  1 │ export default await using basic = reader();
    ·                           ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected `;` but found `Identifier`
    ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-for-of-await-linebreak-using/input.js:3:11]
@@ -8994,6 +9089,121 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·       ╰── `;` expected
  4 │ }
    ╰────
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-in-single-statement-context-async/input.js:2:13]
+ 1 │ async function f() {
+ 2 │   while (1) await using a = foo;
+   ·             ────────────────────
+ 3 │   for (;;) await using b = foo;
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-in-single-statement-context-async/input.js:3:12]
+ 2 │   while (1) await using a = foo;
+ 3 │   for (;;) await using b = foo;
+   ·            ────────────────────
+ 4 │   do await using c = foo; while (1);
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-in-single-statement-context-async/input.js:4:6]
+ 3 │   for (;;) await using b = foo;
+ 4 │   do await using c = foo; while (1);
+   ·      ────────────────────
+ 5 │   if (1) await using d = foo;
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-in-single-statement-context-async/input.js:5:10]
+ 4 │   do await using c = foo; while (1);
+ 5 │   if (1) await using d = foo;
+   ·          ────────────────────
+ 6 │   with (1) await using e = foo;
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-in-single-statement-context-async/input.js:6:12]
+ 5 │   if (1) await using d = foo;
+ 6 │   with (1) await using e = foo;
+   ·            ────────────────────
+ 7 │   label: await using f = foo;
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-in-single-statement-context-async/input.js:7:10]
+ 6 │   with (1) await using e = foo;
+ 7 │   label: await using f = foo;
+   ·          ────────────────────
+ 8 │ }
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-in-single-statement-context-sync/input.js:2:13]
+ 1 │ {
+ 2 │   while (1) await using a = foo;
+   ·             ────────────────────
+ 3 │   for (;0;) await using b = foo;
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-in-single-statement-context-sync/input.js:3:13]
+ 2 │   while (1) await using a = foo;
+ 3 │   for (;0;) await using b = foo;
+   ·             ────────────────────
+ 4 │   do await using c = foo; while (1);
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-in-single-statement-context-sync/input.js:4:6]
+ 3 │   for (;0;) await using b = foo;
+ 4 │   do await using c = foo; while (1);
+   ·      ────────────────────
+ 5 │   if (1) await using d = foo;
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-in-single-statement-context-sync/input.js:5:10]
+ 4 │   do await using c = foo; while (1);
+ 5 │   if (1) await using d = foo;
+   ·          ────────────────────
+ 6 │   with (1) await using e = foo;
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-in-single-statement-context-sync/input.js:6:12]
+ 5 │   if (1) await using d = foo;
+ 6 │   with (1) await using e = foo;
+   ·            ────────────────────
+ 7 │   label: await using f = foo;
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-in-single-statement-context-sync/input.js:7:10]
+ 6 │   with (1) await using e = foo;
+ 7 │   label: await using f = foo;
+   ·          ────────────────────
+ 8 │ }
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-script-top-level-labeled-using-binding/input.js:1:8]
+ 1 │ label: await using x = bar();
+   ·        ──────────────────────
+   ╰────
+  help: Wrap this declaration in a block statement
 
   × Cannot assign to this expression
    ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-using-array-pattern/input.js:2:3]
@@ -9114,7 +9324,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                ▲
  3 │ }
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Using declarations must have an initializer.
    ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-using-no-initializer/input.js:2:15]
@@ -9123,6 +9333,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·               ─
  3 │ }
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/es2026/async-explicit-resource-management/invalid-using-object-pattern/input.js:2:14]
@@ -9131,7 +9342,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·              ▲
  3 │ }
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Using declarations may not have binding patterns.
    ╭─[babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/disallow-destructuring/input.js:1:17]
@@ -9182,13 +9393,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ export default using basic = reader();
    ·                     ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
-  × Unexpected token
+  × Using declarations cannot be exported directly.
    ╭─[babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-export-using/input.js:1:8]
  1 │ export using basic = reader();
-   ·        ─────
+   ·        ───────────
    ╰────
+  help: Remove the `export` here and add `export { basic }` as a separate statement to export the declaration
 
   × Expected `)` but found `of`
    ╭─[babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-for-await-using-binding-of-of/input.mjs:1:24]
@@ -9202,6 +9414,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ for (using foo in {});
    ·      ─────────
    ╰────
+  help: Did you mean to use a for...of statement?
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-for-using-binding-of-in/input.js:1:15]
@@ -9227,6 +9440,76 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ for (using of;of.isValid;);
    ·              ─
    ╰────
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-in-single-statement-context/input.js:2:13]
+ 1 │ {
+ 2 │   while (1) using a = foo;
+   ·             ──────────────
+ 3 │   for (;;) using b = foo;
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-in-single-statement-context/input.js:3:12]
+ 2 │   while (1) using a = foo;
+ 3 │   for (;;) using b = foo;
+   ·            ──────────────
+ 4 │   do using c = foo; while (1);
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-in-single-statement-context/input.js:4:6]
+ 3 │   for (;;) using b = foo;
+ 4 │   do using c = foo; while (1);
+   ·      ──────────────
+ 5 │   if (1) using d = foo;
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-in-single-statement-context/input.js:5:10]
+ 4 │   do using c = foo; while (1);
+ 5 │   if (1) using d = foo;
+   ·          ──────────────
+ 6 │   with (1) using e = foo;
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-in-single-statement-context/input.js:6:12]
+ 5 │   if (1) using d = foo;
+ 6 │   with (1) using e = foo;
+   ·            ──────────────
+ 7 │   label: using f = foo;
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-in-single-statement-context/input.js:7:10]
+ 6 │   with (1) using e = foo;
+ 7 │   label: using f = foo;
+   ·          ──────────────
+ 8 │ }
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-labeled-using-binding/input.js:2:10]
+ 1 │ {
+ 2 │   label: using x = bar();
+   ·          ────────────────
+ 3 │ }
+   ╰────
+  help: Wrap this declaration in a block statement
+
+  × Lexical declaration cannot appear in a single-statement context
+   ╭─[babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-script-top-level-labeled-using-binding/input.js:1:8]
+ 1 │ label: using x = bar();
+   ·        ────────────────
+   ╰────
+  help: Wrap this declaration in a block statement
 
   × Cannot use `await` as an identifier in an async context
    ╭─[babel/packages/babel-parser/test/fixtures/es2026/explicit-resource-management/invalid-using-binding-await-module/input.js:2:9]
@@ -9316,6 +9599,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·         ─
  3 │ }
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Identifier `x` has already been declared
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/declaration-function/dupe-param/input.js:1:12]
@@ -9338,6 +9622,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ ([a,...b,])=>0;
    ·         ─
    ╰────
+  help: Remove the trailing comma here
 
   × Identifier `a` has already been declared
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-array-pattern/dupe-param-1/input.js:2:13]
@@ -9373,11 +9658,12 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                    ╰── `)` expected
    ╰────
 
-  × Expected `,` but found `...`
+  × Expected `,` or `)` but found `...`
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-arrow-function/arrow-rest-forgetting-comma/input.js:1:4]
  1 │ (a ...b) => 0
-   ·    ─┬─
-   ·     ╰── `,` expected
+   · ┬  ─┬─
+   · │   ╰── `,` or `)` expected
+   · ╰── Opened here
    ╰────
 
   × A rest parameter must be last in a parameter list
@@ -9408,6 +9694,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  2 │ => 42
    · ──
    ╰────
+  help: Remove the line break before here
 
   × Cannot assign to 'eval' in strict mode
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-arrow-function/invalid-param-strict-mode/input.js:1:1]
@@ -9420,7 +9707,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ ((a)) => 0
    ·      ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-arrow-function/non-arrow-param-followed-by-rest/input.js:1:6]
@@ -9433,27 +9720,28 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ ({a:b[0]})=>0
    ·           ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-arrow-function/object-binding-pattern-invalid-method-in-pattern/input.js:1:14]
  1 │ ({get a(){}}) => 0;
    ·              ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-arrow-function/object-binding-pattern-invalid-nested-param/input.js:1:51]
  1 │ ([[[[[[[[[[[[[[[[[[[[{a:b[0]}]]]]]]]]]]]]]]]]]]]])=>0;
    ·                                                   ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
-  × Expected `,` but found `=>`
+  × Expected `,` or `)` but found `=>`
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-arrow-function/object-binding-pattern-invalid-pattern-without-parenthesis/input.js:1:4]
  1 │ ({}=>0)
-   ·    ─┬
-   ·     ╰── `,` expected
+   · ┬  ─┬
+   · │   ╰── `,` or `)` expected
+   · ╰── Opened here
    ╰────
 
   × Unexpected token
@@ -9523,7 +9811,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ export default from "foo"
    ·                    ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-export-declaration/invalid-export-default-equal/input.js:1:16]
@@ -9543,7 +9831,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ export {default} +
    ·                 ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × A reserved word cannot be used as an exported binding without `from`
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-export-declaration/invalid-export-named-default/input.js:1:9]
@@ -9594,6 +9882,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ ({ *[yield iter]() {} })
    ·      ─────
    ╰────
+  help: Either remove this `yield` or change the enclosing function to a generator function (`function*`)
 
   × Expected function name
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-generator/generator-parameter-binding-element/input.js:2:13]
@@ -9611,6 +9900,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                  ─────
  3 │ })
    ╰────
+  help: Either remove this `yield` or change the enclosing function to a generator function (`function*`)
 
   × yield expression not allowed in formal parameter
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-generator/generator-parameter-binding-element/input.js:2:18]
@@ -9637,6 +9927,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                      ─────
  3 │ })
    ╰────
+  help: Either remove this `yield` or change the enclosing function to a generator function (`function*`)
 
   × yield expression not allowed in formal parameter
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-generator/generator-parameter-binding-property/input.js:2:22]
@@ -9645,6 +9936,12 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                      ───┬───
    ·                         ╰── yield expression not allowed in formal parameter
  3 │ })
+   ╰────
+
+  × Cannot use `yield` as an identifier in a generator context
+   ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-generator/generator-parameter-binding-property-reserved/input.js:1:13]
+ 1 │ (function*({yield}) {})
+   ·             ─────
    ╰────
 
   × Expected function name
@@ -9663,6 +9960,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                ─────
  3 │ })
    ╰────
+  help: Either remove this `yield` or change the enclosing function to a generator function (`function*`)
 
   × yield expression not allowed in formal parameter
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-generator/generator-parameter-computed-property-name/input.js:2:16]
@@ -9774,7 +10072,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ \uD800!
    ·       ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Cannot use export statement outside a module
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-identifier/invalid_var_await/input.js:1:1]
@@ -9831,7 +10129,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ export {foo} from bar
    ·                  ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected `from` but found `,`
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-import-declaration/invalid-import-named-after-named/input.js:1:13]
@@ -9877,6 +10175,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ let []
    ·     ──
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × for-in loop variable declaration may not have an initializer
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-lexical-declaration/invalid_const_forin/input.js:1:6]
@@ -9901,7 +10200,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ var x = new.target;
    ·         ──────────
    ╰────
-  help: new.target is only allowed in constructors and functions invoked using thew `new` operator
+  help: new.target is only allowed in constructors and functions invoked using the `new` operator
 
   × The only valid meta property for new is new.target
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-meta-property/unknown-property/input.js:1:22]
@@ -10073,12 +10372,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ var {x: y = yield 3} = z;
    ·             ─────
    ╰────
+  help: Either remove this `yield` or change the enclosing function to a generator function (`function*`)
 
   × A 'yield' expression is only allowed in a generator body.
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-yield/invalid-yield-expression/input.js:1:15]
  1 │ (function() { yield 3; })
    ·               ─────
    ╰────
+  help: Either remove this `yield` or change the enclosing function to a generator function (`function*`)
 
   × yield expression not allowed in formal parameter
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/es2015-yield/invalid-yield-generator-arrow-default/input.js:1:22]
@@ -10607,7 +10908,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ var x = /[a-z]/\ux
    ·                ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Invalid Unicode escape sequence
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0042/input.js:1:19]
@@ -10620,7 +10921,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ var x = /[a-z\n]/\ux
    ·                  ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Invalid Unicode escape sequence
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0043/input.js:1:17]
@@ -10633,7 +10934,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ var x = /[a-z]/\\ux
    ·                ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Invalid Unicode escape sequence
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0044/input.js:1:18]
@@ -10646,7 +10947,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ var x = /[P QR]/\\u0067
    ·                 ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Cannot assign to this expression
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0045/input.js:1:1]
@@ -10828,14 +11129,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ { set 1 }
    ·      ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0072/input.js:1:6]
  1 │ { get 2 }
    ·      ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0073/input.js:1:11]
@@ -10854,26 +11155,30 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ ({ set s() { } })
    ·         ──
    ╰────
+  help: Add a parameter here
 
-  × Expected `,` but found `{`
+  × Expected `,` or `}` but found `{`
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0076/input.js:1:13]
  1 │ ({ set: s() { } })
-   ·             ┬
-   ·             ╰── `,` expected
+   ·  ┬          ┬
+   ·  │          ╰── `,` or `}` expected
+   ·  ╰── Opened here
    ╰────
 
-  × Expected `,` but found `{`
+  × Expected `,` or `}` but found `{`
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0077/input.js:1:17]
  1 │ ({ set: s(a, b) { } })
-   ·                 ┬
-   ·                 ╰── `,` expected
+   ·  ┬              ┬
+   ·  │              ╰── `,` or `}` expected
+   ·  ╰── Opened here
    ╰────
 
-  × Expected `,` but found `{`
+  × Expected `,` or `}` but found `{`
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0078/input.js:1:14]
  1 │ ({ get: g(d) { } })
-   ·              ┬
-   ·              ╰── `,` expected
+   ·  ┬           ┬
+   ·  │           ╰── `,` or `}` expected
+   ·  ╰── Opened here
    ╰────
 
   × Expected `]` but found `,`
@@ -10896,11 +11201,12 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·   ─
    ╰────
 
-  × Expected `,` but found `{`
+  × Expected `,` or `}` but found `{`
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0083/input.js:1:6]
  1 │ ({get{a}:0})
-   ·      ┬
-   ·      ╰── `,` expected
+   ·  ┬   ┬
+   ·  │   ╰── `,` or `}` expected
+   ·  ╰── Opened here
    ╰────
 
   × Expected `}` but found `EOF`
@@ -10984,14 +11290,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ (10) => 00
    ·     ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0099/input.js:1:9]
  1 │ (10, 20) => 00
    ·         ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Cannot assign to 'eval' in strict mode
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0100/input.js:1:16]
@@ -11005,11 +11311,12 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·  ────
    ╰────
 
-  × Expected `,` but found `/`
+  × Expected `,` or `}` but found `/`
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0102/input.js:1:8]
  1 │ p = { q/ }
-   ·        ┬
-   ·        ╰── `,` expected
+   ·     ┬  ┬
+   ·     │  ╰── `,` or `}` expected
+   ·     ╰── Opened here
    ╰────
 
   × Expected `:` but found `/`
@@ -11024,7 +11331,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ a b;
    ·  ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected `(` but found `.`
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0113/input.js:1:3]
@@ -11038,14 +11345,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ a if;
    ·  ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0115/input.js:1:2]
  1 │ a enum;
    ·  ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Illegal break statement
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0116/input.js:1:1]
@@ -11163,6 +11470,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ try { }
    ·        ▲
    ╰────
+  help: Either unwrap this try block or add catch / finally clause
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0134/input.js:1:15]
@@ -11194,25 +11502,28 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ const x = 12, y;
    ·               ─
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Missing initializer in const declaration
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0139/input.js:1:7]
  1 │ const x, y = 12;
    ·       ─
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Missing initializer in const declaration
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0140/input.js:1:7]
  1 │ const x;
    ·       ─
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0141/input.js:1:13]
  1 │ if(true) let a = 1;
    ·             ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Lexical declaration cannot appear in a single-statement context
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0142/input.js:1:10]
@@ -11939,7 +12250,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ 'use strict'; a package
    ·                ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × A rest parameter must be last in a parameter list
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0258/input.js:1:15]
@@ -12007,13 +12318,13 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·               ─
    ╰────
 
-  × Classes may not have a static property named prototype
+  × Classes may not have a static property named 'prototype'
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0270/input.js:1:17]
  1 │ class A {static prototype(){}}
    ·                 ─────────
    ╰────
 
-  × Classes may not have a static property named prototype
+  × Classes may not have a static property named 'prototype'
    ╭─[babel/packages/babel-parser/test/fixtures/esprima/invalid-syntax/migrated_0271/input.js:1:17]
  1 │ class A {static "prototype"(){}}
    ·                 ───────────
@@ -12100,6 +12411,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ var []
    ·     ──
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × A 'set' accessor must have exactly one parameter.
    ╭─[babel/packages/babel-parser/test/fixtures/estree/typescript/getter-setter/input.ts:3:9]
@@ -12108,6 +12420,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·         ──
  4 │ ({ get x(x) {} });
    ╰────
+  help: Add a parameter here
 
   × A 'get' accessor must not have any formal parameters.
    ╭─[babel/packages/babel-parser/test/fixtures/estree/typescript/getter-setter/input.ts:4:9]
@@ -12115,6 +12428,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  4 │ ({ get x(x) {} });
    ·         ───
    ╰────
+  help: Remove these parameters here
 
   × TS(1031): 'declare' modifier cannot appear on class elements of this kind.
    ╭─[babel/packages/babel-parser/test/fixtures/estree/typescript/invalid-class-method-empty-body/input.js:4:3]
@@ -12361,13 +12675,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ 4 + async<number>() => 2 
    ·                    ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × A rest parameter cannot be optional
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/arrow-function/async-rest-optional-parameter/input.ts:1:14]
  1 │ async(...args?: any[]) : any => {}
    ·              ─
    ╰────
+  help: Remove this `?`. The default value is an empty array
 
   × Unexpected token. Did you mean `{'>'}` or `&gt;`?
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/arrow-function/generic-tsx/input.ts:2:15]
@@ -12421,28 +12736,28 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ async (a as T) => {};
    ·               ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/cast/arrow-async-parameter-assertion/input.ts:1:14]
  1 │ async (<T> a) => {};
    ·              ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/cast/arrow-parameter-as/input.ts:1:9]
  1 │ (a as T) => {};
    ·         ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/cast/arrow-parameter-assertion/input.ts:1:8]
  1 │ (<T> a) => {};
    ·        ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Invalid rest operator's argument.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/cast/destructuring-assignent-rest-invalid/input.ts:1:9]
@@ -12472,21 +12787,23 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·     ▲
  2 │ (a! = b) => c;
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
-  × Expected `,` but found `:`
+  × Expected `,` or `)` but found `:`
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/cast/parameter-typecast/input.ts:1:7]
  1 │ func(a: T);
-   ·       ┬
-   ·       ╰── `,` expected
+   ·     ┬ ┬
+   ·     │ ╰── `,` or `)` expected
+   ·     ╰── Opened here
  2 │ func<T>(a: T);
    ╰────
 
-  × Expected `,` but found `:`
+  × Expected `,` or `)` but found `:`
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/cast/parameter-typecast-babel-7/input.ts:1:7]
  1 │ func(a: T);
-   ·       ┬
-   ·       ╰── `,` expected
+   ·     ┬ ┬
+   ·     │ ╰── `,` or `)` expected
+   ·     ╰── Opened here
  2 │ func<T>(a: T);
    ╰────
 
@@ -12591,6 +12908,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·              ─
  8 │   abstract accessor f = 1;
    ╰────
+  help: Remove this `?`
 
   × TS(1243): 'accessor' modifier cannot be used with 'readonly' modifier.
     ╭─[babel/packages/babel-parser/test/fixtures/typescript/class/accessor-invalid/input.ts:9:3]
@@ -12670,7 +12988,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·        ▲
  2 │ class A {}
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × TS(1030): 'declare' modifier already seen.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/class/duplicate-modifier-1/input.ts:2:18]
@@ -13089,12 +13407,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ const x: number;
    ·       ─────────
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Missing initializer in const declaration
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/const/reserved-word/input.ts:1:7]
  1 │ const b: const;
    ·       ────────
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Missing initializer in destructuring declaration
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/declare/destructure-new-line/input.ts:2:7]
@@ -13102,6 +13422,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  2 │ const { x, y }: { x: number, y: number };
    ·       ──────────────────────────────────
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × TS(1183): An implementation cannot be declared in ambient contexts.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/declare/function/input.ts:1:24]
@@ -13114,14 +13435,14 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ declare await using basic;
    ·        ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/declare/invalid-await-using-declaration-with-initializer/input.ts:1:8]
  1 │ declare await using basic = null;
    ·        ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Using declarations must have an initializer.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/declare/invalid-namespace-await-using/input.ts:2:15]
@@ -13130,6 +13451,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·               ─
  3 │   await using A1 = 0;
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Using declarations must have an initializer.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/declare/invalid-namespace-await-using/input.ts:5:15]
@@ -13138,6 +13460,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·               ─
  6 │ }
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Using declarations must have an initializer.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/declare/invalid-namespace-await-using/input.ts:5:18]
@@ -13146,6 +13469,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                  ─
  6 │ }
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Using declarations must have an initializer.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/declare/invalid-namespace-using/input.ts:2:9]
@@ -13154,6 +13478,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·         ─
  3 │   using A1 = 0;
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Using declarations must have an initializer.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/declare/invalid-namespace-using/input.ts:5:9]
@@ -13162,6 +13487,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·         ─
  6 │ }
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Using declarations must have an initializer.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/declare/invalid-namespace-using/input.ts:5:12]
@@ -13170,20 +13496,21 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·            ─
  6 │ }
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/declare/invalid-using-declaration/input.ts:1:8]
  1 │ declare using basic;
    ·        ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/declare/invalid-using-declaration-with-initializer/input.ts:1:8]
  1 │ declare using basic = null;
    ·        ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Unexpected exponentiation expression
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/exponentiation/await-non-null-before-exponential/input.ts:1:14]
@@ -13355,7 +13682,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·        ▲
  2 │ I
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × 'abstract' modifier cannot be used here.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/interface/export-abstract-interface/input.ts:1:8]
@@ -13370,7 +13697,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                          ─
    ╰────
 
-  × TS(1095):  A 'set' accessor cannot have a return type annotation.
+  × TS(1095): A 'set' accessor cannot have a return type annotation.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/interface/get-set-invalid-return-types/input.ts:2:17]
  1 │ interface Foo {
  2 │   set foo(param): string;
@@ -13378,7 +13705,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  3 │ }
    ╰────
 
-  × TS(1095):  A 'set' accessor cannot have a return type annotation.
+  × TS(1095): A 'set' accessor cannot have a return type annotation.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/interface/get-set-invalid-return-types-babel-7/input.ts:2:17]
  1 │ interface Foo {
  2 │   set foo(param): string;
@@ -13410,7 +13737,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·         ▲
  2 │ Foo {}
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × TS(2499): An interface can only extend an identifier/qualified-name with optional type arguments.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/interface/invalid-extends/input.ts:2:27]
@@ -13645,7 +13972,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  2 │ F {}
    ·  ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/interface/property-initializer/input.ts:1:25]
@@ -13660,7 +13987,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·        ▲
  7 │ 'bar'
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/module-namespace/module-new-line-error/input.ts:2:4]
@@ -13668,7 +13995,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  2 │ Foo {}
    ·    ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/module-namespace/namespace-declare-new-line/input.ts:6:8]
@@ -13677,7 +14004,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·        ▲
  7 │ barbar
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/module-namespace/namespace-new-line-error/input.ts:2:4]
@@ -13685,7 +14012,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  2 │ Foo {}
    ·    ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × `await` is only allowed within async functions and at the top levels of modules
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/module-namespace/top-level-await/input.ts:2:15]
@@ -13694,6 +14021,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·               ─────
  3 │ }
    ╰────
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
 
   × Identifier `A` has already been declared
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/scope/redeclaration-class-class/input.ts:1:7]
@@ -14170,12 +14498,13 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  2 │   yield 2;
    ╰────
 
-  × Expected `,` but found `:`
+  × Expected `,` or `]` but found `:`
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/tsx/cast-invalid/input.tsx:3:22]
  2 │   return (
  3 │     <div propA={[ key: value ]} propsB={(a: b)} />
-   ·                      ┬
-   ·                      ╰── `,` expected
+   ·                 ┬    ┬
+   ·                 │    ╰── `,` or `]` expected
+   ·                 ╰── Opened here
  4 │   );
    ╰────
 
@@ -14191,7 +14520,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·        ▲
  2 │ T = number
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Unexpected token
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/type-arguments/call-optional-chain-invalid/input.ts:1:2]
@@ -14300,20 +14629,21 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ new A<T> if (0);
    ·         ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/type-arguments/new-without-arguments-missing-semicolon-babel-7/input.ts:1:9]
  1 │ new A<T> if (0);
    ·         ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × TS(2207): The 'type' modifier cannot be used on a named export when 'export type' is used on its export statement.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/type-only-import-export-specifiers/export-invalid-type-in-type/input.ts:1:15]
  1 │ export type { type foo } from "foo";
    ·               ────
    ╰────
+  help: Remove this 'type' modifier
 
   × Identifier expected. 'if' is a reserved word that cannot be used here.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/type-only-import-export-specifiers/export-invalid-type-only-keyword/input.ts:1:7]
@@ -14345,6 +14675,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ import type { type foo } from "foo";
    ·               ────
    ╰────
+  help: Remove this 'type' modifier
 
   × Identifier expected. 'if' is a reserved word that cannot be used here.
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/type-only-import-export-specifiers/import-invalid-type-named-keywords/input.ts:1:15]
@@ -14376,7 +14707,7 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·                     ▲
  2 │ 
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here
 
   × Expected `{` but found `<`
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/types/invalid-import-type-dynamic-with-jsx-options/input.ts:1:34]
@@ -14459,25 +14790,28 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
    ·            ────────
    ╰────
 
-  × Expected `,` but found `:`
+  × Expected `,` or `]` but found `:`
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/types/tuple-invalid-label-1/input.ts:1:14]
  1 │ type T = [x.y: A];
-   ·              ┬
-   ·              ╰── `,` expected
+   ·          ┬   ┬
+   ·          │   ╰── `,` or `]` expected
+   ·          ╰── Opened here
    ╰────
 
-  × Expected `,` but found `:`
+  × Expected `,` or `]` but found `:`
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/types/tuple-invalid-label-2/input.ts:1:15]
  1 │ type T = [x<y>: A];
-   ·               ┬
-   ·               ╰── `,` expected
+   ·          ┬    ┬
+   ·          │    ╰── `,` or `]` expected
+   ·          ╰── Opened here
    ╰────
 
-  × Expected `,` but found `:`
+  × Expected `,` or `]` but found `:`
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/types/tuple-invalid-label-2-babel-7/input.ts:1:15]
  1 │ type T = [x<y>: A];
-   ·               ┬
-   ·               ╰── `,` expected
+   ·          ┬    ┬
+   ·          │    ╰── `,` or `]` expected
+   ·          ╰── Opened here
    ╰────
 
   × TS(5086): A labeled tuple element is declared as optional with a question mark after the name and before the colon, rather than after the type.
@@ -14579,10 +14913,11 @@ Expect to Parse: tasks/coverage/babel/packages/babel-parser/test/fixtures/typesc
  1 │ let {}! = {};
    ·     ──
    ╰────
+  help: Add an initializer (e.g. ` = undefined`) here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[babel/packages/babel-parser/test/fixtures/typescript/variable-declarator/definite-assignment-not-allowed/input.ts:1:7]
  1 │ let {}! = {};
    ·       ▲
    ╰────
-  help: Try insert a semicolon here
+  help: Try inserting a semicolon here

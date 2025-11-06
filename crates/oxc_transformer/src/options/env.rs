@@ -82,11 +82,14 @@ impl EnvOptions {
                 // Turn this on would throw error for all bigints.
                 big_int: false,
                 optional_chaining: true,
+                arbitrary_module_namespace_names: false,
             },
             es2021: ES2021Options { logical_assignment_operators: true },
             es2022: ES2022Options {
                 class_static_block: true,
                 class_properties: Some(ClassPropertiesOptions::default()),
+                // Turn this on would throw error for all top-level awaits.
+                top_level_await: false,
             },
             es2026: ES2026Options { explicit_resource_management: true },
         }
@@ -159,6 +162,8 @@ impl From<EngineTargets> for EnvOptions {
                 nullish_coalescing_operator: o.has_feature(ES2020NullishCoalescingOperator),
                 big_int: o.has_feature(ES2020BigInt),
                 optional_chaining: o.has_feature(ES2020OptionalChaining),
+                arbitrary_module_namespace_names: o
+                    .has_feature(ES2020ArbitraryModuleNamespaceNames),
             },
             es2021: ES2021Options {
                 logical_assignment_operators: o.has_feature(ES2021LogicalAssignmentOperators),
@@ -166,6 +171,7 @@ impl From<EngineTargets> for EnvOptions {
             es2022: ES2022Options {
                 class_static_block: o.has_feature(ES2022ClassStaticBlock),
                 class_properties: o.has_feature(ES2022ClassProperties).then(Default::default),
+                top_level_await: o.has_feature(ES2022TopLevelAwait),
             },
             es2026: ES2026Options {
                 explicit_resource_management: o.has_feature(ES2026ExplicitResourceManagement),
