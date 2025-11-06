@@ -51,7 +51,6 @@ pub(crate) mod eslint {
     pub mod default_param_last;
     pub mod eqeqeq;
     pub mod complexity;
-    pub mod no_warning_comments;
     pub mod for_direction;
     pub mod func_names;
     pub mod func_style;
@@ -826,7 +825,6 @@ oxc_macros::declare_all_lint_rules! {
     eslint::yoda,
     import::consistent_type_specifier_style,
     eslint::complexity,
-    eslint::no_warning_comments,
     import::default,
     import::export,
     import::exports_last,
