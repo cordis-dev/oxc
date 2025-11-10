@@ -132,10 +132,9 @@ impl SortableImport {
 
         // Strip quotes and params
         let source = match &elements[*source_idx] {
-            FormatElement::LocatedTokenText { slice, .. } => slice,
-            FormatElement::DynamicText { text } => *text,
+            FormatElement::Text { text, .. } => *text,
             _ => unreachable!(
-                "`source_idx` must point to either `LocatedTokenText` or `DynamicText` in the `elements`."
+                "`source_idx` must point to either `LocatedTokenText` or `Text` in the `elements`."
             ),
         };
         let source = source.trim_matches('"').trim_matches('\'');
@@ -293,13 +292,8 @@ impl ImportPathKind {
             return Self::Builtin;
         }
 
-        // Check for relative imports
-        if source == "." || source == ".." {
-            return Self::Index;
-        }
-
-        if source.starts_with("./") || source.starts_with("../") {
-            if source.ends_with('/') {
+        if source.starts_with('.') {
+            if source == "." || source == ".." || source.ends_with('/') {
                 return Self::Index;
             }
             if source.starts_with("../") {

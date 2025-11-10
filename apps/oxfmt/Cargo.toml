@@ -1,6 +1,6 @@
 [package]
 name = "oxfmt"
-version = "0.11.0"
+version = "0.12.0"
 authors.workspace = true
 categories.workspace = true
 edition.workspace = true
@@ -20,8 +20,14 @@ crate-type = ["lib", "cdylib"]
 path = "src/lib.rs"
 doctest = false
 
+[[bin]]
+name = "oxfmt"
+path = "src/main.rs"
+test = false
+doctest = false
+
 [dependencies]
-oxc_allocator = { workspace = true }
+oxc_allocator = { workspace = true, features = ["pool"] }
 oxc_diagnostics = { workspace = true }
 oxc_formatter = { workspace = true }
 oxc_parser = { workspace = true }

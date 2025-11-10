@@ -73,7 +73,7 @@ use crate::{
         member_chain::MemberChain,
         object::format_property_key,
         statement_body::FormatStatementBody,
-        string_utils::{FormatLiteralStringToken, StringLiteralParentKind},
+        string::{FormatLiteralStringToken, StringLiteralParentKind},
         suppressed::FormatSuppressedNode,
     },
     write,
@@ -103,25 +103,25 @@ pub trait FormatWrite<'ast, T = ()> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, IdentifierName<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        write!(f, dynamic_text(self.name().as_str()))
+        write!(f, text_without_whitespace(self.name().as_str()))
     }
 }
 
 impl<'a> FormatWrite<'a> for AstNode<'a, IdentifierReference<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        write!(f, dynamic_text(self.name().as_str()))
+        write!(f, text_without_whitespace(self.name().as_str()))
     }
 }
 
 impl<'a> FormatWrite<'a> for AstNode<'a, BindingIdentifier<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        write!(f, dynamic_text(self.name().as_str()))
+        write!(f, text_without_whitespace(self.name().as_str()))
     }
 }
 
 impl<'a> FormatWrite<'a> for AstNode<'a, LabelIdentifier<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        write!(f, dynamic_text(self.name().as_str()))
+        write!(f, text_without_whitespace(self.name().as_str()))
     }
 }
 
@@ -223,16 +223,14 @@ impl<'a> FormatWrite<'a> for AstNode<'a, CallExpression<'a>> {
                 is_multiline_template_starting_on_same_line(expr, f.source_text())
             });
 
-        if !is_simple_module_import(self.arguments(), f.comments())
-            && !is_template_literal_single_arg
-            && callee.as_member_expression().is_some_and(|e| {
-                matches!(
-                    e,
-                    MemberExpression::StaticMemberExpression(_)
-                        | MemberExpression::ComputedMemberExpression(_)
-                )
-            })
+        if !is_template_literal_single_arg
+            && matches!(
+                callee.as_ref(),
+                Expression::StaticMemberExpression(_) | Expression::ComputedMemberExpression(_)
+            )
             && !callee.needs_parentheses(f)
+            && !is_simple_module_import(self.arguments(), f.comments())
+            && !is_test_call_expression(self)
         {
             MemberChain::from_call_expression(self, f).fmt(f)
         } else {
@@ -296,7 +294,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, UnaryExpression<'a>> {
         {
             write!(
                 f,
-                [group(&format_args!(text("("), soft_block_indent(self.argument()), text(")")))]
+                [group(&format_args!(token("("), soft_block_indent(self.argument()), token(")")))]
             )
         } else {
             write!(f, self.argument())
@@ -1081,9 +1079,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, BigIntLiteral<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
         write!(
             f,
-            dynamic_text(
-                f.context().allocator().alloc_str(&self.raw().unwrap().cow_to_ascii_lowercase())
-            )
+            text(f.context().allocator().alloc_str(&self.raw().unwrap().cow_to_ascii_lowercase()))
         )
     }
 }
@@ -1097,7 +1093,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, RegExpLiteral<'a>> {
         flags.sort_unstable();
         let flags = flags.iter().collect::<String>();
         let s = StringBuilder::from_strs_array_in([pattern, "/", &flags], f.context().allocator());
-        write!(f, dynamic_text(s.into_str(),))
+        write!(f, text(s.into_str()))
     }
 }
 
@@ -1523,14 +1519,14 @@ impl<'a> Format<'a> for FormatTSSignature<'a, '_> {
         match f.options().semicolons {
             Semicolons::Always => {
                 if self.last {
-                    write!(f, [if_group_breaks(&text(";"))])?;
+                    write!(f, [if_group_breaks(&token(";"))])?;
                 } else {
-                    text(";").fmt(f)?;
+                    token(";").fmt(f)?;
                 }
             }
             Semicolons::AsNeeded => {
                 if !self.last {
-                    write!(f, [if_group_fits_on_line(&text(";"))])?;
+                    write!(f, [if_group_fits_on_line(&token(";"))])?;
                 }
             }
         }
@@ -1738,9 +1734,9 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSTypeAssertion<'a>> {
                     format_args!(
                         format_cast,
                         group(&format_args!(
-                            text("("),
+                            token("("),
                             block_indent(&format_expression),
-                            text(")")
+                            token(")")
                         ))
                     ),
                     format_args!(format_cast, format_expression)

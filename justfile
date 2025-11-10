@@ -99,7 +99,7 @@ benchmark:
 
 # Run benchmarks for a single component
 benchmark-one *args:
-  cargo benchmark --bench {{args}} --no-default-features --features {{args}}
+  cargo benchmark --bench {{args}} --no-default-features --features {{ if args == "linter" { "linter" } else { "compiler" } }}
 
 # ==================== TESTING & CONFORMANCE ====================
 
@@ -134,11 +134,19 @@ ast:
 
 # ==================== LINTER ====================
 
-# Build oxlint in release build
+# oxlint release build
 oxlint:
+  cargo build -p oxlint --release --features allocator
+
+# watch oxlint, e.g. `just watch-oxlint test.js`
+watch-oxlint *args='':
+  just watch 'cargo run -p oxlint -- --disable-nested-config {{args}}'
+
+# oxlint release build for node.js
+oxlint-node:
   pnpm -C apps/oxlint run build
 
-watch-oxlint *args='':
+watch-oxlint-node *args='':
   just watch 'pnpm run -C apps/oxlint build-dev && node apps/oxlint/dist/cli.js --disable-nested-config {{args}}'
 
 # Create a new lint rule for any plugin
@@ -167,11 +175,19 @@ alias new-typescript-rule := new-ts-rule
 
 # ==================== FORMATTER ====================
 
-# Build oxfmt in release build
+# oxfmt release build
 oxfmt:
+  cargo build -p oxfmt --release --features allocator
+
+# watch oxfmt, e.g. `just watch-oxfmt test.js`
+watch-oxfmt *args='':
+  just watch 'cargo run -p oxfmt -- {{args}}'
+
+# Build oxfmt in release build
+oxfmt-node:
   pnpm -C apps/oxfmt run build
 
-watch-oxfmt *args='':
+watch-oxfmt-node *args='':
   just watch 'pnpm run -C apps/oxfmt build-dev && node apps/oxfmt/dist/cli.js {{args}}'
 
 # ==================== TRANSFORMER ====================
@@ -223,11 +239,18 @@ watch-playground:
 
 # ==================== UTILITIES & ADVANCED ====================
 
-# Generate website documentation
+# Generate website documentation, intended for updating the oxc-project.github.io site.
+# Path should be the path to your clone of https://github.com/oxc-project/oxc-project.github.io
+# When testing changes to the website documentation, you may also want to run `dprint fmt --staged`
+# in the website directory.
 website path:
   cargo run -p website -- linter-rules --table {{path}}/src/docs/guide/usage/linter/generated-rules.md --rule-docs {{path}}/src/docs/guide/usage/linter/rules --git-ref $(git rev-parse HEAD)
   cargo run -p website -- linter-cli > {{path}}/src/docs/guide/usage/linter/generated-cli.md
   cargo run -p website -- linter-schema-markdown > {{path}}/src/docs/guide/usage/linter/generated-config.md
+
+# Generate linter schema json for `npm/oxlint/configuration_schema.json`
+linter-schema-json:
+  cargo run -p website -- linter-schema-json > npm/oxlint/configuration_schema.json
 
 # Automatically DRY up Cargo.toml manifests in a workspace
 autoinherit:
