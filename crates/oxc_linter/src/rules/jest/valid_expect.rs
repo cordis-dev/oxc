@@ -282,7 +282,6 @@ fn is_acceptable_return_node<'a, 'b>(
 
         match node.kind() {
             AstKind::ConditionalExpression(_)
-            | AstKind::Argument(_)
             | AstKind::ExpressionStatement(_)
             | AstKind::FunctionBody(_) => {
                 node = ctx.nodes().parent_node(node.id());
@@ -296,6 +295,29 @@ fn is_acceptable_return_node<'a, 'b>(
 
 type ParentAndIsFirstItem<'a, 'b> = (&'b AstNode<'a>, bool);
 
+/// Checks if a node should be skipped during parent traversal
+fn should_skip_parent_node(node: &AstNode, parent: &AstNode) -> bool {
+    match parent.kind() {
+        AstKind::CallExpression(call) => {
+            // Don't skip arguments to Promise methods - they're semantically important for await detection
+            if let Some(member_expr) = call.callee.as_member_expression()
+                && let Expression::Identifier(ident) = member_expr.object()
+                && ident.name == "Promise"
+            {
+                return false; // Never skip Promise method arguments
+            }
+
+            // For other call expressions, skip if this node is one of the arguments
+            call.arguments.iter().any(|arg| arg.span() == node.span())
+        }
+        AstKind::NewExpression(new_expr) => {
+            // Skip if this node is one of the new expression arguments
+            new_expr.arguments.iter().any(|arg| arg.span() == node.span())
+        }
+        _ => false,
+    }
+}
+
 // Returns the parent node of the given node, ignoring some nodes,
 // and return whether the first item if parent is an array.
 fn get_parent_with_ignore<'a, 'b>(
@@ -305,7 +327,7 @@ fn get_parent_with_ignore<'a, 'b>(
     let mut node = node;
     loop {
         let parent = ctx.nodes().parent_node(node.id());
-        if !matches!(parent.kind(), AstKind::Argument(_)) {
+        if !should_skip_parent_node(node, parent) {
             // we don't want to report `Promise.all([invalidExpectCall_1, invalidExpectCall_2])` twice.
             // so we need mark whether the node is the first item of an array.
             // if it not the first item, we ignore it in `find_promise_call_expression_node`.
@@ -556,6 +578,9 @@ fn test() {
         ("test('valid-expect', () => { expect(Promise.reject(2)).toRejectWith(2); });", Some(serde_json::json!([{ "asyncMatchers": ["toResolveWith"] }]))),
         ("test('valid-expect', async () => { await expect(Promise.resolve(2)).toResolve(); });", Some(serde_json::json!([{ "asyncMatchers": ["toResolveWith"] }]))),
         ("test('valid-expect', async () => { expect(Promise.resolve(2)).toResolve(); });", Some(serde_json::json!([{ "asyncMatchers": ["toResolveWith"] }]))),
+        (
+        "import { describe, expect, it } from 'vitest'; async function runCaseInWorker(type, props) { await runCase({ type, props }, expect); }", None
+        )
     ];
 
     let mut fail = vec![

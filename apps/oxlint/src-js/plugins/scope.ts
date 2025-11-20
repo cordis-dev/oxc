@@ -11,6 +11,76 @@ import { ast, initAst } from './source_code.js';
 import { assertIs } from './utils.js';
 
 import type * as ESTree from '../generated/types.d.ts';
+import type { SetNullable } from './utils.ts';
+
+export interface Scope {
+  type: ScopeType;
+  isStrict: boolean;
+  upper: Scope | null;
+  childScopes: Scope[];
+  variableScope: Scope;
+  block: ESTree.Node;
+  variables: Variable[];
+  set: Map<string, Variable>;
+  references: Reference[];
+  through: Reference[];
+  functionExpressionScope: boolean;
+  implicit?: {
+    variables: Variable[];
+    set: Map<string, Variable>;
+  };
+}
+
+export type ScopeType =
+  | 'block'
+  | 'catch'
+  | 'class'
+  | 'class-field-initializer'
+  | 'class-static-block'
+  | 'for'
+  | 'function'
+  | 'function-expression-name'
+  | 'global'
+  | 'module'
+  | 'switch'
+  | 'with';
+
+export interface Variable {
+  name: string;
+  scope: Scope;
+  identifiers: Identifier[];
+  references: Reference[];
+  defs: Definition[];
+}
+
+export interface Reference {
+  identifier: Identifier;
+  from: Scope;
+  resolved: Variable | null;
+  writeExpr: ESTree.Expression | null;
+  init: boolean;
+  isWrite(): boolean;
+  isRead(): boolean;
+  isReadOnly(): boolean;
+  isWriteOnly(): boolean;
+  isReadWrite(): boolean;
+}
+
+export interface Definition {
+  type: DefinitionType;
+  name: Identifier;
+  node: ESTree.Node;
+  parent: ESTree.Node | null;
+}
+
+export type DefinitionType =
+  | 'CatchClause'
+  | 'ClassName'
+  | 'FunctionName'
+  | 'ImplicitGlobalVariable'
+  | 'ImportBinding'
+  | 'Parameter'
+  | 'Variable';
 
 type Identifier =
   | ESTree.IdentifierName
@@ -26,11 +96,7 @@ let tsScopeManager: TSESLintScopeManager | null = null;
 
 // Options for TS-ESLint's `analyze` method.
 // `sourceType` property is set before calling `analyze`.
-interface AnalyzeOptionsWithNullableSourceType extends Omit<AnalyzeOptions, 'sourceType'> {
-  sourceType: AnalyzeOptions['sourceType'] | null;
-}
-
-const analyzeOptions: AnalyzeOptionsWithNullableSourceType = {
+const analyzeOptions: SetNullable<AnalyzeOptions, 'sourceType'> = {
   globalReturn: false,
   jsxFragmentName: null,
   jsxPragma: 'React',
@@ -122,75 +188,6 @@ export const SCOPE_MANAGER = Object.freeze({
 
 export type ScopeManager = typeof SCOPE_MANAGER;
 
-export interface Scope {
-  type: ScopeType;
-  isStrict: boolean;
-  upper: Scope | null;
-  childScopes: Scope[];
-  variableScope: Scope;
-  block: ESTree.Node;
-  variables: Variable[];
-  set: Map<string, Variable>;
-  references: Reference[];
-  through: Reference[];
-  functionExpressionScope: boolean;
-  implicit?: {
-    variables: Variable[];
-    set: Map<string, Variable>;
-  };
-}
-
-export type ScopeType =
-  | 'block'
-  | 'catch'
-  | 'class'
-  | 'class-field-initializer'
-  | 'class-static-block'
-  | 'for'
-  | 'function'
-  | 'function-expression-name'
-  | 'global'
-  | 'module'
-  | 'switch'
-  | 'with';
-
-export interface Variable {
-  name: string;
-  scope: Scope;
-  identifiers: Identifier[];
-  references: Reference[];
-  defs: Definition[];
-}
-
-export interface Reference {
-  identifier: Identifier;
-  from: Scope;
-  resolved: Variable | null;
-  writeExpr: ESTree.Expression | null;
-  init: boolean;
-  isWrite(): boolean;
-  isRead(): boolean;
-  isReadOnly(): boolean;
-  isWriteOnly(): boolean;
-  isReadWrite(): boolean;
-}
-
-export interface Definition {
-  type: DefinitionType;
-  name: Identifier;
-  node: ESTree.Node;
-  parent: ESTree.Node | null;
-}
-
-export type DefinitionType =
-  | 'CatchClause'
-  | 'ClassName'
-  | 'FunctionName'
-  | 'ImplicitGlobalVariable'
-  | 'ImportBinding'
-  | 'Parameter'
-  | 'Variable';
-
 /**
  * Determine whether the given identifier node is a reference to a global variable.
  * @param node - `Identifier` node to check.
@@ -198,12 +195,8 @@ export type DefinitionType =
  */
 export function isGlobalReference(node: ESTree.Node): boolean {
   // ref: https://github.com/eslint/eslint/blob/e7cda3bdf1bdd664e6033503a3315ad81736b200/lib/languages/js/source-code/source-code.js#L934-L962
-  if (!node) throw new TypeError('Missing required argument: node.');
+  if (!node) throw new TypeError('Missing required argument: `node`');
   if (node.type !== 'Identifier') return false;
-
-  const { name } = node;
-  // TODO: Is this check required? Isn't an `Identifier`'s `name` property always a string?
-  if (typeof name !== 'string') return false;
 
   if (tsScopeManager === null) initTsScopeManager();
 
@@ -212,7 +205,7 @@ export function isGlobalReference(node: ESTree.Node): boolean {
   const globalScope = scopes[0];
 
   // If the identifier is a reference to a global variable, the global scope should have a variable with the name
-  const variable = globalScope.set.get(name);
+  const variable = globalScope.set.get(node.name);
 
   // Global variables are not defined by any node, so they should have no definitions
   if (variable === undefined || variable.defs.length > 0) return false;
@@ -268,3 +261,17 @@ export function getScope(node: ESTree.Node): Scope {
   // @ts-expect-error // TODO: Our types don't quite align yet
   return tsScopeManager.scopes[0];
 }
+
+/**
+ * Marks as used a variable with the given name in a scope indicated by the given reference node.
+ * This affects the `no-unused-vars` rule.
+ * @param name - Variable name
+ * @param refNode - Reference node
+ * @returns `true` if a variable with the given name was found and marked as used, otherwise `false`
+ */
+/* oxlint-disable no-unused-vars */
+export function markVariableAsUsed(name: string, refNode: ESTree.Node): boolean {
+  // TODO: Implement
+  throw new Error('`context.markVariableAsUsed` not implemented yet');
+}
+/* oxlint-enable no-unused-vars */

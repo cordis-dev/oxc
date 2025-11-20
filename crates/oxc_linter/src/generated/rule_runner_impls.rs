@@ -246,10 +246,8 @@ impl RuleRunner for crate::rules::eslint::no_console::NoConsole {
 }
 
 impl RuleRunner for crate::rules::eslint::no_const_assign::NoConstAssign {
-    const NODE_TYPES: Option<&AstTypesBitset> = Some(&AstTypesBitset::from_types(&[
-        AstType::BindingRestElement,
-        AstType::VariableDeclarator,
-    ]));
+    const NODE_TYPES: Option<&AstTypesBitset> =
+        Some(&AstTypesBitset::from_types(&[AstType::VariableDeclarator]));
     const RUN_FUNCTIONS: RuleRunFunctionsImplemented = RuleRunFunctionsImplemented::Run;
 }
 
@@ -767,7 +765,6 @@ impl RuleRunner for crate::rules::eslint::no_unsafe_negation::NoUnsafeNegation {
 
 impl RuleRunner for crate::rules::eslint::no_unsafe_optional_chaining::NoUnsafeOptionalChaining {
     const NODE_TYPES: Option<&AstTypesBitset> = Some(&AstTypesBitset::from_types(&[
-        AstType::Argument,
         AstType::ArrayExpression,
         AstType::AssignmentExpression,
         AstType::AssignmentPattern,
@@ -2893,6 +2890,11 @@ impl RuleRunner for crate::rules::typescript::prefer_function_type::PreferFuncti
     const RUN_FUNCTIONS: RuleRunFunctionsImplemented = RuleRunFunctionsImplemented::Run;
 }
 
+impl RuleRunner for crate::rules::typescript::prefer_includes::PreferIncludes {
+    const NODE_TYPES: Option<&AstTypesBitset> = None;
+    const RUN_FUNCTIONS: RuleRunFunctionsImplemented = RuleRunFunctionsImplemented::Unknown;
+}
+
 impl RuleRunner for crate::rules::typescript::prefer_literal_enum_member::PreferLiteralEnumMember {
     const NODE_TYPES: Option<&AstTypesBitset> =
         Some(&AstTypesBitset::from_types(&[AstType::TSEnumMember]));
@@ -3652,6 +3654,12 @@ impl RuleRunner for crate::rules::unicorn::prefer_reflect_apply::PreferReflectAp
 impl RuleRunner for crate::rules::unicorn::prefer_regexp_test::PreferRegexpTest {
     const NODE_TYPES: Option<&AstTypesBitset> =
         Some(&AstTypesBitset::from_types(&[AstType::CallExpression]));
+    const RUN_FUNCTIONS: RuleRunFunctionsImplemented = RuleRunFunctionsImplemented::Run;
+}
+
+impl RuleRunner for crate::rules::unicorn::prefer_response_static_json::PreferResponseStaticJson {
+    const NODE_TYPES: Option<&AstTypesBitset> =
+        Some(&AstTypesBitset::from_types(&[AstType::NewExpression]));
     const RUN_FUNCTIONS: RuleRunFunctionsImplemented = RuleRunFunctionsImplemented::Run;
 }
 

@@ -830,7 +830,7 @@ impl<'a> Format<'a> for AstNode<'a, Argument<'a>> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
         let allocator = self.allocator;
-        let parent = allocator.alloc(AstNodes::Argument(transmute_self(self)));
+        let parent = self.parent;
         match self.inner {
             Argument::SpreadElement(inner) => allocator
                 .alloc(AstNode::<SpreadElement> {
@@ -1649,6 +1649,14 @@ impl<'a> Format<'a> for AstNode<'a, Declaration<'a>> {
                 .fmt(f),
             Declaration::TSModuleDeclaration(inner) => allocator
                 .alloc(AstNode::<TSModuleDeclaration> {
+                    inner,
+                    parent,
+                    allocator,
+                    following_span: self.following_span,
+                })
+                .fmt(f),
+            Declaration::TSGlobalDeclaration(inner) => allocator
+                .alloc(AstNode::<TSGlobalDeclaration> {
                     inner,
                     parent,
                     allocator,
@@ -4456,6 +4464,17 @@ impl<'a> Format<'a> for AstNode<'a, TSModuleDeclarationBody<'a>> {
                 })
                 .fmt(f),
         }
+    }
+}
+
+impl<'a> Format<'a> for AstNode<'a, TSGlobalDeclaration<'a>> {
+    fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+        let is_suppressed = f.comments().is_suppressed(self.span().start);
+        self.format_leading_comments(f)?;
+        let result =
+            if is_suppressed { FormatSuppressedNode(self.span()).fmt(f) } else { self.write(f) };
+        self.format_trailing_comments(f)?;
+        result
     }
 }
 

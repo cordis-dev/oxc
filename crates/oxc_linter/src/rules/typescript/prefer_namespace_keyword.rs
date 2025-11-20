@@ -4,7 +4,7 @@ use oxc_ast::{
 };
 use oxc_diagnostics::OxcDiagnostic;
 use oxc_macros::declare_oxc_lint;
-use oxc_span::{GetSpan, Span};
+use oxc_span::Span;
 
 use crate::{
     AstNode,
@@ -61,13 +61,15 @@ impl Rule for PreferNamespaceKeyword {
             return;
         }
 
-        let token = ctx.source_range(Span::new(module.span.start, module.id.span().start));
-        let Some(offset) = token.find("module") else {
+        // Ignore nested `TSModuleDeclaration`s
+        // e.g. the 2 inner `TSModuleDeclaration`s in `module A.B.C {}`
+        if let AstKind::TSModuleDeclaration(_) = ctx.nodes().parent_kind(node.id()) {
             return;
-        };
+        }
 
         ctx.diagnostic_with_fix(prefer_namespace_keyword_diagnostic(module.span), |fixer| {
-            let span_start = module.span.start + u32::try_from(offset).unwrap();
+            let mut span_start = module.span.start;
+            span_start += ctx.find_next_token_from(span_start, "module").unwrap();
             fixer.replace(Span::sized(span_start, 6), "namespace")
         });
     }
@@ -103,7 +105,6 @@ fn test() {
             module foo {}
         }
         ",
-        "module foo.'a'",
     ];
 
     let fix = vec![
@@ -134,6 +135,12 @@ fn test() {
               declare namespace bar {}
             }
             ",
+            None,
+        ),
+        ("declare /* module */ module foo {}", "declare /* module */ namespace foo {}", None),
+        (
+            "declare module X.Y.module { x = 'module'; }",
+            "declare namespace X.Y.module { x = 'module'; }",
             None,
         ),
     ];

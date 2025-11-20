@@ -44,7 +44,7 @@ pub enum OutputOptions {
     /// Default - when no output option is specified, behaves like `--write` mode in Prettier
     #[bpaf(hide)]
     DefaultWrite,
-    /// Check mode - check if files are formatted
+    /// Check mode - check if files are formatted, also show statistics
     #[bpaf(long)]
     Check,
     /// List mode - list files that would be changed
@@ -75,10 +75,13 @@ pub struct IgnoreOptions {
 /// Miscellaneous
 #[derive(Debug, Clone, Bpaf)]
 pub struct MiscOptions {
+    /// Start language server protocol (LSP) server
+    #[bpaf(switch, hide_usage)]
+    pub lsp: bool,
     /// Do not exit with error when pattern is unmatched
     #[bpaf(switch, hide_usage)]
     pub no_error_on_unmatched_pattern: bool,
-    /// Number of threads to use. Set to 1 for using only 1 CPU core
+    /// Number of threads to use. Set to 1 for using only 1 CPU core.
     #[bpaf(argument("INT"), hide_usage)]
     pub threads: Option<usize>,
 }

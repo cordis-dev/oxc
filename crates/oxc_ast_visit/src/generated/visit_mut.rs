@@ -1057,6 +1057,11 @@ pub trait VisitMut<'a>: Sized {
     }
 
     #[inline]
+    fn visit_ts_global_declaration(&mut self, it: &mut TSGlobalDeclaration<'a>) {
+        walk_ts_global_declaration(self, it);
+    }
+
+    #[inline]
     fn visit_ts_module_block(&mut self, it: &mut TSModuleBlock<'a>) {
         walk_ts_module_block(self, it);
     }
@@ -1694,13 +1699,11 @@ pub mod walk_mut {
 
     #[inline]
     pub fn walk_argument<'a, V: VisitMut<'a>>(visitor: &mut V, it: &mut Argument<'a>) {
-        let kind = AstType::Argument;
-        visitor.enter_node(kind);
+        // No `AstType` for this type
         match it {
             Argument::SpreadElement(it) => visitor.visit_spread_element(it),
             match_expression!(Argument) => visitor.visit_expression(it.to_expression_mut()),
         }
-        visitor.leave_node(kind);
     }
 
     #[inline]
@@ -2102,6 +2105,7 @@ pub mod walk_mut {
             Declaration::TSInterfaceDeclaration(it) => visitor.visit_ts_interface_declaration(it),
             Declaration::TSEnumDeclaration(it) => visitor.visit_ts_enum_declaration(it),
             Declaration::TSModuleDeclaration(it) => visitor.visit_ts_module_declaration(it),
+            Declaration::TSGlobalDeclaration(it) => visitor.visit_ts_global_declaration(it),
             Declaration::TSImportEqualsDeclaration(it) => {
                 visitor.visit_ts_import_equals_declaration(it)
             }
@@ -4087,6 +4091,21 @@ pub mod walk_mut {
     }
 
     #[inline]
+    pub fn walk_ts_global_declaration<'a, V: VisitMut<'a>>(
+        visitor: &mut V,
+        it: &mut TSGlobalDeclaration<'a>,
+    ) {
+        let kind = AstType::TSGlobalDeclaration;
+        visitor.enter_node(kind);
+        visitor.enter_scope(ScopeFlags::TsModuleBlock, &it.scope_id);
+        visitor.visit_span(&mut it.span);
+        visitor.visit_span(&mut it.global_span);
+        visitor.visit_ts_module_block(&mut it.body);
+        visitor.leave_scope();
+        visitor.leave_node(kind);
+    }
+
+    #[inline]
     pub fn walk_ts_module_block<'a, V: VisitMut<'a>>(visitor: &mut V, it: &mut TSModuleBlock<'a>) {
         let kind = AstType::TSModuleBlock;
         visitor.enter_node(kind);
@@ -4489,7 +4508,14 @@ pub mod walk_mut {
     #[inline]
     pub fn walk_arguments<'a, V: VisitMut<'a>>(visitor: &mut V, it: &mut Vec<'a, Argument<'a>>) {
         for el in it {
-            visitor.visit_argument(el);
+            match el {
+                oxc_ast::ast::Argument::SpreadElement(spread) => {
+                    visitor.visit_spread_element(spread);
+                }
+                _ => {
+                    visitor.visit_expression(el.to_expression_mut());
+                }
+            }
         }
     }
 

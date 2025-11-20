@@ -5,7 +5,6 @@ use std::sync::Arc;
 use ignore::gitignore::Gitignore;
 use log::{debug, warn};
 use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
-use tokio::sync::Mutex;
 use tower_lsp_server::{
     UriExt,
     jsonrpc::ErrorCode,
@@ -19,29 +18,30 @@ use oxc_linter::{
     LintIgnoreMatcher, LintOptions, Oxlintrc,
 };
 
-use crate::tool::{Tool, ToolBuilder, ToolShutdownChanges};
 use crate::{
     ConcurrentHashMap,
     linter::{
-        CODE_ACTION_KIND_SOURCE_FIX_ALL_OXC, LINT_CONFIG_FILE,
-        code_actions::{apply_all_fix_code_action, apply_fix_code_actions, fix_all_text_edit},
+        LINT_CONFIG_FILE,
+        code_actions::{
+            CODE_ACTION_KIND_SOURCE_FIX_ALL_OXC, apply_all_fix_code_action, apply_fix_code_actions,
+            fix_all_text_edit,
+        },
         commands::{FIX_ALL_COMMAND_ID, FixAllCommandArgs},
         config_walker::ConfigWalker,
         error_with_position::DiagnosticReport,
         isolated_lint_handler::{IsolatedLintHandler, IsolatedLintHandlerOptions},
         options::{LintOptions as LSPLintOptions, Run, UnusedDisableDirectives},
     },
-    tool::ToolRestartChanges,
+    tool::{Tool, ToolBuilder, ToolRestartChanges, ToolShutdownChanges},
     utils::normalize_path,
 };
 
-pub struct ServerLinterBuilder {
-    root_uri: Uri,
-    options: LSPLintOptions,
-}
+pub struct ServerLinterBuilder;
 
-impl ToolBuilder<ServerLinter> for ServerLinterBuilder {
-    fn new(root_uri: Uri, options: serde_json::Value) -> Self {
+impl ServerLinterBuilder {
+    /// # Panics
+    /// Panics if the root URI cannot be converted to a file path.
+    pub fn build(root_uri: &Uri, options: serde_json::Value) -> ServerLinter {
         let options = match serde_json::from_value::<LSPLintOptions>(options) {
             Ok(opts) => opts,
             Err(e) => {
@@ -51,17 +51,11 @@ impl ToolBuilder<ServerLinter> for ServerLinterBuilder {
                 LSPLintOptions::default()
             }
         };
-        Self { root_uri, options }
-    }
-
-    /// # Panics
-    /// Panics if the root URI cannot be converted to a file path.
-    fn build(&self) -> ServerLinter {
-        let root_path = self.root_uri.to_file_path().unwrap();
+        let root_path = root_uri.to_file_path().unwrap();
         let mut nested_ignore_patterns = Vec::new();
         let (nested_configs, mut extended_paths) =
-            Self::create_nested_configs(&root_path, &self.options, &mut nested_ignore_patterns);
-        let config_path = self.options.config_path.as_ref().map_or(LINT_CONFIG_FILE, |v| v);
+            Self::create_nested_configs(&root_path, &options, &mut nested_ignore_patterns);
+        let config_path = options.config_path.as_ref().map_or(LINT_CONFIG_FILE, |v| v);
         let config = normalize_path(root_path.join(config_path));
         let oxlintrc = if config.try_exists().is_ok_and(|exists| exists) {
             if let Ok(oxlintrc) = Oxlintrc::from_file(&config) {
@@ -86,8 +80,8 @@ impl ToolBuilder<ServerLinter> for ServerLinterBuilder {
                 .unwrap_or_default();
 
         // TODO(refactor): pull this into a shared function, because in oxlint we have the same functionality.
-        let use_nested_config = self.options.use_nested_configs();
-        let fix_kind = FixKind::from(self.options.fix_kind.clone());
+        let use_nested_config = options.use_nested_configs();
+        let fix_kind = FixKind::from(options.fix_kind.clone());
 
         let use_cross_module = config_builder.plugins().has_import()
             || (use_nested_config
@@ -101,7 +95,7 @@ impl ToolBuilder<ServerLinter> for ServerLinterBuilder {
 
         let lint_options = LintOptions {
             fix: fix_kind,
-            report_unused_directive: match self.options.unused_disable_directives {
+            report_unused_directive: match options.unused_disable_directives {
                 UnusedDisableDirectives::Allow => None, // or AllowWarnDeny::Allow, should be the same?
                 UnusedDisableDirectives::Warn => Some(AllowWarnDeny::Warn),
                 UnusedDisableDirectives::Deny => Some(AllowWarnDeny::Deny),
@@ -127,10 +121,10 @@ impl ToolBuilder<ServerLinter> for ServerLinterBuilder {
             config_store,
             &IsolatedLintHandlerOptions {
                 use_cross_module,
-                type_aware: self.options.type_aware,
-                fix_kind: FixKind::from(self.options.fix_kind.clone()),
+                type_aware: options.type_aware,
+                fix_kind: FixKind::from(options.fix_kind.clone()),
                 root_path: root_path.to_path_buf(),
-                tsconfig_path: self.options.ts_config_path.as_ref().map(|path| {
+                tsconfig_path: options.ts_config_path.as_ref().map(|path| {
                     let path = Path::new(path).to_path_buf();
                     if path.is_relative() { root_path.join(path) } else { path }
                 }),
@@ -138,13 +132,25 @@ impl ToolBuilder<ServerLinter> for ServerLinterBuilder {
         );
 
         ServerLinter::new(
-            self.options.run,
+            options.run,
             root_path.to_path_buf(),
-            Arc::new(Mutex::new(isolated_linter)),
+            isolated_linter,
             LintIgnoreMatcher::new(&base_patterns, &root_path, nested_ignore_patterns),
             Self::create_ignore_glob(&root_path),
             extended_paths,
         )
+    }
+}
+
+impl ToolBuilder for ServerLinterBuilder {
+    fn provided_code_action_kinds(&self) -> Vec<CodeActionKind> {
+        vec![CodeActionKind::QUICKFIX, CODE_ACTION_KIND_SOURCE_FIX_ALL_OXC]
+    }
+    fn provided_commands(&self) -> Vec<String> {
+        vec![FIX_ALL_COMMAND_ID.to_string()]
+    }
+    fn build_boxed(&self, root_uri: &Uri, options: serde_json::Value) -> Box<dyn Tool> {
+        Box::new(ServerLinterBuilder::build(root_uri, options))
     }
 }
 
@@ -237,7 +243,7 @@ impl ServerLinterBuilder {
 pub struct ServerLinter {
     run: Run,
     cwd: PathBuf,
-    isolated_linter: Arc<Mutex<IsolatedLintHandler>>,
+    isolated_linter: IsolatedLintHandler,
     ignore_matcher: LintIgnoreMatcher,
     gitignore_glob: Vec<Gitignore>,
     extended_paths: FxHashSet<PathBuf>,
@@ -245,6 +251,10 @@ pub struct ServerLinter {
 }
 
 impl Tool for ServerLinter {
+    fn name(&self) -> &'static str {
+        "linter"
+    }
+
     fn shutdown(&self) -> ToolShutdownChanges {
         ToolShutdownChanges {
             uris_to_clear_diagnostics: Some(self.get_cached_files_of_diagnostics()),
@@ -253,12 +263,12 @@ impl Tool for ServerLinter {
 
     /// # Panics
     /// Panics if the root URI cannot be converted to a file path.
-    async fn handle_configuration_change(
+    fn handle_configuration_change(
         &self,
         root_uri: &Uri,
         old_options_json: &serde_json::Value,
         new_options_json: serde_json::Value,
-    ) -> ToolRestartChanges<ServerLinter> {
+    ) -> ToolRestartChanges {
         let old_option = match serde_json::from_value::<LSPLintOptions>(old_options_json.clone()) {
             Ok(opts) => opts,
             Err(e) => {
@@ -289,9 +299,8 @@ impl Tool for ServerLinter {
 
         // get the cached files before refreshing the linter, and revalidate them after
         let cached_files = self.get_cached_files_of_diagnostics();
-        let new_linter =
-            ServerLinterBuilder::new(root_uri.clone(), new_options_json.clone()).build();
-        let diagnostics = Some(new_linter.revalidate_diagnostics(cached_files).await);
+        let new_linter = ServerLinterBuilder::build(root_uri, new_options_json.clone());
+        let diagnostics = Some(new_linter.revalidate_diagnostics(cached_files));
 
         let patterns = {
             if old_option.config_path == new_options.config_path
@@ -304,7 +313,7 @@ impl Tool for ServerLinter {
         };
 
         ToolRestartChanges {
-            tool: Some(new_linter),
+            tool: Some(Box::new(new_linter)),
             diagnostic_reports: diagnostics,
             watch_patterns: patterns,
         }
@@ -337,21 +346,21 @@ impl Tool for ServerLinter {
         watchers
     }
 
-    async fn handle_watched_file_change(
+    fn handle_watched_file_change(
         &self,
         _changed_uri: &Uri,
         root_uri: &Uri,
         options: serde_json::Value,
-    ) -> ToolRestartChanges<Self> {
+    ) -> ToolRestartChanges {
         // TODO: Check if the changed file is actually a config file (including extended paths)
-        let new_linter = ServerLinterBuilder::new(root_uri.clone(), options.clone()).build();
+        let new_linter = ServerLinterBuilder::build(root_uri, options);
 
         // get the cached files before refreshing the linter, and revalidate them after
         let cached_files = self.get_cached_files_of_diagnostics();
-        let diagnostics = Some(new_linter.revalidate_diagnostics(cached_files).await);
+        let diagnostics = Some(new_linter.revalidate_diagnostics(cached_files));
 
         ToolRestartChanges {
-            tool: Some(new_linter),
+            tool: Some(Box::new(new_linter)),
             diagnostic_reports: diagnostics,
             // TODO: update watch patterns if config_path changed, or the extended paths changed
             watch_patterns: None,
@@ -371,7 +380,7 @@ impl Tool for ServerLinter {
     ///
     /// # Errors
     /// Returns an `ErrorCode::InvalidParams` if the command arguments are invalid.
-    async fn execute_command(
+    fn execute_command(
         &self,
         command: &str,
         arguments: Vec<serde_json::Value>,
@@ -390,7 +399,7 @@ impl Tool for ServerLinter {
         let value = if let Some(cached_diagnostics) = self.get_cached_diagnostics(uri) {
             cached_diagnostics
         } else {
-            let diagnostics = self.run_file(uri, None).await;
+            let diagnostics = self.run_file(uri, None);
             diagnostics.unwrap_or_default()
         };
 
@@ -408,7 +417,7 @@ impl Tool for ServerLinter {
         }))
     }
 
-    async fn get_code_actions_or_commands(
+    fn get_code_actions_or_commands(
         &self,
         uri: &Uri,
         range: &Range,
@@ -417,7 +426,7 @@ impl Tool for ServerLinter {
         let value = if let Some(cached_diagnostics) = self.get_cached_diagnostics(uri) {
             cached_diagnostics
         } else {
-            let diagnostics = self.run_file(uri, None).await;
+            let diagnostics = self.run_file(uri, None);
             diagnostics.unwrap_or_default()
         };
 
@@ -456,9 +465,8 @@ impl Tool for ServerLinter {
     /// Lint a file with the current linter
     /// - If the file is not lintable or ignored, [`None`] is returned
     /// - If the file is lintable, but no diagnostics are found, an empty vector is returned
-    async fn run_diagnostic(&self, uri: &Uri, content: Option<String>) -> Option<Vec<Diagnostic>> {
+    fn run_diagnostic(&self, uri: &Uri, content: Option<&str>) -> Option<Vec<Diagnostic>> {
         self.run_file(uri, content)
-            .await
             .map(|reports| reports.into_iter().map(|report| report.diagnostic).collect())
     }
 
@@ -466,30 +474,26 @@ impl Tool for ServerLinter {
     /// - If the file is not lintable or ignored, [`None`] is returned
     /// - If the linter is not set to `OnType`, [`None`] is returned
     /// - If the file is lintable, but no diagnostics are found, an empty vector is returned
-    async fn run_diagnostic_on_change(
+    fn run_diagnostic_on_change(
         &self,
         uri: &Uri,
-        content: Option<String>,
+        content: Option<&str>,
     ) -> Option<Vec<Diagnostic>> {
         if self.run != Run::OnType {
             return None;
         }
-        self.run_diagnostic(uri, content).await
+        self.run_diagnostic(uri, content)
     }
 
     /// Lint a file with the current linter
     /// - If the file is not lintable or ignored, [`None`] is returned
     /// - If the linter is not set to `OnSave`, [`None`] is returned
     /// - If the file is lintable, but no diagnostics are found, an empty vector is returned
-    async fn run_diagnostic_on_save(
-        &self,
-        uri: &Uri,
-        content: Option<String>,
-    ) -> Option<Vec<Diagnostic>> {
+    fn run_diagnostic_on_save(&self, uri: &Uri, content: Option<&str>) -> Option<Vec<Diagnostic>> {
         if self.run != Run::OnSave {
             return None;
         }
-        self.run_diagnostic(uri, content).await
+        self.run_diagnostic(uri, content)
     }
 
     fn remove_diagnostics(&self, uri: &Uri) {
@@ -503,7 +507,7 @@ impl ServerLinter {
     pub fn new(
         run: Run,
         cwd: PathBuf,
-        isolated_linter: Arc<Mutex<IsolatedLintHandler>>,
+        isolated_linter: IsolatedLintHandler,
         ignore_matcher: LintIgnoreMatcher,
         gitignore_glob: Vec<Gitignore>,
         extended_paths: FxHashSet<PathBuf>,
@@ -532,10 +536,10 @@ impl ServerLinter {
         self.diagnostics.pin().keys().filter_map(|s| Uri::from_str(s).ok()).collect()
     }
 
-    async fn revalidate_diagnostics(&self, uris: Vec<Uri>) -> Vec<(String, Vec<Diagnostic>)> {
+    fn revalidate_diagnostics(&self, uris: Vec<Uri>) -> Vec<(String, Vec<Diagnostic>)> {
         let mut diagnostics = Vec::with_capacity(uris.len());
         for uri in uris {
-            if let Some(file_diagnostic) = self.run_diagnostic(&uri, None).await {
+            if let Some(file_diagnostic) = self.run_diagnostic(&uri, None) {
                 diagnostics.push((uri.to_string(), file_diagnostic));
             }
         }
@@ -565,15 +569,12 @@ impl ServerLinter {
     }
 
     /// Lint a single file, return `None` if the file is ignored.
-    async fn run_file(&self, uri: &Uri, content: Option<String>) -> Option<Vec<DiagnosticReport>> {
+    fn run_file(&self, uri: &Uri, content: Option<&str>) -> Option<Vec<DiagnosticReport>> {
         if self.is_ignored(uri) {
             return None;
         }
 
-        let diagnostics = {
-            let mut isolated_linter = self.isolated_linter.lock().await;
-            isolated_linter.run_single(uri, content.clone())
-        };
+        let diagnostics = self.isolated_linter.run_single(uri, content);
 
         self.diagnostics.pin().insert(uri.to_string(), diagnostics.clone());
 

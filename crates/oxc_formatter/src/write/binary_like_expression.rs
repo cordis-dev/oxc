@@ -1,6 +1,6 @@
 use std::mem::transmute_copy;
 
-use oxc_allocator::{Address, CloneIn, GetAddress};
+use oxc_allocator::CloneIn;
 use oxc_ast::{ast::*, precedence};
 use oxc_span::GetSpan;
 use oxc_syntax::{
@@ -158,22 +158,20 @@ impl<'a, 'b> BinaryLikeExpression<'a, 'b> {
                 matches!(container.parent, AstNodes::JSXAttribute(_))
             }
             AstNodes::ExpressionStatement(statement) => statement.is_arrow_function_body(),
-            AstNodes::ConditionalExpression(conditional) => {
-                !matches!(
-                    parent.parent(),
-                    AstNodes::ReturnStatement(_)
-                        | AstNodes::ThrowStatement(_)
-                        | AstNodes::CallExpression(_)
-                        | AstNodes::ImportExpression(_)
-                        | AstNodes::MetaProperty(_)
-                    ) &&
+            AstNodes::ConditionalExpression(conditional) => !matches!(
+                parent.parent(),
+                AstNodes::ReturnStatement(_)
+                    | AstNodes::ThrowStatement(_)
                     // TODO(prettier): Why not include `NewExpression` ???
-                    !matches!(parent.parent(), AstNodes::Argument(argument) if matches!(argument.parent, AstNodes::CallExpression(_)))
-            }
-            AstNodes::Argument(argument) => {
+                    | AstNodes::CallExpression(_)
+                    | AstNodes::ImportExpression(_)
+                    | AstNodes::MetaProperty(_)
+            ),
+            // For argument of `Boolean()` calls.
+            AstNodes::CallExpression(call) if call.is_argument_span(self.span()) => {
                 // https://github.com/prettier/prettier/issues/18057#issuecomment-3472912112
-                matches!(argument.parent, AstNodes::CallExpression(call) if call.arguments.len() == 1 &&
-                 matches!(&call.callee, Expression::Identifier(ident) if ident.name == "Boolean"))
+                call.arguments.len() == 1
+                    && matches!(&call.callee, Expression::Identifier(ident) if ident.name == "Boolean")
             }
             _ => false,
         }
@@ -185,15 +183,6 @@ impl GetSpan for BinaryLikeExpression<'_, '_> {
         match self {
             Self::LogicalExpression(expr) => expr.span(),
             Self::BinaryExpression(expr) => expr.span(),
-        }
-    }
-}
-
-impl GetAddress for BinaryLikeExpression<'_, '_> {
-    fn address(&self) -> Address {
-        match *self {
-            Self::LogicalExpression(expr) => Address::from_ref(expr),
-            Self::BinaryExpression(expr) => Address::from_ref(expr),
         }
     }
 }
@@ -229,9 +218,7 @@ impl<'a> Format<'a> for BinaryLikeExpression<'a, '_> {
         // For example, `(a+b)(call)`, `!(a + b)`, `(a + b).test`.
         let is_inside_parenthesis = match parent {
             AstNodes::StaticMemberExpression(_) | AstNodes::UnaryExpression(_) => true,
-            AstNodes::CallExpression(call) => call.callee().span() == self.span(),
-            AstNodes::NewExpression(new) => new.callee().span() == self.span(),
-            _ => false,
+            _ => parent.is_call_like_callee_span(self.span()),
         };
 
         if is_inside_parenthesis {

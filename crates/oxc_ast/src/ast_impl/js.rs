@@ -430,7 +430,7 @@ impl<'a> From<Argument<'a>> for ArrayExpressionElement<'a> {
     fn from(argument: Argument<'a>) -> Self {
         match argument {
             Argument::SpreadElement(spread) => Self::SpreadElement(spread),
-            match_expression!(Argument) => Self::from(argument.into_expression()),
+            _ => Self::from(argument.into_expression()),
         }
     }
 }
@@ -1113,6 +1113,7 @@ impl<'a> Declaration<'a> {
     /// const x = 1; // None. may change in the future.
     /// class Foo {} // Some(IdentifierReference { name: "Foo", .. })
     /// enum Bar {} // Some(IdentifierReference { name: "Bar", .. })
+    /// declare global {} // None
     /// ```
     pub fn id(&self) -> Option<&BindingIdentifier<'a>> {
         match self {
@@ -1129,7 +1130,7 @@ impl<'a> Declaration<'a> {
                     None
                 }
             }
-            Declaration::VariableDeclaration(_) => None,
+            Declaration::TSGlobalDeclaration(_) | Declaration::VariableDeclaration(_) => None,
         }
     }
 
@@ -1142,6 +1143,7 @@ impl<'a> Declaration<'a> {
             Declaration::TSEnumDeclaration(decl) => decl.declare,
             Declaration::TSTypeAliasDeclaration(decl) => decl.declare,
             Declaration::TSModuleDeclaration(decl) => decl.declare,
+            Declaration::TSGlobalDeclaration(decl) => decl.declare,
             Declaration::TSInterfaceDeclaration(decl) => decl.declare,
             Declaration::TSImportEqualsDeclaration(_) => false,
         }
@@ -1321,14 +1323,24 @@ impl<'a> BindingPatternKind<'a> {
         match self {
             Self::BindingIdentifier(ident) => idents.push(ident),
             Self::AssignmentPattern(assign) => assign.left.kind.append_binding_identifiers(idents),
-            Self::ArrayPattern(pattern) => pattern
-                .elements
-                .iter()
-                .filter_map(|item| item.as_ref())
-                .for_each(|item| item.kind.append_binding_identifiers(idents)),
-            Self::ObjectPattern(pattern) => pattern.properties.iter().for_each(|item| {
-                item.value.kind.append_binding_identifiers(idents);
-            }),
+            Self::ArrayPattern(pattern) => {
+                pattern
+                    .elements
+                    .iter()
+                    .filter_map(|item| item.as_ref())
+                    .for_each(|item| item.kind.append_binding_identifiers(idents));
+                if let Some(rest) = &pattern.rest {
+                    rest.argument.kind.append_binding_identifiers(idents);
+                }
+            }
+            Self::ObjectPattern(pattern) => {
+                pattern.properties.iter().for_each(|item| {
+                    item.value.kind.append_binding_identifiers(idents);
+                });
+                if let Some(rest) = &pattern.rest {
+                    rest.argument.kind.append_binding_identifiers(idents);
+                }
+            }
         }
     }
 

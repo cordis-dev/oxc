@@ -4,7 +4,6 @@ use std::{
     sync::Arc,
 };
 
-use options::OxcCodegenOptions;
 use rustc_hash::FxHashMap;
 
 use napi::Either;
@@ -44,13 +43,8 @@ use oxc_transformer_plugins::{
     ReplaceGlobalDefinesConfig,
 };
 
-use crate::options::{
-    OxcControlFlowOptions, OxcDefineOptions, OxcFormatterOptions, OxcInjectOptions,
-    OxcIsolatedDeclarationsOptions, OxcLinterOptions, OxcOptions, OxcParserOptions, OxcRunOptions,
-    OxcTransformerOptions,
-};
-
 mod options;
+pub use options::*;
 
 #[derive(Default)]
 #[napi]
@@ -514,6 +508,8 @@ impl Oxc {
                 .as_ref()
                 .and_then(|o| o.parse::<SortOrder>().ok())
                 .unwrap_or_default();
+            // TODO: support from options
+            let groups = SortImports::default_groups();
 
             format_options.experimental_sort_imports = Some(SortImports {
                 partition_by_newline: sort_imports_config.partition_by_newline.unwrap_or(false),
@@ -522,6 +518,7 @@ impl Oxc {
                 order,
                 ignore_case: sort_imports_config.ignore_case.unwrap_or(true),
                 newlines_between: sort_imports_config.newlines_between.unwrap_or(true),
+                groups,
             });
         }
 

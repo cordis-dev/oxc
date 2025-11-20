@@ -267,6 +267,7 @@ pub(crate) mod typescript {
     pub mod prefer_enum_initializers;
     pub mod prefer_for_of;
     pub mod prefer_function_type;
+    pub mod prefer_includes;
     pub mod prefer_literal_enum_member;
     pub mod prefer_namespace_keyword;
     pub mod prefer_promise_reject_errors;
@@ -491,6 +492,7 @@ pub(crate) mod unicorn {
     pub mod prefer_query_selector;
     pub mod prefer_reflect_apply;
     pub mod prefer_regexp_test;
+    pub mod prefer_response_static_json;
     pub mod prefer_set_has;
     pub mod prefer_set_size;
     pub mod prefer_spread;
@@ -1131,6 +1133,7 @@ oxc_macros::declare_all_lint_rules! {
     typescript::prefer_enum_initializers,
     typescript::prefer_for_of,
     typescript::prefer_function_type,
+    typescript::prefer_includes,
     typescript::prefer_literal_enum_member,
     typescript::prefer_namespace_keyword,
     typescript::prefer_promise_reject_errors,
@@ -1214,6 +1217,7 @@ oxc_macros::declare_all_lint_rules! {
     unicorn::numeric_separators_style,
     unicorn::prefer_classlist_toggle,
     unicorn::prefer_class_fields,
+    unicorn::prefer_response_static_json,
     unicorn::prefer_top_level_await,
     unicorn::prefer_at,
     unicorn::prefer_global_this,

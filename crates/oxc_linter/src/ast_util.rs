@@ -2,6 +2,7 @@ use std::borrow::Cow;
 
 use rustc_hash::FxHashSet;
 
+use oxc_allocator::GetAddress;
 use oxc_ast::{
     AstKind,
     ast::{BindingIdentifier, *},
@@ -203,12 +204,6 @@ pub fn get_enclosing_function<'a, 'b>(
         }
         current_node = semantic.nodes().parent_node(current_node.id());
     }
-}
-
-/// Returns if `arg` is the `n`th (0-indexed) argument of `call`.
-pub fn is_nth_argument<'a>(call: &CallExpression<'a>, arg: &Argument<'a>, n: usize) -> bool {
-    let nth = &call.arguments[n];
-    nth.span() == arg.span()
 }
 
 /// Jump to the outer most of chained parentheses if any
@@ -588,6 +583,7 @@ fn could_be_error_impl(
                 AstKind::Function(_)
                 | AstKind::Class(_)
                 | AstKind::TSModuleDeclaration(_)
+                | AstKind::TSGlobalDeclaration(_)
                 | AstKind::TSEnumDeclaration(_) => false,
                 AstKind::FormalParameter(param) => !param
                     .pattern
@@ -938,4 +934,44 @@ pub fn get_outer_member_expression<'a, 'b>(
         }
         _ => None,
     }
+}
+/// Check if a node is an argument (not callee) of a call or new expression
+pub fn is_node_call_like_argument<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) -> bool {
+    // foo.bar<string>(arg0, arg1)
+    // ^^^^^^^
+    //        ^^^^^^^^
+    //                ^^^^^^^^^^^
+    // A call/new expression has 3 parts, callee, type arguments, and arguments.
+    // This function checks if the given node is within the arguments part.
+    // The type parameter part **must** be `TSTypeParameterInstantiation` if present,
+    // so we can early return false in that case.
+    let parent = ctx.nodes().parent_node(node.id());
+
+    if matches!(node.kind(), AstKind::TSTypeParameterInstantiation(_)) {
+        return false;
+    }
+
+    match parent.kind() {
+        AstKind::CallExpression(call) => node.address() != call.callee.address(),
+        AstKind::NewExpression(new_expr) => node.address() != new_expr.callee.address(),
+        _ => false,
+    }
+}
+
+/// Check if a node's span is contained within any argument span in a call expression
+#[inline]
+pub fn is_node_within_call_argument<'a>(
+    node: &AstNode<'a>,
+    call: &CallExpression<'a>,
+    target_arg_index: usize,
+) -> bool {
+    // Early exit for out-of-bounds index
+    if target_arg_index >= call.arguments.len() {
+        return false;
+    }
+
+    let target_arg = &call.arguments[target_arg_index]; // Direct indexing, no Option unwrap
+    let node_span = node.span();
+    let arg_span = target_arg.span();
+    node_span.start >= arg_span.start && node_span.end <= arg_span.end
 }

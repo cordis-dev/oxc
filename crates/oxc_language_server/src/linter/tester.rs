@@ -9,8 +9,8 @@ use tower_lsp_server::{
 };
 
 use crate::{
-    linter::{ServerLinter, ServerLinterBuilder},
-    tool::{Tool, ToolBuilder},
+    linter::{ServerLinterBuilder, server_linter::ServerLinter},
+    tool::Tool,
 };
 
 /// Given a file path relative to the crate root directory, return the absolute path of the file.
@@ -171,7 +171,7 @@ impl Tester<'_> {
             .join(self.relative_root_dir);
         let uri = Uri::from_file_path(absolute_path).expect("could not convert current dir to uri");
 
-        ServerLinterBuilder::new(uri, self.options.clone()).build()
+        ServerLinterBuilder::build(&uri, self.options.clone())
     }
 
     /// Given a relative file path (relative to `oxc_language_server` crate root), run the linter
@@ -184,19 +184,15 @@ impl Tester<'_> {
         let mut snapshot_result = String::new();
         for relative_file_path in relative_file_paths {
             let uri = get_file_uri(&format!("{}/{}", self.relative_root_dir, relative_file_path));
-            let reports = tokio::runtime::Runtime::new().unwrap().block_on(async {
-                let linter = self.create_linter();
-                FileResult {
-                    diagnostic: linter.run_diagnostic(&uri, None).await,
-                    actions: linter
-                        .get_code_actions_or_commands(
-                            &uri,
-                            &Range::new(Position::new(0, 0), Position::new(u32::MAX, u32::MAX)),
-                            None,
-                        )
-                        .await,
-                }
-            });
+            let linter = self.create_linter();
+            let reports = FileResult {
+                diagnostic: linter.run_diagnostic(&uri, None),
+                actions: linter.get_code_actions_or_commands(
+                    &uri,
+                    &Range::new(Position::new(0, 0), Position::new(u32::MAX, u32::MAX)),
+                    None,
+                ),
+            };
 
             let _ = write!(
                 snapshot_result,

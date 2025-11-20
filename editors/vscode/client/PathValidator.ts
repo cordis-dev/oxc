@@ -8,7 +8,7 @@
  *
  * The check for malicious characters is not needed, but it's an additional layer of security.
  * When using `shell: true` in `LanguageClient.ServerOptions`, it can be vulnerable to command injection.
- * Even though we are not using `shell: true`, it's a good practice to validate the input.
+ * We are using `shell: true` only on Windows when the paths ends with `node_modules/.bin/oxc_language_server`.
  */
 export function validateSafeBinaryPath(binary: string): boolean {
   // Check for path traversal (including Windows variants)
@@ -37,12 +37,6 @@ export function validateSafeBinaryPath(binary: string): boolean {
     if (binary.includes(pattern)) {
       return false;
     }
-  }
-
-  // Check if the filename contains `oxc_language_server`
-  // Malicious projects might try to point to a different binary.
-  if (!binary.replaceAll('\\', '/').toLowerCase().split('/').pop()?.includes('oxc_language_server')) {
-    return false;
   }
 
   return true;

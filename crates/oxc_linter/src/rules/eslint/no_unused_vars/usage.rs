@@ -315,6 +315,7 @@ impl<'a> Symbol<'_, 'a> {
                 // - `type Foo = { bar(): Foo }`
                 // - `class Foo { static factory(): Foo { return new Foo() } }`
                 AstKind::TSModuleDeclaration(_)
+                | AstKind::TSGlobalDeclaration(_)
                 | AstKind::VariableDeclaration(_)
                 | AstKind::VariableDeclarator(_)
                 | AstKind::ExportNamedDeclaration(_)
@@ -416,9 +417,15 @@ impl<'a> Symbol<'_, 'a> {
                 // used by others
                 AstKind::VariableDeclarator(_)
                 | AstKind::JSXExpressionContainer(_)
-                | AstKind::Argument(_)
                 | AstKind::PropertyDefinition(_) => {
                     // definitely used, short-circuit
+                    return false;
+                }
+                AstKind::CallExpression(call_expr)
+                    if call_expr.arguments_span().is_some_and(|span| {
+                        span.contains_inclusive(self.nodes().get_node(reference.node_id()).span())
+                    }) =>
+                {
                     return false;
                 }
                 // When symbol is being assigned a new value, we flag the reference

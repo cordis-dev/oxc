@@ -3,7 +3,7 @@ import { DATA_POINTER_POS_32, SOURCE_LEN_OFFSET } from '../generated/constants.j
 // We use the deserializer which removes `ParenthesizedExpression`s from AST,
 // and with `range`, `loc`, and `parent` properties on AST nodes, to match ESLint
 // @ts-expect-error we need to generate `.d.ts` file for this module
-import { deserializeProgramOnly, resetBuffer } from '../../dist/generated/deserialize.js';
+import { deserializeProgramOnly, resetBuffer } from '../generated/deserialize.js';
 
 import visitorKeys from '../generated/keys.js';
 import * as commentMethods from './comments.js';
@@ -20,7 +20,8 @@ import * as scopeMethods from './scope.js';
 import * as tokenMethods from './tokens.js';
 
 import type { Program } from '../generated/types.d.ts';
-import type { BufferWithArrays, Node, Ranged } from './types.ts';
+import type { Ranged } from './location.ts';
+import type { BufferWithArrays, Node } from './types.ts';
 import type { ScopeManager } from './scope.ts';
 
 const { max } = Math;
@@ -153,11 +154,7 @@ export const SOURCE_CODE = Object.freeze({
    * @param afterCount? - The number of characters after the node to retrieve.
    * @returns Source text representing the AST node.
    */
-  getText(
-    node?: Ranged | null | undefined,
-    beforeCount?: number | null | undefined,
-    afterCount?: number | null | undefined,
-  ): string {
+  getText(node?: Ranged | null, beforeCount?: number | null, afterCount?: number | null): string {
     if (sourceText === null) initSourceText();
 
     // ESLint treats all falsy values for `node` as undefined
@@ -211,11 +208,13 @@ export const SOURCE_CODE = Object.freeze({
   getCommentsAfter: commentMethods.getCommentsAfter,
   getCommentsInside: commentMethods.getCommentsInside,
   commentsExistBetween: commentMethods.commentsExistBetween,
+  getJSDocComment: commentMethods.getJSDocComment,
 
   // Scope methods
   isGlobalReference: scopeMethods.isGlobalReference,
   getDeclaredVariables: scopeMethods.getDeclaredVariables,
   getScope: scopeMethods.getScope,
+  markVariableAsUsed: scopeMethods.markVariableAsUsed,
 
   // Token methods
   getTokens: tokenMethods.getTokens,
@@ -224,8 +223,10 @@ export const SOURCE_CODE = Object.freeze({
   getLastToken: tokenMethods.getLastToken,
   getLastTokens: tokenMethods.getLastTokens,
   getTokenBefore: tokenMethods.getTokenBefore,
+  getTokenOrCommentBefore: tokenMethods.getTokenOrCommentBefore,
   getTokensBefore: tokenMethods.getTokensBefore,
   getTokenAfter: tokenMethods.getTokenAfter,
+  getTokenOrCommentAfter: tokenMethods.getTokenOrCommentAfter,
   getTokensAfter: tokenMethods.getTokensAfter,
   getTokensBetween: tokenMethods.getTokensBetween,
   getFirstTokenBetween: tokenMethods.getFirstTokenBetween,
@@ -234,6 +235,7 @@ export const SOURCE_CODE = Object.freeze({
   getLastTokensBetween: tokenMethods.getLastTokensBetween,
   getTokenByRangeStart: tokenMethods.getTokenByRangeStart,
   isSpaceBetween: tokenMethods.isSpaceBetween,
+  isSpaceBetweenTokens: tokenMethods.isSpaceBetweenTokens,
 });
 
 export type SourceCode = typeof SOURCE_CODE;

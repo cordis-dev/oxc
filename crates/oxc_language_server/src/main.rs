@@ -1,14 +1,14 @@
-use oxc_language_server::Backend;
-use tower_lsp_server::{LspService, Server};
-
 #[tokio::main]
 async fn main() {
-    env_logger::init();
+    #[expect(clippy::vec_init_then_push)]
+    let tools: Vec<Box<dyn oxc_language_server::ToolBuilder>> = {
+        let mut v: Vec<Box<dyn oxc_language_server::ToolBuilder>> = Vec::new();
+        #[cfg(feature = "formatter")]
+        v.push(Box::new(oxc_language_server::ServerFormatterBuilder));
+        #[cfg(feature = "linter")]
+        v.push(Box::new(oxc_language_server::ServerLinterBuilder));
+        v
+    };
 
-    let stdin = tokio::io::stdin();
-    let stdout = tokio::io::stdout();
-
-    let (service, socket) = LspService::build(Backend::new).finish();
-
-    Server::new(stdin, stdout, socket).serve(service).await;
+    oxc_language_server::run_server(tools).await;
 }

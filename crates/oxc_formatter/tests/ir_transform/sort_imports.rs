@@ -38,7 +38,7 @@ import * as c from "c";
 import d from "d";
 "#,
     );
-    // Alphabetical ASC order by default
+    // Natural ASC order by default
     assert_format(
         r#"
 import { log } from "./log";
@@ -49,9 +49,9 @@ import { log2 } from "./log2";
         r#"{ "experimentalSortImports": {} }"#,
         r#"
 import { log } from "./log";
-import { log10 } from "./log10";
 import { log1p } from "./log1p";
 import { log2 } from "./log2";
+import { log10 } from "./log10";
 "#,
     );
     // Dynamic imports should not affect sorting
@@ -297,6 +297,23 @@ import { c } from "c";
 
 #[test]
 fn should_stop_grouping_when_other_statements_appear() {
+    assert_format(
+        r#"
+import type { V } from "v";
+
+export type { U } from "u";
+
+import type { T1, T2 } from "t";
+"#,
+        r#"{ "experimentalSortImports": {} }"#,
+        r#"
+import type { V } from "v";
+
+export type { U } from "u";
+
+import type { T1, T2 } from "t";
+"#,
+    );
     assert_format(
         r#"
 import type { V } from "v";
@@ -612,7 +629,7 @@ import B from "b";
 
 #[test]
 fn should_sort_by_order() {
-    // Z-A
+    // Z-A (natural order reversed)
     assert_format(
         r#"
 import { log } from "./log";
@@ -622,13 +639,13 @@ import { log2 } from "./log2";
 "#,
         r#"{ "experimentalSortImports": { "order": "desc" } }"#,
         r#"
+import { log10 } from "./log10";
 import { log2 } from "./log2";
 import { log1p } from "./log1p";
-import { log10 } from "./log10";
 import { log } from "./log";
 "#,
     );
-    // A-Z - default
+    // A-Z - default (natural order)
     assert_format(
         r#"
 import { log } from "./log";
@@ -639,9 +656,9 @@ import { log2 } from "./log2";
         r#"{ "experimentalSortImports": { "order": "asc" } }"#,
         r#"
 import { log } from "./log";
-import { log10 } from "./log10";
 import { log1p } from "./log1p";
 import { log2 } from "./log2";
+import { log10 } from "./log10";
 "#,
     );
     assert_format(
@@ -654,9 +671,9 @@ import { log2 } from "./log2";
         r#"{ "experimentalSortImports": {} }"#,
         r#"
 import { log } from "./log";
-import { log10 } from "./log10";
 import { log1p } from "./log1p";
 import { log2 } from "./log2";
+import { log10 } from "./log10";
 "#,
     );
 }
@@ -739,6 +756,20 @@ import "aaa";
 import "aaa";
 import "bb";
 import "c";
+"#,
+    );
+    assert_format(
+        r#"
+import "./index.css"
+import "./animate.css"
+import "./reset.css"
+
+"#,
+        r#"{ "experimentalSortImports": {} }"#,
+        r#"
+import "./index.css";
+import "./animate.css";
+import "./reset.css";
 "#,
     );
 }
@@ -833,30 +864,28 @@ import { z } from "z";
 fn should_groups_and_sorts_by_type_and_source() {
     assert_format(
         r#"
-import type { T } from "t";
-
 import { c1, c2, c3, c4 } from "c";
-import { e1 } from "e/a";
 import { e2 } from "e/b";
-import fs from "fs";
+import { e1 } from "e/a";
 import path from "path";
 
-import type { I } from "~/i";
-
 import { b1, b2 } from "~/b";
+import type { I } from "~/i";
+import type { D } from "./d";
+import fs from "fs";
 import { c1 } from "~/c";
 import { i1, i2, i3 } from "~/i";
 
 import type { A } from ".";
 import type { F } from "../f";
-import type { D } from "./d";
+import h from "../../h";
 import type { H } from "./index.d.ts";
 
 import a from ".";
-import h from "../../h";
+import type { T } from "t";
+import "./style.css";
 import { j } from "../j";
 import { K, L, M } from "../k";
-import "./style.css";
 "#,
         r#"{ "experimentalSortImports": {} }"#,
         r#"
@@ -881,32 +910,35 @@ import type { H } from "./index.d.ts";
 
 import a from ".";
 import h from "../../h";
+import "./style.css";
 import { j } from "../j";
 import { K, L, M } from "../k";
-import "./style.css";
 "#,
     );
+    // Input is already in the correct order, should remain unchanged
     assert_format(
         r#"
+import type { T } from "t";
+
 import { c1, c2, c3, c4 } from "c";
-import { e2 } from "e/b";
 import { e1 } from "e/a";
+import { e2 } from "e/b";
+import fs from "fs";
 import path from "path";
 
-import { b1, b2 } from "~/b";
 import type { I } from "~/i";
-import type { D } from "./d";
-import fs from "fs";
+
+import { b1, b2 } from "~/b";
 import { c1 } from "~/c";
 import { i1, i2, i3 } from "~/i";
 
 import type { A } from ".";
 import type { F } from "../f";
-import h from "../../h";
+import type { D } from "./d";
 import type { H } from "./index.d.ts";
 
 import a from ".";
-import type { T } from "t";
+import h from "../../h";
 import "./style.css";
 import { j } from "../j";
 import { K, L, M } from "../k";
@@ -939,7 +971,6 @@ import { j } from "../j";
 import { K, L, M } from "../k";
 "#,
     );
-
     // Ignore comments
     assert_format(
         r#"

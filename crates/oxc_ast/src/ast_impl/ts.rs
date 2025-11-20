@@ -171,22 +171,25 @@ impl fmt::Display for TSAccessibility {
 
 impl TSModuleDeclaration<'_> {
     /// Returns `true` if this module's body exists and has a `"use strict"` directive.
+    ///
+    /// Note that for a nested [`TSModuleDeclaration`], only returns `true` for the innermost `TSModuleDeclaration`.
+    /// e.g. this AST has 3 x `TSModuleDeclaration`s:
+    /// ```ts
+    /// namespace X.Y.Z {
+    ///   "use strict";
+    /// }
+    /// ```
+    /// This method will only return `true` for the innermost one (`Z`).
     pub fn has_use_strict_directive(&self) -> bool {
         self.body.as_ref().is_some_and(TSModuleDeclarationBody::has_use_strict_directive)
     }
 }
 
 impl TSModuleDeclarationKind {
-    /// Returns `true` for `declare global { ... }`
-    pub fn is_global(self) -> bool {
-        matches!(self, TSModuleDeclarationKind::Global)
-    }
-
     /// Declaration keyword as a string, identical to how it would appear in the
     /// source code.
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::Global => "global",
             Self::Module => "module",
             Self::Namespace => "namespace",
         }
@@ -232,6 +235,15 @@ impl fmt::Display for TSModuleDeclarationName<'_> {
 
 impl<'a> TSModuleDeclarationBody<'a> {
     /// Returns `true` if this module has a `"use strict"` directive.
+    ///
+    /// Note that for a nested [`TSModuleDeclaration`], only returns `true` for the innermost [`TSModuleDeclarationBody`].
+    /// e.g. this AST has 3 x `TSModuleDeclarationBody`s:
+    /// ```ts
+    /// namespace X.Y.Z {
+    ///   "use strict";
+    /// }
+    /// ```
+    /// This method will only return `true` for the innermost one (`Z`).
     pub fn has_use_strict_directive(&self) -> bool {
         matches!(self, Self::TSModuleBlock(block) if block.has_use_strict_directive())
     }
@@ -247,10 +259,13 @@ impl<'a> TSModuleDeclarationBody<'a> {
     /// Get a mutable reference to `self` as a [`TSModuleBlock`]. Returns
     /// [`None`] if the body is something other than a block.
     pub fn as_module_block_mut(&mut self) -> Option<&mut TSModuleBlock<'a>> {
-        match self {
-            TSModuleDeclarationBody::TSModuleBlock(block) => Some(block.as_mut()),
-            TSModuleDeclarationBody::TSModuleDeclaration(decl) => {
-                decl.body.as_mut().and_then(|body| body.as_module_block_mut())
+        let mut body = self;
+        loop {
+            match body {
+                TSModuleDeclarationBody::TSModuleBlock(block) => return Some(block.as_mut()),
+                TSModuleDeclarationBody::TSModuleDeclaration(decl) => {
+                    body = decl.body.as_mut()?;
+                }
             }
         }
     }
