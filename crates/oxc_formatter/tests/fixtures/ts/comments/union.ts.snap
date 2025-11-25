@@ -7,6 +7,16 @@ interface _KeywordDef {
 }
 
 ==================== Output ====================
+------------------
+{ printWidth: 80 }
+------------------
+interface _KeywordDef {
+  type?: JSONType | JSONType[]; // data types that keyword applies to
+}
+
+-------------------
+{ printWidth: 100 }
+-------------------
 interface _KeywordDef {
   type?: JSONType | JSONType[]; // data types that keyword applies to
 }

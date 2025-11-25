@@ -1,4 +1,4 @@
-use std::{env::current_dir, fs, path::Path, str::FromStr};
+use std::{env::current_dir, fs, path::Path};
 
 use oxc_allocator::Allocator;
 use oxc_formatter::{
@@ -80,15 +80,15 @@ fn parse_format_options(json: &OptionSet) -> FormatOptions {
                 }
             }
             "printWidth" => {
-                if let Some(n) = value.as_str()
-                    && let Ok(width) = LineWidth::from_str(n)
+                if let Some(n) = value.as_u64()
+                    && let Ok(width) = LineWidth::try_from(u16::try_from(n).unwrap())
                 {
                     options.line_width = width;
                 }
             }
             "tabWidth" => {
-                if let Some(n) = value.as_str()
-                    && let Ok(width) = IndentWidth::from_str(n)
+                if let Some(n) = value.as_u64()
+                    && let Ok(width) = IndentWidth::try_from(u8::try_from(n).unwrap())
                 {
                     options.indent_width = width;
                 }
@@ -118,24 +118,12 @@ fn parse_format_options(json: &OptionSet) -> FormatOptions {
 /// Format options to a readable string for snapshot display
 fn format_options_display(json: &OptionSet) -> String {
     if json.is_empty() {
-        return String::new();
+        return "{}".to_string();
     }
 
-    let mut parts: Vec<String> = json
-        .iter()
-        .map(|(k, v)| {
-            let value_str = match v {
-                serde_json::Value::Bool(b) => b.to_string(),
-                serde_json::Value::Number(n) => n.to_string(),
-                serde_json::Value::String(s) => format!("\"{s}\""),
-                _ => v.to_string(),
-            };
-            format!("{k}: {value_str}")
-        })
-        .collect();
-
+    let mut parts: Vec<_> = json.iter().map(|(k, v)| format!("{k}: {v}")).collect();
     parts.sort();
-    parts.join(", ")
+    format!("{{ {} }}", parts.join(", "))
 }
 
 /// Format a source file with given options
@@ -159,17 +147,28 @@ fn generate_snapshot(path: &Path, source_text: &str) -> String {
     snapshot.push_str(source_text);
     snapshot.push('\n');
 
-    if !option_sets.is_empty() {
-        snapshot.push_str("==================== Output ====================\n");
-    }
+    snapshot.push_str("==================== Output ====================\n");
+
+    // Test both `printWidth` for Prettier default `80` and our default `100`.
+    // If already specified, test that value as well.
+    let option_sets = option_sets.into_iter().flat_map(|original_option_json| {
+        let mut option_json_w80 = original_option_json.clone();
+        option_json_w80.insert("printWidth".to_string(), serde_json::Value::Number(80.into()));
+        let mut option_json_default = original_option_json.clone();
+        option_json_default.insert(
+            "printWidth".to_string(),
+            serde_json::Value::Number(LineWidth::default().value().into()),
+        );
+
+        if original_option_json.contains_key("printWidth") {
+            vec![original_option_json, option_json_w80, option_json_default]
+        } else {
+            vec![option_json_w80, option_json_default]
+        }
+    });
 
     for option_json in option_sets {
-        let options_display = format_options_display(&option_json);
-        let options_line = if options_display.is_empty() {
-            String::default()
-        } else {
-            format!("{{ {options_display} }}")
-        };
+        let options_line = format_options_display(&option_json);
         let separator = "-".repeat(options_line.len());
 
         if !options_line.is_empty() {

@@ -1,39 +1,122 @@
-import { defineConfig, type UserConfig } from 'tsdown';
+import { join } from "node:path";
+import { defineConfig } from "tsdown";
 
-const commonConfig: UserConfig = {
-  format: 'esm',
-  platform: 'node',
-  target: 'node20',
-  outDir: 'dist',
+import type { Plugin } from "rolldown";
+
+// When run with `DEBUG=true pnpm run build-js`, generate a debug build with extra assertions.
+// This is the build used in tests.
+const DEBUG = process.env.DEBUG === "true" || process.env.DEBUG === "1";
+
+const commonConfig = defineConfig({
+  platform: "node",
+  target: "node20",
+  outDir: "dist",
   clean: true,
   unbundle: false,
   hash: false,
-  external: [
-    // External native bindings
-    './oxlint.*.node',
-    '@oxlint/*',
-  ],
   fixedExtension: false,
-  // At present only compress syntax.
-  // Don't mangle identifiers or remove whitespace, so `dist` code remains somewhat readable.
-  minify: {
-    compress: { keepNames: { function: true, class: true } },
-    mangle: false,
-    codegen: { removeWhitespace: false },
-  },
-};
+});
 
-// Only generate `.d.ts` file for main export, not for CLI
 export default defineConfig([
+  // Main build
   {
-    entry: 'src-js/cli.ts',
     ...commonConfig,
-    dts: false,
-  },
-  {
-    entry: 'src-js/index.ts',
-    ...commonConfig,
+    entry: ["src-js/cli.ts", "src-js/index.ts"],
+    format: "esm",
+    external: [
+      // External native bindings
+      "./oxlint.*.node",
+      "@oxlint/*",
+    ],
+    // At present only compress syntax.
+    // Don't mangle identifiers or remove whitespace, so `dist` code remains somewhat readable.
+    minify: {
+      compress: { keepNames: { function: true, class: true } },
+      mangle: false,
+      codegen: { removeWhitespace: false },
+    },
     dts: { resolve: true },
     attw: true,
+    define: { DEBUG: DEBUG ? "true" : "false" },
+    plugins: DEBUG ? [] : [createReplaceAssertsPlugin()],
+    inputOptions: {
+      // For `replaceAssertsPlugin`
+      experimental: { nativeMagicString: true },
+    },
+  },
+  // TS-ESLint parser.
+  // Bundled separately and lazy-loaded, as it's a lot of code.
+  // Bundle contains both `@typescript-eslint/typescript-estree` and `typescript`.
+  {
+    ...commonConfig,
+    entry: "src-js/plugins/ts_eslint.cjs",
+    format: "commonjs",
+    // Minify as this bundle is just dependencies. We don't need to be able to debug it.
+    // Minification halves the size of the bundle.
+    minify: true,
   },
 ]);
+
+/**
+ * Create a plugin to remove imports of `assert*` functions from `src-js/utils/asserts.ts`,
+ * and replace those imports with empty function declarations.
+ *
+ * ```ts
+ * // Original code
+ * import { assertIs, assertIsNonNull } from '../utils/asserts.ts';
+ *
+ * // After transform
+ * function assertIs() {}
+ * function assertIsNonNull() {}
+ * ```
+ *
+ * Minifier can already remove all calls to these functions as dead code, but only if the functions are defined
+ * in the same file as the call sites.
+ *
+ * Problem is that `asserts.ts` is imported by files which end up in all output chunks.
+ * So without this transform, TSDown creates a shared chunk for `asserts.ts`. Minifier works chunk-by-chunk,
+ * so can't see that these functions are no-ops, and doesn't remove the function calls.
+ *
+ * Inlining these functions in each file solves the problem, and minifier removes all trace of them.
+ *
+ * @returns Plugin
+ */
+function createReplaceAssertsPlugin(): Plugin {
+  const ASSERTS_PATH = join(import.meta.dirname, "src-js/utils/asserts.ts");
+
+  return {
+    name: "replace-asserts",
+    transform: {
+      // Only process TS files in `src-js` directory
+      filter: { id: /\/src-js\/.+\.ts$/ },
+
+      async handler(code, id, meta) {
+        const magicString = meta.magicString!;
+        const program = this.parse(code, { lang: "ts" });
+
+        stmts: for (const stmt of program.body) {
+          if (stmt.type !== "ImportDeclaration") continue;
+
+          // Check if import is from `utils/asserts.ts`.
+          // `endsWith` check is just a shortcut to avoid resolving the specifier to a full path for most imports.
+          const source = stmt.source.value;
+          if (!source.endsWith("/asserts.ts") && !source.endsWith("/asserts.js")) continue;
+          // oxlint-disable-next-line no-await-in-loop
+          const importedId = await this.resolve(source, id);
+          if (importedId === null || importedId.id !== ASSERTS_PATH) continue;
+
+          // Replace `import` statement with empty function declarations
+          let functionsCode = "";
+          for (const specifier of stmt.specifiers) {
+            // Skip this `import` statement if it's a default or namespace import - can't handle those
+            if (specifier.type !== "ImportSpecifier") continue stmts;
+            functionsCode += `function ${specifier.local.name}() {}\n`;
+          }
+          magicString.overwrite(stmt.start, stmt.end, functionsCode);
+        }
+
+        return { code: magicString };
+      },
+    },
+  };
+}

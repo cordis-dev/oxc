@@ -32,6 +32,8 @@ pub struct TsGoLintState {
     fix: bool,
     /// If `true`, request that suggestions be returned from `tsgolint`.
     fix_suggestions: bool,
+    /// If `true`, include TypeScript compiler syntactic and semantic diagnostics.
+    type_check: bool,
 }
 
 impl TsGoLintState {
@@ -46,6 +48,7 @@ impl TsGoLintState {
             silent: false,
             fix: fix_kind.contains(FixKind::Fix),
             fix_suggestions: fix_kind.contains(FixKind::Suggestion),
+            type_check: false,
         }
     }
 
@@ -67,6 +70,7 @@ impl TsGoLintState {
             silent: false,
             fix: fix_kind.contains(FixKind::Fix),
             fix_suggestions: fix_kind.contains(FixKind::Suggestion),
+            type_check: false,
         })
     }
 
@@ -77,6 +81,15 @@ impl TsGoLintState {
     #[must_use]
     pub fn with_silent(mut self, yes: bool) -> Self {
         self.silent = yes;
+        self
+    }
+
+    /// Set to `true` to include TypeScript compiler syntactic and semantic diagnostics.
+    ///
+    /// Default is `false`.
+    #[must_use]
+    pub fn with_type_check(mut self, yes: bool) -> Self {
+        self.type_check = yes;
         self
     }
 
@@ -548,6 +561,8 @@ impl TsGoLintState {
                 })
                 .collect(),
             source_overrides,
+            report_syntactic: self.type_check,
+            report_semantic: self.type_check,
         }
     }
 }
@@ -573,6 +588,8 @@ pub struct Payload {
     pub version: i32,
     pub configs: Vec<Config>,
     pub source_overrides: Option<FxHashMap<String, String>>,
+    pub report_syntactic: bool,
+    pub report_semantic: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -648,7 +665,7 @@ impl<'de> Deserialize<'de> for DiagnosticKind {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct TsGoLintDiagnosticPayload {
     pub kind: DiagnosticKind,
-    pub range: Range,
+    pub range: Option<Range>,
     pub message: RuleMessage,
     pub file_path: Option<String>,
     // Only for kind="rule"
@@ -680,7 +697,7 @@ pub enum TsGoLintDiagnostic {
 
 #[derive(Debug, Clone)]
 pub struct TsGoLintRuleDiagnostic {
-    pub range: Range,
+    pub span: Span,
     pub rule: String,
     pub message: RuleMessage,
     pub fixes: Vec<Fix>,
@@ -691,6 +708,7 @@ pub struct TsGoLintRuleDiagnostic {
 #[derive(Debug, Clone)]
 pub struct TsGoLintInternalDiagnostic {
     pub message: RuleMessage,
+    pub span: Option<Span>,
     pub file_path: Option<PathBuf>,
 }
 
@@ -711,7 +729,7 @@ impl From<TsGoLintDiagnostic> for OxcDiagnostic {
 impl From<TsGoLintRuleDiagnostic> for OxcDiagnostic {
     fn from(val: TsGoLintRuleDiagnostic) -> Self {
         let mut d = OxcDiagnostic::warn(val.message.description)
-            .with_label(Span::new(val.range.pos, val.range.end))
+            .with_label(val.span)
             .with_error_code("typescript-eslint", val.rule);
         if let Some(help) = val.message.help {
             d = d.with_help(help);
@@ -721,12 +739,15 @@ impl From<TsGoLintRuleDiagnostic> for OxcDiagnostic {
 }
 impl From<TsGoLintInternalDiagnostic> for OxcDiagnostic {
     fn from(val: TsGoLintInternalDiagnostic) -> Self {
-        let mut d = OxcDiagnostic::error(val.message.description);
+        let mut d = OxcDiagnostic::error(val.message.description)
+            .with_error_code("typescript", val.message.id);
         if let Some(help) = val.message.help {
             d = d.with_help(help);
         }
-        if val.file_path.is_some() {
-            d = d.with_label(Span::new(0, 0));
+        if val.file_path.is_some()
+            && let Some(span) = val.span
+        {
+            d = d.with_label(span);
         }
         d
     }
@@ -793,7 +814,7 @@ impl Message {
 }
 
 // TODO: Should this be removed and replaced with a `Span`?
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct Range {
     pub pos: u32,
     pub end: u32,
@@ -928,7 +949,7 @@ fn should_skip_diagnostic(
     path: &Path,
     tsgolint_diagnostic: &TsGoLintRuleDiagnostic,
 ) -> bool {
-    let span = Span::new(tsgolint_diagnostic.range.pos, tsgolint_diagnostic.range.end);
+    let span = tsgolint_diagnostic.span;
 
     if let Some(directives) = disable_directives_map.get(path) {
         directives.contains(&tsgolint_diagnostic.rule, span)
@@ -987,7 +1008,13 @@ fn parse_single_message(
                     rule: diagnostic_payload
                         .rule
                         .expect("Rule name must be present for rule diagnostics"),
-                    range: diagnostic_payload.range,
+                    span: diagnostic_payload.range.map_or_else(
+                        || {
+                            debug_assert!(false, "Range must be present for rule diagnostics");
+                            Span::default()
+                        },
+                        |range| Span::new(range.pos, range.end),
+                    ),
                     message: diagnostic_payload.message,
                     fixes: diagnostic_payload.fixes,
                     suggestions: diagnostic_payload.suggestions,
@@ -1000,6 +1027,7 @@ fn parse_single_message(
                 DiagnosticKind::Internal => {
                     TsGoLintDiagnostic::Internal(TsGoLintInternalDiagnostic {
                         message: diagnostic_payload.message,
+                        span: diagnostic_payload.range.map(|range| Span::new(range.pos, range.end)),
                         file_path: diagnostic_payload.file_path.map(PathBuf::from),
                     })
                 }
@@ -1091,7 +1119,7 @@ mod test {
     #[test]
     fn test_message_from_tsgo_lint_diagnostic_basic() {
         let diagnostic = TsGoLintRuleDiagnostic {
-            range: Range { pos: 0, end: 10 },
+            span: Span::new(0, 10),
             rule: "some_rule".into(),
             message: RuleMessage {
                 id: "some_id".into(),
@@ -1122,7 +1150,7 @@ mod test {
     #[test]
     fn test_message_from_tsgo_lint_diagnostic_with_fixes() {
         let diagnostic = TsGoLintRuleDiagnostic {
-            range: Range { pos: 0, end: 10 },
+            span: Span::new(0, 10),
             rule: "some_rule".into(),
             message: RuleMessage {
                 id: "some_id".into(),
@@ -1153,7 +1181,7 @@ mod test {
     #[test]
     fn test_message_from_tsgo_lint_diagnostic_with_multiple_suggestions() {
         let diagnostic = TsGoLintRuleDiagnostic {
-            range: Range { pos: 0, end: 10 },
+            span: Span::new(0, 10),
             rule: "some_rule".into(),
             message: RuleMessage {
                 id: "some_id".into(),
@@ -1207,7 +1235,7 @@ mod test {
     #[test]
     fn test_message_from_tsgo_lint_diagnostic_with_fix_and_suggestions() {
         let diagnostic = TsGoLintRuleDiagnostic {
-            range: Range { pos: 0, end: 10 },
+            span: Span::new(0, 10),
             rule: "some_rule".into(),
             message: RuleMessage {
                 id: "some_id".into(),

@@ -21,8 +21,8 @@ use crate::{
 };
 
 fn img_redundant_alt_diagnostic(span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn("Redundant alt attribute.")
-        .with_help("Provide no redundant alt text for image. Screen-readers already announce `img` tags as an image. You don’t need to use the words `image`, `photo,` or `picture` (or any specified custom words) in the alt prop.").with_label(span)
+    OxcDiagnostic::warn("Redundant `alt` attribute.")
+        .with_help("Provide no redundant alt text for image. Screen-readers already announce `img` tags as an image. You don't need to use the words `image`, `photo,` or `picture` (or any specified custom words) in the `alt` prop.").with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -292,7 +292,5 @@ fn test() {
         (r"<Image alt='Word2' />;", Some(array()), None),
     ];
 
-    Tester::new(ImgRedundantAlt::NAME, ImgRedundantAlt::PLUGIN, pass, fail)
-        .with_jsx_a11y_plugin(true)
-        .test_and_snapshot();
+    Tester::new(ImgRedundantAlt::NAME, ImgRedundantAlt::PLUGIN, pass, fail).test_and_snapshot();
 }

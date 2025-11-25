@@ -11,7 +11,7 @@ use oxc_formatter::{
 use oxc_parser::Parser;
 use tower_lsp_server::{
     UriExt,
-    lsp_types::{Pattern, Position, Range, TextEdit, Uri},
+    lsp_types::{Pattern, Position, Range, ServerCapabilities, TextEdit, Uri},
 };
 
 use crate::{
@@ -67,6 +67,10 @@ impl ServerFormatterBuilder {
 }
 
 impl ToolBuilder for ServerFormatterBuilder {
+    fn server_capabilities(&self, capabilities: &mut ServerCapabilities) {
+        capabilities.document_formatting_provider =
+            Some(tower_lsp_server::lsp_types::OneOf::Left(true));
+    }
     fn build_boxed(&self, root_uri: &Uri, options: serde_json::Value) -> Box<dyn Tool> {
         Box::new(ServerFormatterBuilder::build(root_uri, options))
     }
@@ -378,6 +382,144 @@ fn load_ignore_paths(cwd: &Path) -> Vec<PathBuf> {
             if path.exists() { Some(path) } else { None }
         })
         .collect::<Vec<_>>()
+}
+
+#[cfg(test)]
+mod tests_builder {
+    use crate::{ServerFormatterBuilder, ToolBuilder};
+
+    #[test]
+    fn test_server_capabilities() {
+        use tower_lsp_server::lsp_types::{OneOf, ServerCapabilities};
+
+        let builder = ServerFormatterBuilder;
+        let mut capabilities = ServerCapabilities::default();
+
+        builder.server_capabilities(&mut capabilities);
+
+        assert_eq!(capabilities.document_formatting_provider, Some(OneOf::Left(true)));
+    }
+}
+
+#[cfg(test)]
+mod test_watchers {
+    // formatter file watcher-system does not depend on the actual file system,
+    // so we can use a fake directory for testing.
+    const FAKE_DIR: &str = "fixtures/formatter/watchers";
+
+    mod init_watchers {
+        use crate::formatter::{server_formatter::test_watchers::FAKE_DIR, tester::Tester};
+        use serde_json::json;
+
+        #[test]
+        fn test_default_options() {
+            let patterns = Tester::new(FAKE_DIR, json!({})).get_watcher_patterns();
+            assert!(patterns.is_empty());
+        }
+
+        #[test]
+        fn test_formatter_experimental_enabled() {
+            let patterns = Tester::new(
+                FAKE_DIR,
+                json!({
+                    "fmt.experimental": true
+                }),
+            )
+            .get_watcher_patterns();
+
+            assert_eq!(patterns.len(), 2);
+            assert_eq!(patterns[0], ".oxfmtrc.json");
+            assert_eq!(patterns[1], ".oxfmtrc.jsonc");
+        }
+
+        #[test]
+        fn test_formatter_custom_config_path() {
+            let patterns = Tester::new(
+                FAKE_DIR,
+                json!({
+                    "fmt.experimental": true,
+                    "fmt.configPath": "configs/formatter.json"
+                }),
+            )
+            .get_watcher_patterns();
+            assert_eq!(patterns.len(), 1);
+            assert_eq!(patterns[0], "configs/formatter.json");
+        }
+    }
+
+    mod handle_configuration_change {
+        use crate::{
+            ToolRestartChanges,
+            formatter::{server_formatter::test_watchers::FAKE_DIR, tester::Tester},
+        };
+        use serde_json::json;
+
+        #[test]
+        fn test_no_change() {
+            let ToolRestartChanges { watch_patterns, .. } =
+                Tester::new(FAKE_DIR, json!({})).handle_configuration_change(json!({}));
+
+            assert!(watch_patterns.is_none());
+        }
+
+        #[test]
+        fn test_no_changes_with_experimental() {
+            let options = json!({
+                "fmt.experimental": true
+            });
+            let ToolRestartChanges { watch_patterns, .. } =
+                Tester::new(FAKE_DIR, options.clone()).handle_configuration_change(options);
+
+            assert!(watch_patterns.is_none());
+        }
+
+        #[test]
+        fn test_formatter_experimental_enabled() {
+            let ToolRestartChanges { watch_patterns, .. } = Tester::new(FAKE_DIR, json!({}))
+                .handle_configuration_change(json!({
+                    "fmt.experimental": true
+                }));
+
+            assert!(watch_patterns.is_some());
+            assert_eq!(watch_patterns.as_ref().unwrap().len(), 2);
+            assert_eq!(watch_patterns.as_ref().unwrap()[0], ".oxfmtrc.json");
+            assert_eq!(watch_patterns.as_ref().unwrap()[1], ".oxfmtrc.jsonc");
+        }
+
+        #[test]
+        fn test_formatter_custom_config_path() {
+            let ToolRestartChanges { watch_patterns, .. } = Tester::new(
+                FAKE_DIR,
+                json!({
+                    "fmt.experimental": true,
+                }),
+            )
+            .handle_configuration_change(json!({
+                "fmt.experimental": true,
+                "fmt.configPath": "configs/formatter.json"
+            }));
+
+            assert!(watch_patterns.is_some());
+            assert_eq!(watch_patterns.as_ref().unwrap().len(), 1);
+            assert_eq!(watch_patterns.as_ref().unwrap()[0], "configs/formatter.json");
+        }
+
+        #[test]
+        fn test_formatter_disabling() {
+            let ToolRestartChanges { watch_patterns, .. } = Tester::new(
+                FAKE_DIR,
+                json!({
+                    "fmt.experimental": true
+                }),
+            )
+            .handle_configuration_change(json!({
+                "fmt.experimental": false
+            }));
+
+            assert!(watch_patterns.is_some());
+            assert!(watch_patterns.unwrap().is_empty());
+        }
+    }
 }
 
 #[cfg(test)]

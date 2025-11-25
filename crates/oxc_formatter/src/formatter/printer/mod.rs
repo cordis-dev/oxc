@@ -13,7 +13,6 @@ use unicode_width::UnicodeWidthChar;
 use self::call_stack::PrintIndentStack;
 use super::{
     ActualStart, FormatElement, GroupId, InvalidDocumentError, PrintError, PrintResult, Printed,
-    TextRange, TextSize,
     format_element::{BestFittingElement, LineMode, PrintMode, document::Document, tag::Condition},
     prelude::{
         Tag::EndFill,
@@ -335,7 +334,10 @@ impl<'a> Printer<'a> {
         } else {
             self.state.measured_group_fits = true;
 
-            for variant in best_fitting.variants() {
+            let (most_expanded, remaining_variants) =
+                best_fitting.split_to_most_expanded_and_flat_variants();
+
+            for variant in remaining_variants {
                 // Test if this variant fits and if so, use it. Otherwise try the next
                 // variant.
 
@@ -366,7 +368,6 @@ impl<'a> Printer<'a> {
             }
 
             // No variant fits, take the last (most expanded) as fallback
-            let most_expanded = best_fitting.most_expanded();
             queue.extend_back(most_expanded);
             self.print_entry(queue, stack, indent_stack, args.with_print_mode(PrintMode::Expanded))
         }
@@ -1176,7 +1177,7 @@ impl<'a, 'print> FitsMeasurer<'a, 'print> {
             Text::Token(text) => {
                 self.state.line_width += text.len();
             }
-            Text::Text { text, width } => {
+            Text::Text { text: _, width } => {
                 if width.is_multiline() {
                     return if self.must_be_flat
                         || self.state.line_width + width.value() as usize
@@ -1293,14 +1294,6 @@ enum Text<'a> {
     Text { text: &'a str, width: TextWidth },
 }
 
-impl Text<'_> {
-    fn len(&self) -> usize {
-        match self {
-            Text::Token(text) | Text::Text { text, .. } => text.len(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use oxc_allocator::Allocator;
@@ -1329,7 +1322,7 @@ mod tests {
         root: &dyn Format<'a>,
         options: PrinterOptions,
     ) -> Printed {
-        let formatted = crate::format!(FormatContext::dummy(allocator), [root]).unwrap();
+        let formatted = crate::format!(FormatContext::dummy(allocator), [root]);
 
         Printer::new(options).print(formatted.document()).expect("Document to be valid")
     }
@@ -1480,6 +1473,7 @@ two lines`,
                             &token("\"0123456789\""),
                             &token("\"0123456789\""),
                             &token("\"0123456789\""),
+                            &token("\"0123456789\""),
                         ],
                     },
                 ],
@@ -1492,7 +1486,7 @@ two lines`,
   "b",
   "c",
   "d",
-  ["0123456789", "0123456789", "0123456789", "0123456789", "0123456789"],
+  ["0123456789", "0123456789", "0123456789", "0123456789", "0123456789", "0123456789"],
 ]"#,
             result.as_code()
         );
@@ -1594,8 +1588,7 @@ two lines`,
                     token("]"),
                 )),
             )
-            .finish()
-            .unwrap();
+            .finish();
 
         let document = Document::from(buffer.into_vec());
 
@@ -1632,7 +1625,7 @@ two lines`,
                                 &soft_line_break_or_space(),
                                 &format_args!(token("3"), if_group_breaks(&token(","))),
                             )
-                            .finish()
+                            .finish();
                     })),
                     token("]")
                 )),
@@ -1663,7 +1656,7 @@ two lines`,
                         if_group_breaks(&token("It measures with the 'if_group_breaks' variant because the referenced group breaks and that's just way too much text.")).with_group_id(Some(group_id)),
                     ))
                 ]
-            )
+            );
         });
 
         let printed = format(&allocator, &content);
@@ -1684,15 +1677,13 @@ two lines`,
             write!(
                 f,
                 [group(&token("Group with id-2")).with_group_id(Some(id_2)), hard_line_break()]
-            )?;
+            );
 
-            write!(
-                f,
-                [
-                    group(&token("Group with id-1 does not fit on the line because it exceeds the line width of 80 characters by")).with_group_id(Some(id_1)),
-                    hard_line_break()
-                ]
-            )?;
+            write!(f,
+            [
+                group(&token("Group with id-1 does not fit on the line because it exceeds the line width of 100 characters by..........")).with_group_id(Some(id_1)),
+                hard_line_break()
+            ]);
 
             write!(
                 f,
@@ -1701,7 +1692,7 @@ two lines`,
                     hard_line_break(),
                     if_group_breaks(&token("Group 1 breaks")).with_group_id(Some(id_1))
                 ]
-            )
+            );
         });
 
         let printed = format(&allocator, &content);
@@ -1709,7 +1700,7 @@ two lines`,
         assert_eq!(
             printed.as_code(),
             r"Group with id-2
-Group with id-1 does not fit on the line because it exceeds the line width of 80 characters by
+Group with id-1 does not fit on the line because it exceeds the line width of 100 characters by..........
 Group 2 fits
 Group 1 breaks"
         );
@@ -1741,7 +1732,7 @@ Group 1 breaks"
     }
 
     impl<'a> Format<'a> for FormatArrayElements<'a> {
-        fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+        fn fmt(&self, f: &mut Formatter<'_, 'a>) {
             write!(
                 f,
                 [group(&format_args!(
@@ -1755,7 +1746,7 @@ Group 1 breaks"
                     )),
                     token("]")
                 ))]
-            )
+            );
         }
     }
 }

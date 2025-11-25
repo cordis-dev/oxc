@@ -1,10 +1,16 @@
-import { setupFileContext, resetFileContext } from './context.js';
-import { registeredRules } from './load.js';
-import { diagnostics } from './report.js';
-import { setSettingsForFile, resetSettings } from './settings.js';
-import { ast, initAst, resetSourceAndAst, setupSourceForFile } from './source_code.js';
-import { assertIs, getErrorMessage } from './utils.js';
-import { addVisitorToCompiled, compiledVisitor, finalizeCompiledVisitor, initCompiledVisitor } from './visitor.js';
+import { setupFileContext, resetFileContext } from "./context.js";
+import { registeredRules } from "./load.js";
+import { diagnostics } from "./report.js";
+import { setSettingsForFile, resetSettings } from "./settings.js";
+import { ast, initAst, resetSourceAndAst, setupSourceForFile } from "./source_code.js";
+import { typeAssertIs, debugAssertIsNonNull } from "../utils/asserts.js";
+import { getErrorMessage } from "../utils/utils.js";
+import {
+  addVisitorToCompiled,
+  compiledVisitor,
+  finalizeCompiledVisitor,
+  initCompiledVisitor,
+} from "./visitor.js";
 
 // Lazy implementation
 /*
@@ -13,9 +19,9 @@ import { walkProgram } from '../generated/walk.js';
 */
 
 // @ts-expect-error we need to generate `.d.ts` file for this module
-import { walkProgram } from '../generated/walk.js';
+import { walkProgram } from "../generated/walk.js";
 
-import type { AfterHook, BufferWithArrays } from './types.ts';
+import type { AfterHook, BufferWithArrays } from "./types.ts";
 
 // Buffers cache.
 //
@@ -86,7 +92,7 @@ function lintFileImpl(
     // Rust will only send a `bufferId` alone, if it previously sent a buffer with this same ID
     buffer = buffers[bufferId]!;
   } else {
-    assertIs<BufferWithArrays>(buffer);
+    typeAssertIs<BufferWithArrays>(buffer);
     const { buffer: arrayBuffer, byteOffset } = buffer;
     buffer.uint32 = new Uint32Array(arrayBuffer, byteOffset);
     buffer.float64 = new Float64Array(arrayBuffer, byteOffset);
@@ -96,13 +102,15 @@ function lintFileImpl(
     }
     buffers[bufferId] = buffer;
   }
-  assertIs<BufferWithArrays>(buffer);
+  typeAssertIs<BufferWithArrays>(buffer);
 
-  if (typeof filePath !== 'string' || filePath.length === 0) {
-    throw new Error('expected filePath to be a non-zero length string');
-  }
-  if (!Array.isArray(ruleIds) || ruleIds.length === 0) {
-    throw new Error('Expected `ruleIds` to be a non-zero len array');
+  if (DEBUG) {
+    if (typeof filePath !== "string" || filePath.length === 0) {
+      throw new Error("Expected filePath to be a non-zero length string");
+    }
+    if (!Array.isArray(ruleIds) || ruleIds.length === 0) {
+      throw new Error("Expected `ruleIds` to be a non-zero length array");
+    }
   }
 
   // Pass file path to context module, so `Context`s know what file is being linted
@@ -136,6 +144,7 @@ function lintFileImpl(
     let { visitor } = ruleDetails;
     if (visitor === null) {
       // Rule defined with `create` method
+      debugAssertIsNonNull(ruleDetails.rule.create);
       visitor = ruleDetails.rule.create(ruleDetails.context);
     } else {
       // Rule defined with `createOnce` method

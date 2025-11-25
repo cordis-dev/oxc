@@ -1,13 +1,13 @@
-import type { Plugin } from '../../../dist/index.js';
+import type { Plugin } from "#oxlint";
 
 const plugin: Plugin = {
   meta: {
-    name: 'error-plugin',
+    name: "error-plugin",
   },
   rules: {
     error: {
       create(_context) {
-        throw new Error('Whoops!');
+        throw new Error("Whoops!");
       },
     },
   },

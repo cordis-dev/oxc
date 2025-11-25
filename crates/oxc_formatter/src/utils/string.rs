@@ -1,12 +1,12 @@
 use std::borrow::Cow;
 
-use oxc_span::{SourceType, Span};
+use oxc_span::SourceType;
 use oxc_syntax::identifier::is_identifier_name;
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
     FormatOptions, QuoteProperties, QuoteStyle,
-    formatter::{Format, FormatResult, Formatter, prelude::*},
+    formatter::{Format, Formatter, prelude::*},
 };
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
@@ -16,6 +16,7 @@ pub enum StringLiteralParentKind {
     /// Variant to track tokens that are inside a member
     Member,
     /// Variant to track tokens that are inside an import attribute
+    #[expect(unused)]
     ImportAttribute,
     /// Variant used when the string literal is inside a directive. This will apply
     /// a simplified logic of normalisation
@@ -28,8 +29,6 @@ pub struct FormatLiteralStringToken<'a> {
     /// The current string
     string: &'a str,
 
-    span: Span,
-
     jsx: bool,
 
     /// The parent that holds the token
@@ -37,13 +36,8 @@ pub struct FormatLiteralStringToken<'a> {
 }
 
 impl<'a> FormatLiteralStringToken<'a> {
-    pub fn new(
-        string: &'a str,
-        span: Span,
-        jsx: bool,
-        parent_kind: StringLiteralParentKind,
-    ) -> Self {
-        Self { string, span, jsx, parent_kind }
+    pub fn new(string: &'a str, jsx: bool, parent_kind: StringLiteralParentKind) -> Self {
+        Self { string, jsx, parent_kind }
     }
 
     pub fn clean_text(
@@ -55,21 +49,16 @@ impl<'a> FormatLiteralStringToken<'a> {
             if self.jsx { options.jsx_quote_style } else { options.quote_style };
         let chosen_quote_properties = options.quote_properties;
 
-        let mut string_cleaner =
+        let string_cleaner =
             LiteralStringNormalizer::new(*self, chosen_quote_style, chosen_quote_properties);
 
         let content = string_cleaner.normalize_text(source_type);
 
-        CleanedStringLiteralText { string: self.string, text: content }
-    }
-
-    fn raw_content(&self) -> &'a str {
-        &self.string[1..self.string.len() - 1]
+        CleanedStringLiteralText { text: content }
     }
 }
 
 pub struct CleanedStringLiteralText<'a> {
-    string: &'a str,
     text: Cow<'a, str>,
 }
 
@@ -80,8 +69,8 @@ impl CleanedStringLiteralText<'_> {
 }
 
 impl<'a> Format<'a> for CleanedStringLiteralText<'a> {
-    fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        text(f.context().allocator().alloc_str(&self.text)).fmt(f)
+    fn fmt(&self, f: &mut Formatter<'_, 'a>) {
+        text(f.context().allocator().alloc_str(&self.text)).fmt(f);
     }
 }
 
@@ -195,7 +184,7 @@ impl<'a> LiteralStringNormalizer<'a> {
         Self { token, chosen_quote_style, chosen_quote_properties }
     }
 
-    fn normalize_text(&mut self, source_type: SourceType) -> Cow<'a, str> {
+    fn normalize_text(&self, source_type: SourceType) -> Cow<'a, str> {
         let str_info = self.token.compute_string_information(self.chosen_quote_style);
         match self.token.parent_kind {
             StringLiteralParentKind::Expression => self.normalize_string_literal(str_info),
@@ -205,10 +194,7 @@ impl<'a> LiteralStringNormalizer<'a> {
         }
     }
 
-    fn normalize_import_attribute(
-        &mut self,
-        string_information: StringInformation,
-    ) -> Cow<'a, str> {
+    fn normalize_import_attribute(&self, string_information: StringInformation) -> Cow<'a, str> {
         let quoteless = self.raw_content();
         let can_remove_quotes =
             !self.is_preserve_quote_properties() && is_identifier_name(quoteless);
@@ -219,7 +205,7 @@ impl<'a> LiteralStringNormalizer<'a> {
         }
     }
 
-    fn normalize_directive(&mut self, string_information: StringInformation) -> Cow<'a, str> {
+    fn normalize_directive(&self, string_information: StringInformation) -> Cow<'a, str> {
         // In diretcives, unnecessary escapes should be preserved.
         // See https://github.com/prettier/prettier/issues/1555
         // Thus we don't normalize the string.
@@ -261,7 +247,7 @@ impl<'a> LiteralStringNormalizer<'a> {
     }
 
     fn normalize_type_member(
-        &mut self,
+        &self,
         string_information: StringInformation,
         source_type: SourceType,
     ) -> Cow<'a, str> {
@@ -315,8 +301,8 @@ impl<'a> LiteralStringNormalizer<'a> {
 }
 
 impl<'a> Format<'a> for FormatLiteralStringToken<'a> {
-    fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
-        self.clean_text(f.context().source_type(), f.options()).fmt(f)
+    fn fmt(&self, f: &mut Formatter<'_, 'a>) {
+        self.clean_text(f.context().source_type(), f.options()).fmt(f);
     }
 }
 

@@ -380,6 +380,7 @@ impl CliRunner {
         // TODO: Add a warning message if `tsgolint` cannot be found, but type-aware rules are enabled
         let lint_runner = match LintRunner::builder(options, linter)
             .with_type_aware(self.options.type_aware)
+            .with_type_check(self.options.type_check)
             .with_silent(misc_options.silent)
             .with_fix_kind(fix_options.fix_kind())
             .build()
@@ -1363,6 +1364,13 @@ mod test {
 
     #[test]
     #[cfg(not(target_endian = "big"))]
+    fn test_tsgolint_type_error() {
+        let args = &["--type-aware", "--type-check"];
+        Tester::new().with_cwd("fixtures/tsgolint_type_error".into()).test_and_snapshot(args);
+    }
+
+    #[test]
+    #[cfg(not(target_endian = "big"))]
     fn test_tsgolint_no_typescript_files() {
         // tsgolint shouldn't run when no files need type aware linting
         let args = &["--type-aware", "test.svelte"];
@@ -1394,5 +1402,14 @@ mod test {
     fn test_tsgolint_config_error() {
         let args = &["--type-aware"];
         Tester::new().with_cwd("fixtures/tsgolint_config_error".into()).test_and_snapshot(args);
+    }
+
+    #[test]
+    #[cfg(all(not(target_os = "windows"), not(target_endian = "big")))]
+    fn test_tsgolint_tsconfig_extends_config_err() {
+        let args = &["--type-aware", "-D", "no-floating-promises"];
+        Tester::new()
+            .with_cwd("fixtures/tsgolint_tsconfig_extends_config_err".into())
+            .test_and_snapshot(args);
     }
 }

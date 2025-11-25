@@ -21,37 +21,12 @@ export function getErrorMessage(err: unknown): string {
     if (err instanceof Error) {
       // Note: `stack` includes the error message
       const { stack } = err;
-      if (typeof stack === 'string' && stack !== '') return stack;
+      if (typeof stack === "string" && stack !== "") return stack;
     }
 
     const { message } = err as { message?: unknown };
-    if (typeof message === 'string' && message !== '') return message;
+    if (typeof message === "string" && message !== "") return message;
   } catch {}
 
-  return 'Unknown error';
+  return "Unknown error";
 }
-
-/**
- * Assert a value is of a certain type.
- *
- * Has no runtime effect - only for guiding the type-checker.
- * Minification removes this function and all calls to it, so it has zero runtime cost.
- *
- * @param value - Value
- */
-// oxlint-disable-next-line no-unused-vars
-export function assertIs<T>(value: unknown): asserts value is T {}
-
-/**
- * Utility type to make specified properties of a type nullable.
- *
- * @example
- * ```ts
- * type Foo = { str: string, num: number };
- * type FooWithNullableNum = SetNullable<Foo, 'num'>;
- * // { str: string, num: number | null }
- * ```
- */
-export type SetNullable<BaseType, Keys extends keyof BaseType = keyof BaseType> = {
-  [Key in keyof BaseType]: Key extends Keys ? BaseType[Key] | null : BaseType[Key];
-};

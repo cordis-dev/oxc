@@ -1,18 +1,11 @@
-use std::mem::transmute_copy;
-
-use oxc_allocator::CloneIn;
-use oxc_ast::{ast::*, precedence};
+use oxc_ast::ast::*;
 use oxc_span::GetSpan;
-use oxc_syntax::{
-    operator,
-    precedence::{GetPrecedence, Precedence},
-};
+use oxc_syntax::precedence::{GetPrecedence, Precedence};
 
 use crate::{
     Format,
     ast_nodes::{AstNode, AstNodes},
-    formatter::{FormatResult, Formatter, trivia::FormatTrailingComments},
-    parentheses::NeedsParentheses,
+    formatter::Formatter,
 };
 
 use crate::{format_args, formatter::prelude::*, write};
@@ -36,13 +29,13 @@ impl From<LogicalOperator> for BinaryLikeOperator {
 }
 
 impl Format<'_> for BinaryLikeOperator {
-    fn fmt(&self, f: &mut Formatter<'_, '_>) -> FormatResult<()> {
+    fn fmt(&self, f: &mut Formatter<'_, '_>) {
         let operator = match self {
             Self::BinaryOperator(op) => op.as_str(),
             Self::LogicalOperator(op) => op.as_str(),
         };
 
-        write!(f, operator)
+        write!(f, operator);
     }
 }
 
@@ -159,11 +152,11 @@ impl<'a, 'b> BinaryLikeExpression<'a, 'b> {
             }
             AstNodes::ExpressionStatement(statement) => statement.is_arrow_function_body(),
             AstNodes::ConditionalExpression(conditional) => !matches!(
-                parent.parent(),
+                conditional.parent,
                 AstNodes::ReturnStatement(_)
                     | AstNodes::ThrowStatement(_)
-                    // TODO(prettier): Why not include `NewExpression` ???
                     | AstNodes::CallExpression(_)
+                    | AstNodes::NewExpression(_)
                     | AstNodes::ImportExpression(_)
                     | AstNodes::MetaProperty(_)
             ),
@@ -200,7 +193,7 @@ impl<'a, 'b> TryFrom<&'b AstNode<'a, Expression<'a>>> for BinaryLikeExpression<'
 }
 
 impl<'a> Format<'a> for BinaryLikeExpression<'a, '_> {
-    fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+    fn fmt(&self, f: &mut Formatter<'_, 'a>) {
         let parent = self.parent();
         let is_inside_condition = self.is_inside_condition(parent);
 
@@ -208,8 +201,8 @@ impl<'a> Format<'a> for BinaryLikeExpression<'a, '_> {
         if is_inside_condition {
             return write!(
                 f,
-                [&format_once(|f| {
-                    format_flattened_logical_expression(*self, is_inside_condition, f)
+                [&format_with(|f| {
+                    format_flattened_logical_expression(*self, is_inside_condition, f);
                 })]
             );
         }
@@ -226,7 +219,7 @@ impl<'a> Format<'a> for BinaryLikeExpression<'a, '_> {
                 f,
                 [group(&soft_block_indent(&format_once(|f| {
                     // is_inside_condition is always false here (we returned early if true)
-                    format_flattened_logical_expression(*self, false, f)
+                    format_flattened_logical_expression(*self, false, f);
                 })))]
             );
         }
@@ -238,9 +231,9 @@ impl<'a> Format<'a> for BinaryLikeExpression<'a, '_> {
         if should_not_indent {
             return write!(
                 f,
-                [group(&format_once(|f| {
+                [group(&format_with(|f| {
                     // is_inside_condition is always false here (we returned early if true)
-                    format_flattened_logical_expression(*self, false, f)
+                    format_flattened_logical_expression(*self, false, f);
                 }))]
             );
         }
@@ -274,10 +267,10 @@ impl<'a> Format<'a> for BinaryLikeExpression<'a, '_> {
                 f,
                 [group(&format_args!(
                     first,
-                    indent(&format_once(|f| { f.join().entries(tail_parts.iter()).finish() }))
+                    indent(&format_with(|f| { f.join().entries(tail_parts.iter()).finish() }))
                 ))
                 .with_group_id(Some(group_id))]
-            )
+            );
         });
 
         if last_is_jsx {
@@ -289,9 +282,9 @@ impl<'a> Format<'a> for BinaryLikeExpression<'a, '_> {
                     format_non_jsx_parts,
                     indent_if_group_breaks(&jsx_element, group_id),
                 ))]
-            )
+            );
         } else {
-            write!(f, format_non_jsx_parts)
+            write!(f, format_non_jsx_parts);
         }
     }
 }
@@ -320,31 +313,31 @@ fn format_flattened_logical_expression<'a>(
     binary: BinaryLikeExpression<'a, '_>,
     inside_condition: bool,
     f: &mut Formatter<'_, 'a>,
-) -> FormatResult<()> {
+) {
     fn format_recursive<'a>(
         binary: BinaryLikeExpression<'a, '_>,
         inside_condition: bool,
         f: &mut Formatter<'_, 'a>,
-    ) -> FormatResult<()> {
+    ) {
         let left = binary.left();
 
         if binary.can_flatten() {
             // Recursively format nested binary expressions
-            format_recursive(BinaryLikeExpression::try_from(left).unwrap(), inside_condition, f)?;
+            format_recursive(BinaryLikeExpression::try_from(left).unwrap(), inside_condition, f);
         } else {
             // Format the left terminal
-            write!(f, [group(left)])?;
+            write!(f, [group(left)]);
         }
 
         // Format the right side with operator
-        BinaryLeftOrRightSide::Right { parent: binary, inside_condition }.fmt(f)
+        BinaryLeftOrRightSide::Right { parent: binary, inside_condition }.fmt(f);
     }
 
-    format_recursive(binary, inside_condition, f)
+    format_recursive(binary, inside_condition, f);
 }
 
 impl<'a> Format<'a> for BinaryLeftOrRightSide<'a, '_> {
-    fn fmt(&self, f: &mut Formatter<'_, 'a>) -> FormatResult<()> {
+    fn fmt(&self, f: &mut Formatter<'_, 'a>) {
         match self {
             Self::Left { parent } => write!(f, group(parent.left())),
             Self::Right {
@@ -402,7 +395,7 @@ impl<'a> Format<'a> for BinaryLeftOrRightSide<'a, '_> {
                                 space(),
                                 operator.as_str(),
                                 soft_line_break_or_space(),
-                                format_once(|f| {
+                                format_with(|f| {
                                     // If the left side of the right logical expression is still a logical expression with
                                     // the same operator, we need to recursively format it inline.
                                     // This way, we can ensure that all parts are in the same group.
@@ -419,13 +412,13 @@ impl<'a> Format<'a> for BinaryLeftOrRightSide<'a, '_> {
                                             ),
                                             *inside_parenthesis,
                                             f,
-                                        )
+                                        );
                                     } else {
-                                        left_child.fmt(f)
+                                        left_child.fmt(f);
                                     }
                                 })
                             ]
-                        )?;
+                        );
 
                         binary_like_expression =
                             BinaryLikeExpression::LogicalExpression(right_logical);
@@ -437,20 +430,20 @@ impl<'a> Format<'a> for BinaryLeftOrRightSide<'a, '_> {
                 let right = binary_like_expression.right();
 
                 let operator_and_right_expression = format_with(|f| {
-                    write!(f, [space(), binary_like_expression.operator()])?;
+                    write!(f, [space(), binary_like_expression.operator()]);
 
                     let should_inline = binary_like_expression.should_inline_logical_expression();
 
                     if should_inline {
-                        write!(f, [space()])?;
+                        write!(f, [space()]);
                         if f.comments().has_leading_own_line_comment(right.span().start) {
                             return write!(f, soft_line_indent_or_space(right));
                         }
                     } else {
-                        write!(f, [soft_line_break_or_space()])?;
+                        write!(f, [soft_line_break_or_space()]);
                     }
 
-                    write!(f, right)
+                    write!(f, right);
                 });
 
                 // Cache as_ast_nodes() calls to avoid repeated conversions
@@ -468,10 +461,10 @@ impl<'a> Format<'a> for BinaryLeftOrRightSide<'a, '_> {
 
                 match left_ast_nodes {
                     AstNodes::LogicalExpression(logical) => {
-                        logical.format_trailing_comments(f)?;
+                        logical.format_trailing_comments(f);
                     }
                     AstNodes::BinaryExpression(binary) => {
-                        binary.format_trailing_comments(f)?;
+                        binary.format_trailing_comments(f);
                     }
                     _ => {}
                 }
@@ -500,9 +493,9 @@ impl<'a> Format<'a> for BinaryLeftOrRightSide<'a, '_> {
                         })
                         .any(|comment| comment.is_line());
 
-                    write!(f, [group(&operator_and_right_expression).should_expand(should_break)])
+                    write!(f, [group(&operator_and_right_expression).should_expand(should_break)]);
                 } else {
-                    write!(f, [operator_and_right_expression])
+                    write!(f, [operator_and_right_expression]);
                 }
             }
         }
@@ -524,7 +517,6 @@ impl BinaryLeftOrRightSide<'_, '_> {
                     Expression::JSXElement(_) | Expression::JSXFragment(_)
                 )
             }
-            _ => false,
         }
     }
 }

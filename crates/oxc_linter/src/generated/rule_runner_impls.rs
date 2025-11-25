@@ -2222,8 +2222,11 @@ impl RuleRunner for crate::rules::react::jsx_handler_names::JsxHandlerNames {
 }
 
 impl RuleRunner for crate::rules::react::jsx_key::JsxKey {
-    const NODE_TYPES: Option<&AstTypesBitset> =
-        Some(&AstTypesBitset::from_types(&[AstType::JSXElement, AstType::JSXFragment]));
+    const NODE_TYPES: Option<&AstTypesBitset> = Some(&AstTypesBitset::from_types(&[
+        AstType::ArrayExpression,
+        AstType::JSXElement,
+        AstType::JSXFragment,
+    ]));
     const RUN_FUNCTIONS: RuleRunFunctionsImplemented = RuleRunFunctionsImplemented::Run;
 }
 
@@ -3469,6 +3472,12 @@ impl RuleRunner for crate::rules::unicorn::prefer_at::PreferAt {
         AstType::CallExpression,
         AstType::ComputedMemberExpression,
     ]));
+    const RUN_FUNCTIONS: RuleRunFunctionsImplemented = RuleRunFunctionsImplemented::Run;
+}
+
+impl RuleRunner for crate::rules::unicorn::prefer_bigint_literals::PreferBigintLiterals {
+    const NODE_TYPES: Option<&AstTypesBitset> =
+        Some(&AstTypesBitset::from_types(&[AstType::CallExpression]));
     const RUN_FUNCTIONS: RuleRunFunctionsImplemented = RuleRunFunctionsImplemented::Run;
 }
 
