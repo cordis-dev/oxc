@@ -69,22 +69,22 @@ const renderRulesList = ({ title, counters, views, defaultOpen = true }) => `
 
 <details ${defaultOpen ? "open" : ""}>
 <summary>
-  ✨: ${counters.isImplemented}, 🚫: ${counters.isNotSupported}, ⏳: ${counters.isPendingFix} / total: ${counters.total}
+  ✅: ${counters.isImplemented}, 🚫: ${counters.isNotSupported}, ⏳: ${counters.isPendingFix} / total: ${counters.total}
 </summary>
 
-| Status | Name | Docs |
-| :----: | :--- | :--- |
+| Status | Name |
+| :----: | :--- |
 ${views
   .map((v) => {
     let status = "";
-    if (v.isImplemented) status += "✨";
+    if (v.isImplemented) status += "✅";
     if (v.isNotSupported) status += "🚫";
     if (v.isPendingFix) status += "⏳";
-    return `| ${status} | ${v.name} | ${v.docsUrl} |`;
+    return `| ${status} | [${v.name}](${v.docsUrl}) |`;
   })
   .join("\n")}
 
-✨ = Implemented, 🚫 = No need to implement, ⏳ = Fix pending
+✅ = Implemented, 🚫 = No need to implement, ⏳ = Fix pending
 
 </details>
 `;

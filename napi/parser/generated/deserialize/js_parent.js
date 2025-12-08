@@ -4346,10 +4346,9 @@ function deserializeTSModuleDeclaration(pos) {
       body.parent = node;
     } else {
       let innerId = body.id;
-      if (innerId.type === "Identifier")
-        id.parent =
-          innerId.parent =
-          node.id =
+      if (innerId.type === "Identifier") {
+        let outerId =
+          (node.id =
           parent =
             {
               type: "TSQualifiedName",
@@ -4358,8 +4357,9 @@ function deserializeTSModuleDeclaration(pos) {
               start: id.start,
               end: innerId.end,
               parent: node,
-            };
-      else {
+            });
+        id.parent = innerId.parent = outerId;
+      } else {
         // Replace `left` of innermost `TSQualifiedName` with a nested `TSQualifiedName` with `id` of
         // this module on left, and previous `left` of innermost `TSQualifiedName` on right
         node.id = innerId;
@@ -4552,16 +4552,11 @@ function deserializeTSImportType(pos) {
       start,
       end,
       parent,
-    }),
-    source = deserializeTSType(pos + 8);
-  if (source.type === "TSLiteralType") {
-    source = source.literal;
-    source.parent = parent;
-  }
-  node.source = source;
-  node.options = deserializeOptionBoxObjectExpression(pos + 24);
-  node.qualifier = deserializeOptionTSImportTypeQualifier(pos + 32);
-  node.typeArguments = deserializeOptionBoxTSTypeParameterInstantiation(pos + 48);
+    });
+  node.source = deserializeStringLiteral(pos + 8);
+  node.options = deserializeOptionBoxObjectExpression(pos + 56);
+  node.qualifier = deserializeOptionTSImportTypeQualifier(pos + 64);
+  node.typeArguments = deserializeOptionBoxTSTypeParameterInstantiation(pos + 80);
   parent = previousParent;
   return node;
 }

@@ -170,6 +170,7 @@ pub(crate) mod eslint {
     pub mod no_useless_constructor;
     pub mod no_useless_escape;
     pub mod no_useless_rename;
+    pub mod no_useless_return;
     pub mod no_var;
     pub mod no_void;
     pub mod no_warning_comments;
@@ -241,6 +242,7 @@ pub(crate) mod typescript {
     pub mod no_non_null_assertion;
     pub mod no_redundant_type_constituents;
     pub mod no_require_imports;
+    pub mod no_restricted_types;
     pub mod no_this_alias;
     pub mod no_unnecessary_boolean_literal_compare;
     pub mod no_unnecessary_parameter_property_assignment;
@@ -800,6 +802,7 @@ oxc_macros::declare_all_lint_rules! {
     eslint::no_useless_constructor,
     eslint::no_useless_escape,
     eslint::no_useless_rename,
+    eslint::no_useless_return,
     eslint::no_var,
     eslint::no_void,
     eslint::no_warning_comments,
@@ -1108,6 +1111,7 @@ oxc_macros::declare_all_lint_rules! {
     typescript::no_non_null_assertion,
     typescript::no_redundant_type_constituents,
     typescript::no_require_imports,
+    typescript::no_restricted_types,
     typescript::no_this_alias,
     typescript::no_unnecessary_boolean_literal_compare,
     typescript::no_unnecessary_parameter_property_assignment,

@@ -80,6 +80,7 @@ use crate::{
 use self::{
     array_expression::FormatArrayExpression,
     arrow_function_expression::is_multiline_template_starting_on_same_line,
+    block_statement::is_empty_block,
     call_arguments::is_simple_module_import,
     class::format_grouped_parameters_with_return_type_for_method,
     object_like::ObjectLike,
@@ -145,9 +146,11 @@ impl<'a> FormatWrite<'a> for AstNode<'a, ObjectExpression<'a>> {
 impl<'a> Format<'a> for AstNode<'a, Vec<'a, ObjectPropertyKind<'a>>> {
     fn fmt(&self, f: &mut Formatter<'_, 'a>) {
         let trailing_separator = FormatTrailingCommas::ES5.trailing_separator(f.options());
-        f.join_nodes_with_soft_line()
-            .entries_with_trailing_separator(self.iter(), ",", trailing_separator)
-            .finish();
+        f.join_nodes_with_soft_line().entries_with_trailing_separator(
+            self.iter(),
+            ",",
+            trailing_separator,
+        );
     }
 }
 
@@ -225,10 +228,21 @@ impl<'a> FormatWrite<'a> for AstNode<'a, CallExpression<'a>> {
             MemberChain::from_call_expression(self, f).fmt(f);
         } else {
             let format_inner = format_with(|f| {
+                // Preserve trailing comments of the callee in the following cases:
+                // `call /**/()`
+                // `call /**/<T>()`
                 if self.type_arguments.is_some() {
                     write!(f, [callee]);
                 } else {
                     write!(f, [FormatNodeWithoutTrailingComments(callee)]);
+
+                    if self.arguments.is_empty() {
+                        let callee_trailing_comments = f
+                            .context()
+                            .comments()
+                            .comments_before_character(self.callee.span().end, b'(');
+                        write!(f, FormatTrailingComments::Comments(callee_trailing_comments));
+                    }
                 }
                 write!(f, [optional.then_some("?."), type_arguments, arguments]);
             });
@@ -766,10 +780,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, IfStatement<'a>> {
                 "if",
                 space(),
                 "(",
-                group(&soft_block_indent(&format_args!(
-                    FormatTestOfIfAndWhileStatement(test),
-                    FormatCommentForEmptyStatement(consequent)
-                ))),
+                group(&soft_block_indent(&FormatTestOfIfAndWhileStatement(test))),
                 ")",
                 FormatStatementBody::new(consequent),
             ))
@@ -778,38 +789,36 @@ impl<'a> FormatWrite<'a> for AstNode<'a, IfStatement<'a>> {
             let alternate_start = alternate.span().start;
             let comments = f.context().comments().comments_before(alternate_start);
 
-            let has_line_comment = comments.iter().any(|comment| comment.kind == CommentKind::Line);
-            let has_dangling_comments = has_line_comment
-                || comments.last().is_some_and(|last_comment| {
+            let has_line_comment = comments.iter().any(|comment| comment.is_line());
+            let has_dangling_comments = comments
+                .last()
+                .or(f.comments().printed_comments().last())
+                .is_some_and(|last_comment| {
                     // Ensure the comments are placed before the else keyword or on a new line
-                    f.source_text()
-                        .slice_range(last_comment.span.end, alternate_start)
-                        .contains("else")
-                        || f.source_text()
-                            .contains_newline_between(last_comment.span.end, alternate_start)
+                    f.source_text().slice_range(last_comment.span.end, alternate_start).trim()
+                        == "else"
                 });
 
-            let else_on_same_line =
-                matches!(consequent.as_ref(), Statement::BlockStatement(_)) && !has_line_comment;
+            let else_on_same_line = matches!(consequent.as_ref(), Statement::BlockStatement(_))
+                && (!has_line_comment || !has_dangling_comments);
 
             if else_on_same_line {
-                write!(f, space());
+                write!(f, [space(), has_dangling_comments.then(line_suffix_boundary)]);
             } else {
                 write!(f, hard_line_break());
             }
 
-            if has_dangling_comments {
+            if has_dangling_comments && let Some(first_comment) = comments.first() {
+                if f.source_text().get_lines_before(first_comment.span, f.comments()) > 1 {
+                    write!(f, empty_line());
+                }
+                write!(
+                    f,
+                    FormatDanglingComments::Comments { comments, indent: DanglingIndentMode::None }
+                );
                 if has_line_comment {
-                    write!(f, FormatTrailingComments::Comments(comments));
                     write!(f, hard_line_break());
                 } else {
-                    write!(
-                        f,
-                        FormatDanglingComments::Comments {
-                            comments,
-                            indent: DanglingIndentMode::None
-                        }
-                    );
                     write!(f, space());
                 }
             }
@@ -818,6 +827,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, IfStatement<'a>> {
                 f,
                 [
                     "else",
+                    line_suffix_boundary(),
                     group(&FormatStatementBody::new(alternate).with_forced_space(matches!(
                         alternate.as_ref(),
                         Statement::IfStatement(_)
@@ -1073,9 +1083,11 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSEnumBody<'a>> {
 impl<'a> Format<'a> for AstNode<'a, Vec<'a, TSEnumMember<'a>>> {
     fn fmt(&self, f: &mut Formatter<'_, 'a>) {
         let trailing_separator = FormatTrailingCommas::ES5.trailing_separator(f.options());
-        f.join_nodes_with_soft_line()
-            .entries_with_trailing_separator(self.iter(), ",", trailing_separator)
-            .finish();
+        f.join_nodes_with_soft_line().entries_with_trailing_separator(
+            self.iter(),
+            ",",
+            trailing_separator,
+        );
     }
 }
 
@@ -1298,10 +1310,16 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSInterfaceDeclaration<'a>> {
         let extends = self.extends();
         let body = self.body();
 
+        // Determines whether to use group mode for formatting the `extends` clause.
+        // 1. If there are multiple `extends`, we always use group mode.
+        // 2. If there is a single `extends` that is a member expression without type arguments, we use group mode.
+        // 3. If there are comments between the `id` and the `extends`, we use group mode.
         let group_mode = extends.len() > 1
             || extends.as_ref().first().is_some_and(|first| {
-                let prev_span = type_parameters.as_ref().map_or(id.span(), GetSpan::span);
-                f.comments().has_comment_in_range(prev_span.end, first.span().start)
+                (first.expression.is_member_expression() && first.type_arguments.is_none()) || {
+                    let prev_span = type_parameters.as_ref().map_or(id.span(), GetSpan::span);
+                    f.comments().has_comment_in_range(prev_span.end, first.span().start)
+                }
             });
 
         let format_id = format_with(|f| {
@@ -1502,7 +1520,6 @@ impl<'a> Format<'a> for AstNode<'a, Vec<'a, TSSignature<'a>>> {
                 &FormatTSSignature { signature, next_signature: iter.peek().copied() },
             );
         }
-        joiner.finish();
     }
 }
 
@@ -1522,8 +1539,6 @@ impl<'a> Format<'a> for AstNode<'a, Vec<'a, TSInterfaceHeritage<'a>>> {
                 joiner.entry(&heritage);
             }
         }
-
-        joiner.finish();
     }
 }
 
@@ -1600,7 +1615,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, TSModuleBlock<'a>> {
         let span = self.span();
 
         write!(f, "{");
-        if body.is_empty() && directives.is_empty() {
+        if is_empty_block(&self.body) && directives.is_empty() {
             write!(f, [format_dangling_comments(span).with_block_indent()]);
         } else {
             write!(f, [block_indent(&format_args!(directives, body))]);

@@ -154,7 +154,7 @@ fn format_left_trailing_comments(
 
     let comments = if end_of_line_comments.is_empty() {
         let comments = f.context().comments().comments_before_character(start, b'=');
-        if comments.iter().any(|c| f.comments().is_own_line_comment(c)) { &[] } else { comments }
+        if comments.iter().any(|c| c.preceded_by_newline()) { &[] } else { comments }
     } else if should_print_as_leading || end_of_line_comments.last().is_some_and(|c| c.is_block()) {
         // No trailing comments for these expressions or if the trailing comment is a block comment
         &[]
@@ -554,11 +554,12 @@ impl<'a> AssignmentLike<'a, '_> {
                             _ => false,
                         }
                     };
-
                     is_generic(&conditional_type.check_type)
                         || is_generic(&conditional_type.extends_type)
                         || comments.has_comment_before(decl.type_annotation.span().start)
                 }
+                // `TSUnionType` has its own indentation logic
+                TSType::TSUnionType(_) => false,
                 _ => {
                     // Check for leading comments on any other type
                     comments.has_comment_before(decl.type_annotation.span().start)
@@ -628,18 +629,13 @@ fn should_break_after_operator<'a>(
     right: &AstNode<'a, Expression<'a>>,
     f: &Formatter<'_, 'a>,
 ) -> bool {
-    let is_jsx = matches!(right.as_ref(), Expression::JSXElement(_) | Expression::JSXFragment(_));
-
-    if is_jsx {
+    if right.is_jsx() {
         return false;
     }
 
-    let comments = f.comments();
-    let source_text = f.source_text();
-    for comment in comments.comments_before(right.span().start) {
-        if source_text.lines_after(comment.span.end) > 0
-            || f.source_text().has_newline_before(comment.span.start)
-        {
+    let comments = f.context().comments();
+    for comment in comments.comments_before_iter(right.span().start) {
+        if comment.has_newlines_around() {
             return true;
         }
 
