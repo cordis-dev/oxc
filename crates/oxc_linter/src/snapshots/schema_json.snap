@@ -232,7 +232,7 @@ expression: json
       "type": "string",
       "enum": [
         "readonly",
-        "writeable",
+        "writable",
         "off"
       ]
     },
@@ -509,7 +509,8 @@ expression: json
             }
           ]
         }
-      }
+      },
+      "additionalProperties": false
     },
     "OxlintOverrides": {
       "type": "array",

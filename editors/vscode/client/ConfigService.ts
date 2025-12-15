@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { ConfigurationChangeEvent, Uri, workspace, WorkspaceFolder } from "vscode";
+import { ConfigurationChangeEvent, RelativePattern, Uri, workspace, WorkspaceFolder } from "vscode";
 import { validateSafeBinaryPath } from "./PathValidator";
 import { IDisposable } from "./types";
 import { VSCodeConfig } from "./VSCodeConfig";
@@ -91,61 +91,53 @@ export class ConfigService implements IDisposable {
     return false;
   }
 
-  public getUserServerBinPath(): string | undefined {
-    let bin = this.vsCodeConfig.binPathOxlint;
-    if (!bin) {
-      return;
-    }
-
-    // validates the given path is safe to use
-    if (validateSafeBinaryPath(bin) === false) {
-      return;
-    }
-
-    if (!path.isAbsolute(bin)) {
-      // if the path is not absolute, resolve it to the first workspace folder
-      const cwd = this.workspaceConfigs.keys().next().value;
-      if (!cwd) {
-        return;
-      }
-      bin = path.normalize(path.join(cwd, bin));
-      // strip the leading slash on Windows
-      if (process.platform === "win32" && bin.startsWith("\\")) {
-        bin = bin.slice(1);
-      }
-    }
-
-    return bin;
+  public async getOxlintServerBinPath(): Promise<string | undefined> {
+    return this.searchBinaryPath(this.vsCodeConfig.binPathOxlint, "oxlint");
   }
 
   public async getOxfmtServerBinPath(): Promise<string | undefined> {
-    let bin = this.vsCodeConfig.binPathOxfmt;
-    if (!bin) {
-      // try to find oxfmt in node_modules/.bin
-      const files = await workspace.findFiles("**/node_modules/.bin/oxfmt", null, 1);
+    return this.searchBinaryPath(this.vsCodeConfig.binPathOxfmt, "oxfmt");
+  }
+
+  private async searchBinaryPath(
+    settingsBinary: string | undefined,
+    defaultPattern: string,
+  ): Promise<string | undefined> {
+    const cwd = this.workspaceConfigs.keys().next().value;
+    if (!cwd) {
+      return undefined;
+    }
+
+    if (!settingsBinary) {
+      // try to find the binary in node_modules/.bin, resolve to the first workspace folder
+      const files = await workspace.findFiles(
+        new RelativePattern(cwd, `**/node_modules/.bin/${defaultPattern}`),
+        null,
+        1,
+      );
 
       return files.length > 0 ? files[0].fsPath : undefined;
     }
 
+    if (!workspace.isTrusted) {
+      return;
+    }
+
     // validates the given path is safe to use
-    if (validateSafeBinaryPath(bin) === false) {
+    if (validateSafeBinaryPath(settingsBinary) === false) {
       return undefined;
     }
 
-    if (!path.isAbsolute(bin)) {
+    if (!path.isAbsolute(settingsBinary)) {
       // if the path is not absolute, resolve it to the first workspace folder
-      const cwd = this.workspaceConfigs.keys().next().value;
-      if (!cwd) {
-        return undefined;
-      }
-      bin = path.normalize(path.join(cwd, bin));
+      settingsBinary = path.normalize(path.join(cwd, settingsBinary));
       // strip the leading slash on Windows
-      if (process.platform === "win32" && bin.startsWith("\\")) {
-        bin = bin.slice(1);
+      if (process.platform === "win32" && settingsBinary.startsWith("\\")) {
+        settingsBinary = settingsBinary.slice(1);
       }
     }
 
-    return bin;
+    return settingsBinary;
   }
 
   private async onVscodeConfigChange(event: ConfigurationChangeEvent): Promise<void> {

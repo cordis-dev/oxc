@@ -4,6 +4,27 @@ All notable changes to this package will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
+## [0.103.0] - 2025-12-15
+
+### 🚀 Features
+
+- 30a9076 ast, parser, codegen: Add `CommentKind::MultilineBlock` (#16479) (Dunqing)
+
+## [0.102.0] - 2025-12-08
+
+### 💥 BREAKING CHANGES
+
+- 083fea9 napi/parser: [**BREAKING**] Represent empty optional fields on JS side as `null` (#16411) (overlookmotel)
+
+### 🐛 Bug Fixes
+
+- 699406a napi/parser: Move `ExportEntry::module_request` field to first (#16412) (overlookmotel)
+- 12bd794 napi/parser: Move `ExportEntry::module_request` field to last (#16403) (overlookmotel)
+
+### ⚡ Performance
+
+- 790beeb napi/parser: Do not remove extraneous options on JS side (#16447) (overlookmotel)
+
 ## [0.100.0] - 2025-12-01
 
 ### 💥 BREAKING CHANGES

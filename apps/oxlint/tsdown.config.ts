@@ -4,9 +4,17 @@ import { parseSync, Visitor } from "oxc-parser";
 
 import type { Plugin } from "rolldown";
 
+const { env } = process;
+const isEnabled = (env: string | undefined) => env === "true" || env === "1";
+
+// When run with `CONFORMANCE=true pnpm run build-js`, generate a conformance build with alterations to behavior.
+// Also enables debug assertions.
+// This is the build used in conformance tests.
+const CONFORMANCE = isEnabled(env.CONFORMANCE);
+
 // When run with `DEBUG=true pnpm run build-js`, generate a debug build with extra assertions.
 // This is the build used in tests.
-const DEBUG = process.env.DEBUG === "true" || process.env.DEBUG === "1";
+const DEBUG = CONFORMANCE || isEnabled(env.DEBUG);
 
 const commonConfig = defineConfig({
   platform: "node",
@@ -37,20 +45,23 @@ export default defineConfig([
       codegen: { removeWhitespace: false },
     },
     dts: { resolve: true },
-    attw: true,
-    define: { DEBUG: DEBUG ? "true" : "false" },
+    attw: { profile: "esm-only" },
+    define: {
+      DEBUG: DEBUG ? "true" : "false",
+      CONFORMANCE: CONFORMANCE ? "true" : "false",
+    },
     plugins: DEBUG ? [] : [createReplaceAssertsPlugin()],
     inputOptions: {
       // For `replaceAssertsPlugin`
       experimental: { nativeMagicString: true },
     },
   },
-  // TS-ESLint parser.
+  // TypeScript.
   // Bundled separately and lazy-loaded, as it's a lot of code.
-  // Bundle contains both `@typescript-eslint/typescript-estree` and `typescript`.
+  // Only used for tokens APIs.
   {
     ...commonConfig,
-    entry: "src-js/plugins/ts_eslint.cjs",
+    entry: "src-js/plugins/typescript.cjs",
     format: "commonjs",
     // Minify as this bundle is just dependencies. We don't need to be able to debug it.
     // Minification halves the size of the bundle.
