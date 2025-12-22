@@ -13,7 +13,6 @@ import {
 import {
   ConfigurationParams,
   ExecuteCommandRequest,
-  InitializeParams,
   ShowMessageNotification,
 } from "vscode-languageclient";
 
@@ -35,16 +34,6 @@ const languageClientName = "oxc";
 
 const enum LspCommands {
   FixAll = "oxc.fixAll",
-}
-
-class NoFormatterLanguageClient extends LanguageClient {
-  protected fillInitializeParams(params: InitializeParams): void {
-    // Disable formatting capabilities to prevent conflicts with the formatter tool.
-    delete params.capabilities.textDocument?.formatting;
-    delete params.capabilities.textDocument?.rangeFormatting;
-
-    super.fillInitializeParams(params);
-  }
 }
 
 export default class LinterTool implements ToolInterface {
@@ -118,7 +107,11 @@ export default class LinterTool implements ToolInterface {
 
     context.subscriptions.push(restartCommand, toggleEnable, applyAllFixesFile);
 
-    const run: Executable = runExecutable(binaryPath, configService.vsCodeConfig.nodePath);
+    const run: Executable = runExecutable(
+      binaryPath,
+      configService.vsCodeConfig.nodePath,
+      configService.vsCodeConfig.binPathTsGoLint,
+    );
     const serverOptions: ServerOptions = {
       run,
       debug: run,
@@ -152,7 +145,7 @@ export default class LinterTool implements ToolInterface {
           scheme: "file",
         },
       ],
-      initializationOptions: configService.languageServerConfig,
+      initializationOptions: configService.oxlintServerConfig,
       outputChannel,
       traceOutputChannel: outputChannel,
       middleware: {
@@ -180,9 +173,7 @@ export default class LinterTool implements ToolInterface {
               }
 
               return (
-                configService
-                  .getWorkspaceConfig(Uri.parse(item.scopeUri))
-                  ?.toLanguageServerConfig() ?? null
+                configService.getWorkspaceConfig(Uri.parse(item.scopeUri))?.toOxlintConfig() ?? null
               );
             });
           },
@@ -190,12 +181,7 @@ export default class LinterTool implements ToolInterface {
       },
     };
 
-    // If the formatter is not handled by the language server, disable formatting capabilities to prevent conflicts.
-    if (configService.useOxcLanguageServerForFormatting) {
-      this.client = new LanguageClient(languageClientName, serverOptions, clientOptions);
-    } else {
-      this.client = new NoFormatterLanguageClient(languageClientName, serverOptions, clientOptions);
-    }
+    this.client = new LanguageClient(languageClientName, serverOptions, clientOptions);
 
     const onNotificationDispose = this.client.onNotification(
       ShowMessageNotification.type,
@@ -281,11 +267,11 @@ export default class LinterTool implements ToolInterface {
     }
 
     // update the initializationOptions for a possible restart
-    this.client.clientOptions.initializationOptions = configService.languageServerConfig;
+    this.client.clientOptions.initializationOptions = configService.oxlintServerConfig;
 
     if (configService.effectsWorkspaceConfigChange(event) && this.client.isRunning()) {
       await this.client.sendNotification("workspace/didChangeConfiguration", {
-        settings: configService.languageServerConfig,
+        settings: configService.oxlintServerConfig,
       });
     }
   }
@@ -306,19 +292,19 @@ export default class LinterTool implements ToolInterface {
       return {
         bgColor: "statusBarItem.offlineBackground",
         icon: "circle-slash",
-        tooltipText: "oxc is disabled (no .oxlintrc.json found)",
+        tooltipText: "oxlint is disabled (no .oxlintrc.json found)",
       };
     } else if (!enable) {
       return {
         bgColor: "statusBarItem.warningBackground",
         icon: "check",
-        tooltipText: "oxc is disabled",
+        tooltipText: "oxlint is disabled",
       };
     } else {
       return {
         bgColor: "statusBarItem.activeBackground",
         icon: "check-all",
-        tooltipText: "oxc is enabled",
+        tooltipText: "oxlint is enabled",
       };
     }
   }

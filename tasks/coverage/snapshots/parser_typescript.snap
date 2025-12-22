@@ -1,9 +1,9 @@
-commit: c21f73fd
+commit: b78f0899
 
 parser_typescript Summary:
-AST Parsed     : 9832/9833 (99.99%)
-Positive Passed: 9823/9833 (99.90%)
-Negative Passed: 1486/2547 (58.34%)
+AST Parsed     : 9839/9840 (99.99%)
+Positive Passed: 9830/9840 (99.90%)
+Negative Passed: 1486/2549 (58.30%)
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/FunctionDeclaration3.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/FunctionDeclaration4.ts
@@ -344,6 +344,8 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/es6ModuleInt
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/es6ModuleInternalNamedImports2.ts
 
+Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/escapedIdentifiers.ts
+
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/esmNoSynthesizedDefault.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/excessPropertyCheckIntersectionWithRecursiveType.ts
@@ -665,6 +667,8 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/moduleAugmen
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/moduleAugmentationImportsAndExports2.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/moduleAugmentationImportsAndExports3.ts
+
+Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/moduleKeywordDeprecated.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/moduleProperty2.ts
 
@@ -3561,6 +3565,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
    ·              ─────
  5 │ }
    ╰────
+  help: Wrap this in parentheses if you want to use a `yield` expression here
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[typescript/tests/cases/compiler/castOfYield.ts:4:19]
@@ -6727,12 +6732,13 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
    ·        ╰── It can not be redeclared here
    ╰────
 
-  × Unexpected token
+  × Only string literals are allowed as module attribute values.
    ╭─[typescript/tests/cases/compiler/importAssertionNonstring.ts:1:52]
  1 │ import * as thing1 from "./mod.mjs" assert {field: 0};
    ·                                                    ─
  2 │ 
    ╰────
+  help: Wrap this with quotes
 
   × TS(1029): 'export' modifier must precede 'declare' modifier.
    ╭─[typescript/tests/cases/compiler/importDeclWithDeclareModifier.ts:5:9]
@@ -9848,6 +9854,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
    ·    ───
  5 │ ];
    ╰────
+  help: Add the missing closing delimiter
 
   × Invalid regular expression: Could not parse the entire pattern
    ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:7:5]
@@ -9856,6 +9863,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
    ·     ▲
  8 │   /[\q\u\i\c\k\_\f\o\x\-\j\u\m\p\s]/u,
    ╰────
+  help: Check for unbalanced brackets or invalid escape sequences
 
   × Invalid regular expression: Invalid class atom
    ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:8:5]
@@ -9864,6 +9872,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
    ·     ─
  9 │   /\P[\P\w-_]/u,
    ╰────
+  help: This character or escape sequence is not valid inside a character class
 
   × Invalid regular expression: Unterminated unicode property escape
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:9:4]
@@ -9872,6 +9881,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ──
  10 │ ];
     ╰────
+  help: Add the missing closing delimiter
 
   × Invalid regular expression: Invalid braced quantifier
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:23:4]
@@ -9880,6 +9890,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ────
  24 │   /{1,}??/,
     ╰────
+  help: Quantifiers must follow an expression. To match literally, escape it with `\`
 
   × Invalid regular expression: Invalid braced quantifier
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:24:4]
@@ -9888,6 +9899,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ─────
  25 │   /{1,2}??/,
     ╰────
+  help: Quantifiers must follow an expression. To match literally, escape it with `\`
 
   × Invalid regular expression: Invalid braced quantifier
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:25:4]
@@ -9896,6 +9908,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ──────
  26 │   /{2,1}??/,
     ╰────
+  help: Quantifiers must follow an expression. To match literally, escape it with `\`
 
   × Invalid regular expression: Numbers out of order in braced quantifier
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:26:4]
@@ -9904,6 +9917,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ─────
  27 │ 
     ╰────
+  help: In `{n,m}`, the minimum `n` must be less than or equal to the maximum `m`
 
   × Invalid regular expression: Could not parse the entire pattern
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:29:4]
@@ -9912,6 +9926,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ▲
  30 │   /{,??/u,
     ╰────
+  help: Check for unbalanced brackets or invalid escape sequences
 
   × Invalid regular expression: Could not parse the entire pattern
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:30:4]
@@ -9920,6 +9935,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ▲
  31 │   /{,1??/u,
     ╰────
+  help: Check for unbalanced brackets or invalid escape sequences
 
   × Invalid regular expression: Could not parse the entire pattern
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:31:4]
@@ -9928,6 +9944,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ▲
  32 │   /{1??/u,
     ╰────
+  help: Check for unbalanced brackets or invalid escape sequences
 
   × Invalid regular expression: Could not parse the entire pattern
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:32:4]
@@ -9936,6 +9953,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ▲
  33 │   /{1,??/u,
     ╰────
+  help: Check for unbalanced brackets or invalid escape sequences
 
   × Invalid regular expression: Could not parse the entire pattern
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:33:4]
@@ -9944,6 +9962,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ▲
  34 │   /{1,2??/u,
     ╰────
+  help: Check for unbalanced brackets or invalid escape sequences
 
   × Invalid regular expression: Could not parse the entire pattern
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:34:4]
@@ -9952,6 +9971,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ▲
  35 │   /{2,1??/u,
     ╰────
+  help: Check for unbalanced brackets or invalid escape sequences
 
   × Invalid regular expression: Could not parse the entire pattern
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:35:4]
@@ -9960,6 +9980,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ▲
  36 │   /{}??/u,
     ╰────
+  help: Check for unbalanced brackets or invalid escape sequences
 
   × Invalid regular expression: Could not parse the entire pattern
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:36:4]
@@ -9968,6 +9989,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ▲
  37 │   /{,}??/u,
     ╰────
+  help: Check for unbalanced brackets or invalid escape sequences
 
   × Invalid regular expression: Could not parse the entire pattern
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:37:4]
@@ -9976,6 +9998,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ▲
  38 │   /{,1}??/u,
     ╰────
+  help: Check for unbalanced brackets or invalid escape sequences
 
   × Invalid regular expression: Could not parse the entire pattern
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:38:4]
@@ -9984,6 +10007,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ▲
  39 │   /{1}??/u,
     ╰────
+  help: Check for unbalanced brackets or invalid escape sequences
 
   × Invalid regular expression: Lone quantifier found, expected with `Atom`
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:39:4]
@@ -9992,6 +10016,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ────
  40 │   /{1,}??/u,
     ╰────
+  help: Quantifiers must follow an expression. To match literally, escape it with `\`
 
   × Invalid regular expression: Lone quantifier found, expected with `Atom`
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:40:4]
@@ -10000,6 +10025,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ─────
  41 │   /{1,2}??/u,
     ╰────
+  help: Quantifiers must follow an expression. To match literally, escape it with `\`
 
   × Invalid regular expression: Lone quantifier found, expected with `Atom`
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:41:4]
@@ -10008,6 +10034,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ──────
  42 │   /{2,1}??/u,
     ╰────
+  help: Quantifiers must follow an expression. To match literally, escape it with `\`
 
   × Invalid regular expression: Numbers out of order in braced quantifier
     ╭─[typescript/tests/cases/compiler/regularExpressionAnnexB.ts:42:4]
@@ -10016,6 +10043,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·    ─────
  43 │ ];
     ╰────
+  help: In `{n,m}`, the minimum `n` must be less than or equal to the maximum `m`
 
   × Invalid regular expression: Character class atom range out of order
    ╭─[typescript/tests/cases/compiler/regularExpressionCharacterClassRangeOrder.ts:7:8]
@@ -10024,6 +10052,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
    ·     ─
  8 │     /[𝘈-𝘡][𝘡-𝘈]/u,
    ╰────
+  help: In a character range `[a-z]`, the first character must have a smaller code point than the second
 
   × Invalid regular expression: Character class atom range out of order
    ╭─[typescript/tests/cases/compiler/regularExpressionCharacterClassRangeOrder.ts:8:19]
@@ -10032,6 +10061,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
    ·     ─
  9 │     /[𝘈-𝘡][𝘡-𝘈]/v,
    ╰────
+  help: In a character range `[a-z]`, the first character must have a smaller code point than the second
 
   × Invalid regular expression: Character class set range out of order
     ╭─[typescript/tests/cases/compiler/regularExpressionCharacterClassRangeOrder.ts:9:15]
@@ -10040,6 +10070,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·     ─
  10 │ 
     ╰────
+  help: In a character range `[a-z]`, the first character must have a smaller code point than the second
 
   × Invalid regular expression: Character class atom range out of order
     ╭─[typescript/tests/cases/compiler/regularExpressionCharacterClassRangeOrder.ts:11:13]
@@ -10048,6 +10079,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·                ───
  12 │     /[\u{1D608}-\u{1D621}][\u{1D621}-\u{1D608}]/u,
     ╰────
+  help: In a character range `[a-z]`, the first character must have a smaller code point than the second
 
   × Invalid regular expression: Character class atom range out of order
     ╭─[typescript/tests/cases/compiler/regularExpressionCharacterClassRangeOrder.ts:12:34]
@@ -10056,6 +10088,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·                                     ──────────
  13 │     /[\u{1D608}-\u{1D621}][\u{1D621}-\u{1D608}]/v,
     ╰────
+  help: In a character range `[a-z]`, the first character must have a smaller code point than the second
 
   × Invalid regular expression: Character class set range out of order
     ╭─[typescript/tests/cases/compiler/regularExpressionCharacterClassRangeOrder.ts:13:25]
@@ -10064,6 +10097,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·                            ───────────────────
  14 │ 
     ╰────
+  help: In a character range `[a-z]`, the first character must have a smaller code point than the second
 
   × Invalid regular expression: Character class atom range out of order
     ╭─[typescript/tests/cases/compiler/regularExpressionCharacterClassRangeOrder.ts:15:16]
@@ -10072,6 +10106,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·                   ───────
  16 │     /[\uD835\uDE08-\uD835\uDE21][\uD835\uDE21-\uD835\uDE08]/u,
     ╰────
+  help: In a character range `[a-z]`, the first character must have a smaller code point than the second
 
   × Invalid regular expression: Character class atom range out of order
     ╭─[typescript/tests/cases/compiler/regularExpressionCharacterClassRangeOrder.ts:16:43]
@@ -10080,6 +10115,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·                                              ─────────────
  17 │     /[\uD835\uDE08-\uD835\uDE21][\uD835\uDE21-\uD835\uDE08]/v,
     ╰────
+  help: In a character range `[a-z]`, the first character must have a smaller code point than the second
 
   × Invalid regular expression: Character class set range out of order
     ╭─[typescript/tests/cases/compiler/regularExpressionCharacterClassRangeOrder.ts:17:31]
@@ -10088,12 +10124,14 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
     ·                                  ─────────────────────────
  18 │ ];
     ╰────
+  help: In a character range `[a-z]`, the first character must have a smaller code point than the second
 
-  × Invalid regular expression: Group specifier is empty
+  × Invalid regular expression: Invalid named reference
    ╭─[typescript/tests/cases/compiler/regularExpressionGroupNameSuggestions.ts:1:24]
  1 │ const regex = /(?<foo>)\k<Foo>/;
    ·                        ───────
    ╰────
+  help: Valid group names are: foo
 
   × Unexpected flag a in regular expression literal
    ╭─[typescript/tests/cases/compiler/regularExpressionScanning.ts:3:11]
@@ -10199,6 +10237,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
  1 │ const regex = /\p{ascii}\p{Sc=Unknown}\p{sc=unknownX}\p{Script_Declensions=Inherited}\p{scx=inherit}/u;
    ·                   ─────
    ╰────
+  help: Check the property name spelling or use a valid Unicode property
 
   × Invalid regular expression: Unknown modifiers
    ╭─[typescript/tests/cases/compiler/regularExpressionWithNonBMPFlags.ts:7:33]
@@ -10206,6 +10245,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
  7 │ const 𝘳𝘦𝘨𝘦𝘹 = /(?𝘴𝘪-𝘮:^𝘧𝘰𝘰.)/𝘨𝘮𝘶;
    ·                  ▲
    ╰────
+  help: Valid modifiers are: i, m, s
 
   × Expected a semicolon or an implicit semicolon after a statement, but found none
    ╭─[typescript/tests/cases/compiler/regularExpressionWithNonBMPFlags.ts:7:63]
@@ -16748,12 +16788,14 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
  3 │ var x = /\u{110000}/gu;
    ·           ─
    ╰────
+  help: Use `\uXXXX` or `\u{XXXXX}` format for unicode escapes
 
   × Invalid regular expression: Invalid unicode escape sequence
    ╭─[typescript/tests/cases/conformance/es6/unicodeExtendedEscapes/unicodeExtendedEscapesInRegularExpressions12.ts:1:11]
  1 │ var x = /\u{FFFFFFFF}/gu;
    ·           ─
    ╰────
+  help: Use `\uXXXX` or `\u{XXXXX}` format for unicode escapes
 
   × Invalid regular expression: Invalid unicode escape sequence
    ╭─[typescript/tests/cases/conformance/es6/unicodeExtendedEscapes/unicodeExtendedEscapesInRegularExpressions14.ts:2:11]
@@ -16761,18 +16803,21 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
  2 │ var x = /\u{-DDDD}/gu;
    ·           ─
    ╰────
+  help: Use `\uXXXX` or `\u{XXXXX}` format for unicode escapes
 
   × Invalid regular expression: Invalid unicode escape sequence
    ╭─[typescript/tests/cases/conformance/es6/unicodeExtendedEscapes/unicodeExtendedEscapesInRegularExpressions17.ts:1:11]
  1 │ var x = /\u{r}\u{n}\u{t}/gu;
    ·           ─
    ╰────
+  help: Use `\uXXXX` or `\u{XXXXX}` format for unicode escapes
 
   × Invalid regular expression: Invalid unicode escape sequence
    ╭─[typescript/tests/cases/conformance/es6/unicodeExtendedEscapes/unicodeExtendedEscapesInRegularExpressions19.ts:1:11]
  1 │ var x = /\u{}/gu;
    ·           ─
    ╰────
+  help: Use `\uXXXX` or `\u{XXXXX}` format for unicode escapes
 
   × Invalid escape sequence
    ╭─[typescript/tests/cases/conformance/es6/unicodeExtendedEscapes/unicodeExtendedEscapesInStrings07.ts:3:10]
@@ -19886,12 +19931,13 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
  1 │ import * as f from "./first" with {
    ╰────
 
-  × Unexpected token
+  × Only string literals are allowed as module attribute values.
    ╭─[typescript/tests/cases/conformance/importAttributes/importAttributes6.ts:1:51]
  1 │ import * as thing1 from "./mod.mjs" with { field: 0 };
    ·                                                   ─
  2 │ import * as thing2 from "./mod.mjs" with { field: `a` };
    ╰────
+  help: Wrap this with quotes
 
   × Expected `(` but found `;`
    ╭─[typescript/tests/cases/conformance/importDefer/dynamicImportDeferInvalidStandalone.ts:1:13]
@@ -19913,19 +19959,17 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
    ·                   ────
    ╰────
 
-  × Expected `from` but found `Identifier`
-   ╭─[typescript/tests/cases/conformance/importDefer/importDeferInvalidDefault.ts:1:14]
+  × TS(18058): Default imports are not allowed in a deferred import.
+   ╭─[typescript/tests/cases/conformance/importDefer/importDeferInvalidDefault.ts:1:8]
  1 │ import defer foo from "./a";
-   ·              ─┬─
-   ·               ╰── `from` expected
+   ·        ─────
  2 │ 
    ╰────
 
-  × Expected `from` but found `{`
-   ╭─[typescript/tests/cases/conformance/importDefer/importDeferInvalidNamed.ts:1:14]
+  × TS(18059): Named imports are not allowed in a deferred import.
+   ╭─[typescript/tests/cases/conformance/importDefer/importDeferInvalidNamed.ts:1:8]
  1 │ import defer { foo } from "./a";
-   ·              ┬
-   ·              ╰── `from` expected
+   ·        ─────
  2 │ 
    ╰────
 
@@ -19936,11 +19980,16 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
    ·                   ╰── `from` expected
    ╰────
 
-  × Expected `from` but found `type`
-   ╭─[typescript/tests/cases/conformance/importDefer/importDeferTypeConflict2.ts:1:14]
+  × TS(18058): Default imports are not allowed in a deferred import.
+   ╭─[typescript/tests/cases/conformance/importDefer/importDeferTypeConflict2.ts:1:8]
  1 │ import defer type * as ns1 from "./a";
-   ·              ──┬─
-   ·                ╰── `from` expected
+   ·        ─────
+   ╰────
+
+  × Unexpected token
+   ╭─[typescript/tests/cases/conformance/importDefer/importDeferTypeConflict2.ts:1:19]
+ 1 │ import defer type * as ns1 from "./a";
+   ·                   ─
    ╰────
 
   × The only valid meta property for import is import.meta
@@ -22752,6 +22801,7 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmasc
  1 │ var x = /fo(o/;
    ·            ──
    ╰────
+  help: Add the missing closing delimiter
 
   × Expected `;` but found `Identifier`
    ╭─[typescript/tests/cases/conformance/parser/ecmascript5/RegressionTests/parser585151.ts:2:7]

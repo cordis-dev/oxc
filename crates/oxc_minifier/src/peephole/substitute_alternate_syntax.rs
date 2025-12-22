@@ -4,6 +4,7 @@ use oxc_allocator::{CloneIn, TakeIn, Vec};
 use oxc_ast::{NONE, ast::*};
 use oxc_compat::ESFeature;
 use oxc_ecmascript::constant_evaluation::{ConstantEvaluation, ConstantValue, DetermineValueType};
+use oxc_ecmascript::side_effects::MayHaveSideEffectsContext;
 use oxc_ecmascript::{ToJsString, ToNumber, side_effects::MayHaveSideEffects};
 use oxc_semantic::ReferenceFlags;
 use oxc_span::GetSpan;
@@ -761,7 +762,10 @@ impl<'a> PeepholeOptimizations {
 
         // make sure `arguments` points to the arguments object
         // this is checked after the structure checks above because this check is slower than the structure checks
-        if ctx.ancestor_scopes().all(|s| !ctx.scoping().scope_flags(s).is_function()) {
+        if ctx.ancestor_scopes().all(|s| {
+            let scope_flags = ctx.scoping().scope_flags(s);
+            !scope_flags.is_function() || scope_flags.is_arrow()
+        }) {
             return;
         }
 
@@ -1577,6 +1581,102 @@ impl<'a> PeepholeOptimizations {
                 | "BigInt64Array"
                 | "BigUint64Array"
         )
+    }
+
+    /// This function checks if the first ancestor in the hierarchy of the given context exists
+    /// and satisfies the condition of being a parent of a statement
+    fn is_descendant_of_block(ctx: &Ctx<'a, '_>) -> bool {
+        ctx.ancestors().nth(1).is_some_and(Ancestor::is_parent_of_statement)
+    }
+
+    /// Optimizes the usage of Immediately Invoked Function Expressions (IIFEs)
+    /// within the given expression and context by performing various substitutions
+    /// to clean up and simplify the code.
+    ///
+    /// - Replaces empty IIFEs (e.g., `(() => {})()` or `(function() {})()`) with the value `undefined`.
+    /// - Simplifies single-expression non-async arrow function IIFEs (e.g., `(() => foo())()` to `foo()`).
+    /// - Converts arrow function IIFEs that return void or execute one expression
+    ///   (e.g., `(() => { foo() })()` or `(() => { return foo() })()`) into simpler expressions.
+    pub fn substitute_iife_call(e: &mut Expression<'a>, ctx: &mut Ctx<'a, '_>) {
+        let Expression::CallExpression(call_expr) = e else { return };
+
+        if !call_expr.arguments.is_empty() || !call_expr.callee.is_function() {
+            return;
+        }
+
+        let is_empty_iife = match &call_expr.callee {
+            Expression::FunctionExpression(f) => {
+                f.params.is_empty()
+                    && f.body.as_ref().is_some_and(|body| body.is_empty())
+                    // ignore async/generator if a return value is not used
+                    && ((!f.r#async && !f.generator) || Self::is_descendant_of_block(ctx))
+            }
+            Expression::ArrowFunctionExpression(f) => {
+                f.params.is_empty()
+                    && f.body.is_empty()
+                    // ignore async if a return value is not used
+                    && (!f.r#async || Self::is_descendant_of_block(ctx))
+            }
+            _ => false,
+        };
+
+        if is_empty_iife {
+            *e = ctx.ast.void_0(call_expr.span);
+            ctx.state.changed = true;
+            // Replace "(() => {})()" with "undefined"
+            // Replace "(function () => { return })()" with "undefined"
+            return;
+        }
+
+        let is_pure =
+            (call_expr.pure && ctx.annotations()) || ctx.manual_pure_functions(&call_expr.callee);
+
+        if let Expression::ArrowFunctionExpression(f) = &mut call_expr.callee
+            && !f.r#async
+            && !f.params.has_parameter()
+            && f.body.statements.len() == 1
+        {
+            if f.expression {
+                // Replace "(() => foo())()" with "foo()"
+                let expr = f.get_expression_mut().unwrap();
+                if is_pure && Self::is_descendant_of_block(ctx) {
+                    *e = ctx.ast.void_0(call_expr.span);
+                } else {
+                    *e = expr.take_in(ctx.ast);
+                }
+                ctx.state.changed = true;
+                return;
+            }
+            match &mut f.body.statements[0] {
+                Statement::ExpressionStatement(expr_stmt) => {
+                    // Replace "(() => { foo() })()" with "(foo(), undefined)"
+                    if is_pure && Self::is_descendant_of_block(ctx) {
+                        *e = ctx.ast.void_0(call_expr.span);
+                    } else {
+                        *e = ctx.ast.expression_sequence(expr_stmt.span, {
+                            let mut sequence = ctx.ast.vec();
+                            sequence.push(expr_stmt.expression.take_in(ctx.ast));
+                            sequence.push(ctx.ast.void_0(call_expr.span));
+                            sequence
+                        });
+                    }
+
+                    ctx.state.changed = true;
+                }
+                Statement::ReturnStatement(ret_stmt) => {
+                    if let Some(argument) = &mut ret_stmt.argument {
+                        // Replace "(() => { return foo() })()" with "foo()"
+                        if is_pure && Self::is_descendant_of_block(ctx) {
+                            *e = ctx.ast.void_0(call_expr.span);
+                        } else {
+                            *e = argument.take_in(ctx.ast);
+                        }
+                        ctx.state.changed = true;
+                    }
+                }
+                _ => {}
+            }
+        }
     }
 }
 
@@ -2552,6 +2652,9 @@ mod test {
 
         test_same(
             "for (var e = arguments.length, r = Array(e), a = 0; a < e; a++) r[a] = arguments[a]; console.log(r)",
+        );
+        test_same(
+            "const _ = () => { for (var e = arguments.length, r = Array(e), a = 0; a < e; a++) r[a] = arguments[a]; console.log(r) }",
         );
         test_same(
             "{ let _; for (var e = arguments.length, r = Array(e), a = 0; a < e; a++) r[a] = arguments[a]; console.log(r) }",
