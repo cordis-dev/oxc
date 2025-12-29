@@ -12,6 +12,7 @@ use oxc_parser::Parser;
 use tower_lsp_server::ls_types::{Pattern, Position, Range, ServerCapabilities, TextEdit, Uri};
 
 use crate::{
+    capabilities::Capabilities,
     formatter::{FORMAT_CONFIG_FILES, options::FormatOptions as LSPFormatOptions},
     tool::{Tool, ToolBuilder, ToolRestartChanges},
     utils::normalize_path,
@@ -53,7 +54,11 @@ impl ServerFormatterBuilder {
 }
 
 impl ToolBuilder for ServerFormatterBuilder {
-    fn server_capabilities(&self, capabilities: &mut ServerCapabilities) {
+    fn server_capabilities(
+        &self,
+        capabilities: &mut ServerCapabilities,
+        _backend_capabilities: &Capabilities,
+    ) {
         capabilities.document_formatting_provider =
             Some(tower_lsp_server::ls_types::OneOf::Left(true));
     }
@@ -110,7 +115,7 @@ impl ServerFormatterBuilder {
     }
 
     fn search_config_file(root_path: &Path, config_path: Option<&String>) -> Option<PathBuf> {
-        if let Some(config_path) = config_path {
+        if let Some(config_path) = config_path.filter(|s| !s.is_empty()) {
             let config = normalize_path(root_path.join(config_path));
             if config.try_exists().is_ok_and(|exists| exists) {
                 return Some(config);
@@ -210,7 +215,7 @@ impl Tool for ServerFormatter {
             }
         };
 
-        if let Some(config_path) = options.config_path.as_ref() {
+        if let Some(config_path) = options.config_path.as_ref().filter(|s| !s.is_empty()) {
             return vec![config_path.clone()];
         }
 
@@ -366,7 +371,7 @@ fn load_ignore_paths(cwd: &Path) -> Vec<PathBuf> {
 
 #[cfg(test)]
 mod tests_builder {
-    use crate::{ServerFormatterBuilder, ToolBuilder};
+    use crate::{ServerFormatterBuilder, ToolBuilder, capabilities::Capabilities};
 
     #[test]
     fn test_server_capabilities() {
@@ -375,7 +380,7 @@ mod tests_builder {
         let builder = ServerFormatterBuilder;
         let mut capabilities = ServerCapabilities::default();
 
-        builder.server_capabilities(&mut capabilities);
+        builder.server_capabilities(&mut capabilities, &Capabilities::default());
 
         assert_eq!(capabilities.document_formatting_provider, Some(OneOf::Left(true)));
     }
@@ -410,6 +415,20 @@ mod test_watchers {
             .get_watcher_patterns();
             assert_eq!(patterns.len(), 1);
             assert_eq!(patterns[0], "configs/formatter.json");
+        }
+
+        #[test]
+        fn test_empty_string_config_path() {
+            let patterns = Tester::new(
+                FAKE_DIR,
+                json!({
+                    "fmt.configPath": ""
+                }),
+            )
+            .get_watcher_patterns();
+            assert_eq!(patterns.len(), 2);
+            assert_eq!(patterns[0], ".oxfmtrc.json");
+            assert_eq!(patterns[1], ".oxfmtrc.jsonc");
         }
     }
 

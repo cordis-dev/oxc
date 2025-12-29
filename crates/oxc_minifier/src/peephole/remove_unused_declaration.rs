@@ -41,18 +41,18 @@ impl<'a> PeepholeOptimizations {
         if decl.kind.is_using() {
             return false;
         }
-        match &decl.id.kind {
-            BindingPatternKind::BindingIdentifier(ident) => {
+        match &decl.id {
+            BindingPattern::BindingIdentifier(ident) => {
                 if let Some(symbol_id) = ident.symbol_id.get() {
                     return ctx.scoping().symbol_is_unused(symbol_id);
                 }
                 false
             }
-            BindingPatternKind::ArrayPattern(ident) => {
+            BindingPattern::ArrayPattern(ident) => {
                 ident.is_empty()
                     && decl.init.as_ref().is_some_and(|expr| Self::is_sync_iterator_expr(expr, ctx))
             }
-            BindingPatternKind::ObjectPattern(ident) => {
+            BindingPattern::ObjectPattern(ident) => {
                 ident.is_empty()
                     && decl.init.as_ref().is_some_and(|expr| {
                         !matches!(
@@ -61,7 +61,7 @@ impl<'a> PeepholeOptimizations {
                         )
                     })
             }
-            BindingPatternKind::AssignmentPattern(_) => false,
+            BindingPattern::AssignmentPattern(_) => false,
         }
     }
 
@@ -157,7 +157,9 @@ impl<'a> PeepholeOptimizations {
     /// import 'b'
     /// ```
     pub fn remove_unused_import_specifiers(stmt: &mut Statement<'a>, ctx: &mut Ctx<'a, '_>) {
-        if ctx.state.options.unused == CompressOptionsUnused::Keep {
+        if ctx.options().treeshake.invalid_import_side_effects
+            || ctx.state.options.unused == CompressOptionsUnused::Keep
+        {
             return;
         }
 
@@ -214,7 +216,7 @@ mod test {
     use oxc_span::SourceType;
 
     use crate::{
-        CompressOptions,
+        CompressOptions, TreeShakeOptions,
         tester::{
             test_options, test_options_source_type, test_same_options,
             test_same_options_source_type,
@@ -345,7 +347,13 @@ mod test {
 
     #[test]
     fn remove_unused_import_specifiers() {
-        let options = CompressOptions::smallest();
+        let options = CompressOptions {
+            treeshake: TreeShakeOptions {
+                invalid_import_side_effects: false,
+                ..TreeShakeOptions::default()
+            },
+            ..CompressOptions::smallest()
+        };
 
         test_options("import a from 'a'", "import 'a';", &options);
         test_options("import a from 'a'; foo()", "import 'a'; foo();", &options);
@@ -414,7 +422,13 @@ mod test {
 
     #[test]
     fn remove_unused_import_source_statement() {
-        let options = CompressOptions::smallest();
+        let options = CompressOptions {
+            treeshake: TreeShakeOptions {
+                invalid_import_side_effects: false,
+                ..TreeShakeOptions::default()
+            },
+            ..CompressOptions::smallest()
+        };
 
         test_options("import source a from 'a'", "", &options);
         test_options("import source a from 'a'; if (false) { console.log(a) }", "", &options);
@@ -423,7 +437,13 @@ mod test {
 
     #[test]
     fn remove_unused_import_defer_statements() {
-        let options = CompressOptions::smallest();
+        let options = CompressOptions {
+            treeshake: TreeShakeOptions {
+                invalid_import_side_effects: false,
+                ..TreeShakeOptions::default()
+            },
+            ..CompressOptions::smallest()
+        };
 
         test_options("import defer * as a from 'a'", "", &options);
         test_options(

@@ -1,7 +1,7 @@
 use oxc_ast::{
     AstKind,
     ast::{
-        Argument, AssignmentTarget, BindingIdentifier, BindingPatternKind, BindingProperty,
+        Argument, AssignmentTarget, BindingIdentifier, BindingPattern, BindingProperty,
         CallExpression, Expression, FormalParameters, JSXAttributeItem, JSXElementName,
     },
 };
@@ -102,8 +102,8 @@ impl Rule for OnlyUsedInRecursion {
         }
 
         for (arg_index, formal_parameter) in function_parameters.items.iter().enumerate() {
-            match &formal_parameter.pattern.kind {
-                BindingPatternKind::BindingIdentifier(arg) => {
+            match &formal_parameter.pattern {
+                BindingPattern::BindingIdentifier(arg) => {
                     if is_argument_only_used_in_recursion(function_id, arg, arg_index, ctx) {
                         create_diagnostic(
                             ctx,
@@ -115,7 +115,7 @@ impl Rule for OnlyUsedInRecursion {
                         );
                     }
                 }
-                BindingPatternKind::ObjectPattern(pattern) => {
+                BindingPattern::ObjectPattern(pattern) => {
                     for property in &pattern.properties {
                         let Some(ident) = property.value.get_binding_identifier() else {
                             continue;
@@ -157,11 +157,21 @@ fn create_diagnostic(
             let mut fix = fixer.new_fix_with_capacity(
                 ctx.semantic().symbol_references(arg.symbol_id()).count() + 1,
             );
-            fix.push(Fix::delete(arg.span()));
+            // Delete the parameter, including the comma before it
+            fix.push(Fix::delete(Span::new(
+                skip_to_next_char(ctx.source_text(), arg.span().start, &Direction::Backward)
+                    .unwrap_or(arg.span().start),
+                arg.span().end,
+            )));
 
             for reference in ctx.semantic().symbol_references(arg.symbol_id()) {
                 let node = ctx.nodes().get_node(reference.node_id());
-                fix.push(Fix::delete(node.span()));
+                // Delete the argument reference, including the comma before it
+                fix.push(Fix::delete(Span::new(
+                    skip_to_next_char(ctx.source_text(), node.span().start, &Direction::Backward)
+                        .unwrap_or(node.span().start),
+                    node.span().end,
+                )));
             }
 
             // search for references to the function and remove the argument
@@ -177,13 +187,13 @@ fn create_diagnostic(
 
                     let arg_to_delete = call_expr.arguments[arg_index].span();
                     fix.push(Fix::delete(Span::new(
-                        arg_to_delete.start,
                         skip_to_next_char(
                             ctx.source_text(),
-                            arg_to_delete.end,
-                            &Direction::Forward,
+                            arg_to_delete.start,
+                            &Direction::Backward,
                         )
-                        .unwrap_or(arg_to_delete.end),
+                        .unwrap_or(arg_to_delete.start),
+                        arg_to_delete.end,
                     )));
                 }
             }
@@ -412,26 +422,32 @@ enum Direction {
 }
 
 // Skips whitespace and commas in a given direction and
-// returns the next character if found.
+// returns the byte offset of the next non-skipped character if found.
 #[expect(clippy::cast_possible_truncation)]
 fn skip_to_next_char(s: &str, start: u32, direction: &Direction) -> Option<u32> {
-    // span is a half-open interval: [start, end)
-    // so we should return in that way.
     let start = start as usize;
     match direction {
-        Direction::Forward => s
-            .char_indices()
-            .skip(start)
-            .find(|&(_, c)| !c.is_whitespace() && c != ',')
-            .map(|(i, _)| i as u32),
-
-        Direction::Backward => s
-            .char_indices()
-            .rev()
-            .skip(s.len() - start)
-            .take_while(|&(_, c)| c.is_whitespace() || c == ',')
-            .map(|(i, _)| i as u32)
-            .last(),
+        Direction::Forward => {
+            let slice = s.get(start..)?;
+            for (offset, c) in slice.char_indices() {
+                if !c.is_whitespace() && c != ',' {
+                    return Some((start + offset) as u32);
+                }
+            }
+            None
+        }
+        Direction::Backward => {
+            let slice = s.get(..start)?;
+            let mut result = None;
+            for (i, c) in slice.char_indices().rev() {
+                if c.is_whitespace() || c == ',' {
+                    result = Some(i as u32);
+                } else {
+                    break;
+                }
+            }
+            result
+        }
     }
 }
 
@@ -737,9 +753,9 @@ function writeChunks(a,callac){writeChunks(m,callac)}writeChunks(i,{})",
             }
             "#,
             r#"
-            test(foo, );
-            function test(arg0, ) {
-                return test("", );
+            test(foo);
+            function test(arg0) {
+                return test("");
             }
             "#,
         ),
@@ -829,6 +845,19 @@ function writeChunks(a,callac){writeChunks(m,callac)}writeChunks(i,{})",
             r"function ListItem({depth, ...otherProps}) {
                 return <ListItem depth={depth} {...otherProps}/>
             }
+            ",
+        ),
+        // Test that trailing commas are removed at external call sites
+        (
+            r"function recurse(used, unused) {
+                return recurse(used + 1, unused);
+            }
+            recurse(0, 'delete_me');
+            ",
+            r"function recurse(used) {
+                return recurse(used + 1);
+            }
+            recurse(0);
             ",
         ),
     ];

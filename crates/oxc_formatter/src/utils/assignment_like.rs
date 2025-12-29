@@ -172,14 +172,27 @@ impl<'a> AssignmentLike<'a, '_> {
         match self {
             AssignmentLike::VariableDeclarator(declarator) => {
                 if let Some(init) = &declarator.init {
-                    write!(f, [FormatNodeWithoutTrailingComments(&declarator.id())]);
+                    write!(
+                        f,
+                        [
+                            FormatNodeWithoutTrailingComments(&declarator.id()),
+                            declarator.type_annotation()
+                        ]
+                    );
                     format_left_trailing_comments(
                         declarator.id.span().end,
                         should_print_as_leading(init),
                         f,
                     );
                 } else {
-                    write!(f, declarator.id());
+                    write!(
+                        f,
+                        [
+                            declarator.id(),
+                            declarator.definite.then_some("!"),
+                            declarator.type_annotation()
+                        ]
+                    );
                 }
                 false
             }
@@ -215,11 +228,9 @@ impl<'a> AssignmentLike<'a, '_> {
             AssignmentLike::BindingProperty(property) => {
                 if property.shorthand {
                     // Left-hand side only. See the explanation in the `has_only_left_hand_side` method.
-                    if matches!(
-                        property.value.kind,
-                        BindingPatternKind::BindingIdentifier(_)
-                            | BindingPatternKind::AssignmentPattern(_)
-                    ) {
+                    if property.value.is_binding_identifier()
+                        || property.value.is_assignment_pattern()
+                    {
                         write!(f, property.value());
                     }
                     return false;
@@ -440,17 +451,14 @@ impl<'a> AssignmentLike<'a, '_> {
             Self::VariableDeclarator(declarator) => declarator.init.is_none(),
             Self::PropertyDefinition(property) => property.value().is_none(),
             Self::BindingProperty(property) => {
+                // Treats binding property has a left-hand side only
+                // when the value is an assignment pattern,
+                // because the `value` includes the `key` part.
+                // e.g., `{ a = 1 }` the `a` is the `key` and `a = 1` is the
+                // `value`, aka AssignmentPattern itself
                 property.shorthand
-                    && matches!(
-                        property.value.kind,
-                        BindingPatternKind::BindingIdentifier(_)
-                        // Treats binding property has a left-hand side only
-                        // when the value is an assignment pattern,
-                        // because the `value` includes the `key` part.
-                        // e.g., `{ a = 1 }` the `a` is the `key` and `a = 1` is the
-                        // `value`, aka AssignmentPattern itself
-                        | BindingPatternKind::AssignmentPattern(_)
-                    )
+                    && (property.value.is_binding_identifier()
+                        || property.value.is_assignment_pattern())
             }
             Self::ObjectProperty(property) => property.shorthand,
         }
@@ -517,7 +525,7 @@ impl<'a> AssignmentLike<'a, '_> {
             return false;
         };
 
-        let type_annotation = declarator.id.type_annotation.as_ref();
+        let type_annotation = declarator.type_annotation.as_ref();
 
         type_annotation.is_some_and(|ann| is_complex_type_annotation(ann))
             || (left_may_break
@@ -588,7 +596,7 @@ impl<'a> AssignmentLike<'a, '_> {
     fn is_complex_destructuring(&self) -> bool {
         match self {
             AssignmentLike::VariableDeclarator(variable_decorator) => {
-                let BindingPatternKind::ObjectPattern(object) = &variable_decorator.id.kind else {
+                let BindingPattern::ObjectPattern(object) = &variable_decorator.id else {
                     return false;
                 };
 
@@ -596,9 +604,10 @@ impl<'a> AssignmentLike<'a, '_> {
                     return false;
                 }
 
-                object.properties.iter().any(|property| {
-                    !property.shorthand || property.value.kind.is_assignment_pattern()
-                })
+                object
+                    .properties
+                    .iter()
+                    .any(|property| !property.shorthand || property.value.is_assignment_pattern())
             }
             AssignmentLike::AssignmentExpression(assignment) => {
                 let AssignmentTarget::ObjectAssignmentTarget(object) = &assignment.left else {
@@ -980,32 +989,49 @@ fn is_short_argument(argument: &Expression, threshold: u16, f: &Formatter) -> bo
     }
 }
 
-/// This function checks if `TSTypeArguments` is complex
-/// We need it to decide if `CallExpression` with the type arguments is breakable or not
-/// If the type arguments is complex the function call is breakable
+/// This function checks if `TSTypeArguments` is complex.
+/// We need it to decide if `CallExpression` with the type arguments is breakable or not.
+/// If the type arguments is complex the function call is breakable.
+///
+/// NOTE: This function does not follow Prettier exactly.
 /// [Prettier applies]: <https://github.com/prettier/prettier/blob/a043ac0d733c4d53f980aa73807a63fc914f23bd/src/language-js/print/assignment.js#L432>
 fn is_complex_type_arguments(type_arguments: &TSTypeParameterInstantiation) -> bool {
-    let ts_type_argument_list = &type_arguments.params;
-
-    if ts_type_argument_list.len() > 1 {
-        return true;
-    }
-
-    let is_first_argument_complex = ts_type_argument_list.first().is_some_and(|first_argument| {
+    let is_complex_ts_type = |ts_type: &TSType| {
         matches!(
-            first_argument,
-            TSType::TSUnionType(_) | TSType::TSIntersectionType(_) | TSType::TSTypeLiteral(_)
+            ts_type,
+            TSType::TSUnionType(_)
+                | TSType::TSIntersectionType(_)
+                | TSType::TSTypeLiteral(_)
+                // NOTE: Prettier does not contain `TSMappedType` in its check.
+                // But it makes sense to consider mapped types as complex,
+                // because it is the same as type literals in terms of structure.
+                | TSType::TSMappedType(_)
         )
-    });
+    };
 
-    if is_first_argument_complex {
+    if type_arguments.params.len() > 1 {
         return true;
     }
 
-    // TODO: add here will_break logic
-    // https://github.com/prettier/prettier/blob/a043ac0d733c4d53f980aa73807a63fc914f23bd/src/language-js/print/assignment.js#L454
+    type_arguments.params.first().is_some_and(|first_argument| {
+        if is_complex_ts_type(first_argument) {
+            return true;
+        }
 
-    false
+        // NOTE: Prettier checks `willBreak(print(typeArgs))` here.
+        // Our equivalent is `type_arguments.memoized().inspect(f).will_break()`,
+        // but we avoid using it because:
+        // - `inspect(f)` (= `f.intern()`) will update the comment counting state in `f`
+        // - And resulted IRs are discarded after this check
+        // So we approximate it by checking if the type arguments contain complex types.
+        if let TSType::TSTypeReference(type_ref) = first_argument
+            && let Some(type_args) = &type_ref.type_arguments
+        {
+            return is_complex_type_arguments(type_args);
+        }
+
+        false
+    })
 }
 
 /// [Prettier applies]: <https://github.com/prettier/prettier/blob/fde0b49d7866e203ca748c306808a87b7c15548f/src/language-js/print/assignment.js#L278>

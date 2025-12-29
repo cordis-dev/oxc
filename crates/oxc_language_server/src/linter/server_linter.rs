@@ -4,6 +4,7 @@ use std::sync::Arc;
 use ignore::gitignore::Gitignore;
 use log::{debug, warn};
 use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
+use tower_lsp_server::ls_types::{DiagnosticOptions, DiagnosticServerCapabilities};
 use tower_lsp_server::{
     jsonrpc::ErrorCode,
     ls_types::{
@@ -20,6 +21,7 @@ use oxc_linter::{
 
 use crate::{
     ConcurrentHashMap,
+    capabilities::Capabilities,
     linter::{
         LINT_CONFIG_FILE,
         code_actions::{
@@ -32,7 +34,7 @@ use crate::{
         isolated_lint_handler::{IsolatedLintHandler, IsolatedLintHandlerOptions},
         options::{LintOptions as LSPLintOptions, Run, UnusedDisableDirectives},
     },
-    tool::{DiagnosticResult, Tool, ToolBuilder, ToolRestartChanges, ToolShutdownChanges},
+    tool::{DiagnosticResult, Tool, ToolBuilder, ToolRestartChanges},
     utils::normalize_path,
 };
 
@@ -55,7 +57,10 @@ impl ServerLinterBuilder {
         let mut nested_ignore_patterns = Vec::new();
         let (nested_configs, mut extended_paths) =
             Self::create_nested_configs(&root_path, &options, &mut nested_ignore_patterns);
-        let config_path = options.config_path.as_ref().map_or(LINT_CONFIG_FILE, |v| v);
+        let config_path = match options.config_path.as_deref() {
+            Some("") | None => LINT_CONFIG_FILE,
+            Some(v) => v,
+        };
         let config = normalize_path(root_path.join(config_path));
         let oxlintrc = if config.try_exists().is_ok_and(|exists| exists) {
             if let Ok(oxlintrc) = Oxlintrc::from_file(&config) {
@@ -143,7 +148,11 @@ impl ServerLinterBuilder {
 }
 
 impl ToolBuilder for ServerLinterBuilder {
-    fn server_capabilities(&self, capabilities: &mut ServerCapabilities) {
+    fn server_capabilities(
+        &self,
+        capabilities: &mut ServerCapabilities,
+        backend_capabilities: &Capabilities,
+    ) {
         let mut code_action_kinds = capabilities
             .code_action_provider
             .as_ref()
@@ -200,6 +209,12 @@ impl ToolBuilder for ServerLinterBuilder {
                     .and_then(|provider| provider.work_done_progress_options.work_done_progress),
             },
         });
+
+        capabilities.diagnostic_provider = if backend_capabilities.use_push_diagnostics() {
+            None
+        } else {
+            Some(DiagnosticServerCapabilities::Options(DiagnosticOptions::default()))
+        };
     }
     fn build_boxed(&self, root_uri: &Uri, options: serde_json::Value) -> Box<dyn Tool> {
         Box::new(ServerLinterBuilder::build(root_uri, options))
@@ -308,10 +323,6 @@ impl Tool for ServerLinter {
         "linter"
     }
 
-    fn shutdown(&self) -> ToolShutdownChanges {
-        ToolShutdownChanges { uris_to_clear_diagnostics: Some(self.get_cached_uris()) }
-    }
-
     /// # Panics
     /// Panics if the root URI cannot be converted to a file path.
     fn handle_configuration_change(
@@ -371,9 +382,11 @@ impl Tool for ServerLinter {
                 LSPLintOptions::default()
             }
         };
-        let mut watchers = vec![
-            options.config_path.as_ref().unwrap_or(&"**/.oxlintrc.json".to_string()).to_owned(),
-        ];
+        let config_pattern = match options.config_path.as_deref() {
+            Some("") | None => "**/.oxlintrc.json".to_string(),
+            Some(v) => v.to_string(),
+        };
+        let mut watchers = vec![config_pattern];
 
         for path in &self.extended_paths {
             // ignore .oxlintrc.json files when using nested configs
@@ -500,9 +513,9 @@ impl Tool for ServerLinter {
     /// - If the file is not lintable or ignored, an empty vector is returned
     fn run_diagnostic(&self, uri: &Uri, content: Option<&str>) -> DiagnosticResult {
         let Some(diagnostics) = self.run_file(uri, content) else {
-            return vec![];
+            return Ok(vec![]);
         };
-        vec![(uri.clone(), diagnostics)]
+        Ok(vec![(uri.clone(), diagnostics)])
     }
 
     /// Lint a file with the current linter
@@ -510,7 +523,7 @@ impl Tool for ServerLinter {
     /// - If the linter is not set to `OnType`, an empty vector is returned
     fn run_diagnostic_on_change(&self, uri: &Uri, content: Option<&str>) -> DiagnosticResult {
         if self.run != Run::OnType {
-            return vec![];
+            return Ok(vec![]);
         }
         self.run_diagnostic(uri, content)
     }
@@ -520,7 +533,7 @@ impl Tool for ServerLinter {
     /// - If the linter is not set to `OnSave`, an empty vector is returned
     fn run_diagnostic_on_save(&self, uri: &Uri, content: Option<&str>) -> DiagnosticResult {
         if self.run != Run::OnSave {
-            return vec![];
+            return Ok(vec![]);
         }
         self.run_diagnostic(uri, content)
     }
@@ -550,10 +563,6 @@ impl ServerLinter {
             extended_paths,
             code_actions: Arc::new(ConcurrentHashMap::default()),
         }
-    }
-
-    fn get_cached_uris(&self) -> Vec<Uri> {
-        self.code_actions.pin().keys().cloned().collect()
     }
 
     fn get_code_actions_for_uri(&self, uri: &Uri) -> Option<Vec<LinterCodeAction>> {
@@ -647,6 +656,7 @@ mod tests_builder {
 
     use crate::{
         ServerLinterBuilder, ToolBuilder,
+        capabilities::Capabilities,
         linter::{code_actions::CODE_ACTION_KIND_SOURCE_FIX_ALL_OXC, commands::FIX_ALL_COMMAND_ID},
     };
 
@@ -655,7 +665,7 @@ mod tests_builder {
         let builder = ServerLinterBuilder;
         let mut capabilities = ServerCapabilities::default();
 
-        builder.server_capabilities(&mut capabilities);
+        builder.server_capabilities(&mut capabilities, &Capabilities::default());
 
         // Should set code action provider with quickfix and source fix all kinds
         match &capabilities.code_action_provider {
@@ -686,7 +696,7 @@ mod tests_builder {
             ..Default::default()
         };
 
-        builder.server_capabilities(&mut capabilities);
+        builder.server_capabilities(&mut capabilities, &Capabilities::default());
 
         match &capabilities.code_action_provider {
             Some(CodeActionProviderCapability::Options(options)) => {
@@ -713,7 +723,7 @@ mod tests_builder {
             ..Default::default()
         };
 
-        builder.server_capabilities(&mut capabilities);
+        builder.server_capabilities(&mut capabilities, &Capabilities::default());
 
         match &capabilities.code_action_provider {
             Some(CodeActionProviderCapability::Options(options)) => {
@@ -734,7 +744,7 @@ mod tests_builder {
             ..Default::default()
         };
 
-        builder.server_capabilities(&mut capabilities);
+        builder.server_capabilities(&mut capabilities, &Capabilities::default());
 
         // Should override with options
         match &capabilities.code_action_provider {
@@ -761,7 +771,7 @@ mod tests_builder {
             ..Default::default()
         };
 
-        builder.server_capabilities(&mut capabilities);
+        builder.server_capabilities(&mut capabilities, &Capabilities::default());
 
         let execute_command_provider = capabilities.execute_command_provider.as_ref().unwrap();
         assert!(execute_command_provider.commands.contains(&"existing.command".to_string()));
@@ -784,7 +794,7 @@ mod tests_builder {
             ..Default::default()
         };
 
-        builder.server_capabilities(&mut capabilities);
+        builder.server_capabilities(&mut capabilities, &Capabilities::default());
 
         let execute_command_provider = capabilities.execute_command_provider.as_ref().unwrap();
         assert!(execute_command_provider.commands.contains(&FIX_ALL_COMMAND_ID.to_string()));
@@ -802,6 +812,20 @@ mod test_watchers {
         fn test_default_options() {
             let patterns =
                 Tester::new("fixtures/linter/watchers/default", json!({})).get_watcher_patterns();
+
+            assert_eq!(patterns.len(), 1);
+            assert_eq!(patterns[0], "**/.oxlintrc.json".to_string());
+        }
+
+        #[test]
+        fn test_empty_string_config_path() {
+            let patterns = Tester::new(
+                "fixtures/linter/watchers/default",
+                json!({
+                    "configPath": ""
+                }),
+            )
+            .get_watcher_patterns();
 
             assert_eq!(patterns.len(), 1);
             assert_eq!(patterns[0], "**/.oxlintrc.json".to_string());

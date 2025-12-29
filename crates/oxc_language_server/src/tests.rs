@@ -88,9 +88,7 @@ impl Tool for FakeTool {
         root_uri: &Uri,
         options: serde_json::Value,
     ) -> ToolRestartChanges {
-        if changed_uri.as_str().ends_with("tool.config")
-            || changed_uri.as_str().ends_with("diagnostics.config")
-        {
+        if changed_uri.as_str().ends_with("tool.config") {
             return ToolRestartChanges {
                 tool: Some(FakeToolBuilder.build_boxed(root_uri, options)),
                 watch_patterns: None,
@@ -126,7 +124,7 @@ impl Tool for FakeTool {
 
     fn run_diagnostic(&self, uri: &Uri, content: Option<&str>) -> DiagnosticResult {
         if uri.as_str().ends_with("diagnostics.config") {
-            return vec![(
+            return Ok(vec![(
                 uri.clone(),
                 vec![Diagnostic {
                     message: format!(
@@ -135,9 +133,14 @@ impl Tool for FakeTool {
                     ),
                     ..Default::default()
                 }],
-            )];
+            )]);
         }
-        vec![]
+
+        if uri.as_str().ends_with("error.config") {
+            return Err("Fake diagnostic error".to_string());
+        }
+
+        Ok(Vec::new())
     }
 
     fn run_diagnostic_on_change(&self, uri: &Uri, content: Option<&str>) -> DiagnosticResult {
@@ -251,7 +254,28 @@ impl TestServer {
             }
         }
         let res = self.responses.pop_back().unwrap();
-        serde_json::from_str(&res).unwrap()
+        // If the next payload is a response (no `method`), keep it queued for recv_response
+        // and attempt to return the next available notification without looping.
+        let val: serde_json::Value = serde_json::from_str(&res).unwrap();
+        if val.get("method").is_some() {
+            serde_json::from_value(val).unwrap()
+        } else {
+            // Put back the response for recv_response to consume
+            self.responses.push_front(res);
+            // If another message is already queued, return it
+            if let Some(next) = self.responses.pop_back() {
+                return serde_json::from_str(&next).unwrap();
+            }
+            // Otherwise perform a single read to fetch the notification
+            let mut buf = vec![0; 1024];
+            let n = self.res_stream.read(&mut buf).await.unwrap();
+            let ret = String::from_utf8(buf[..n].to_vec()).unwrap();
+            for x in Self::decode(&ret) {
+                self.responses.push_front(x);
+            }
+            let res = self.responses.pop_back().unwrap();
+            serde_json::from_str(&res).unwrap()
+        }
     }
 
     /// Creates a new TestServer and performs the initialize and initialized sequence.
@@ -281,64 +305,77 @@ impl TestServer {
         assert_eq!(shutdown_result.id(), &Id::Number(id));
     }
 
-    async fn shutdown_with_watchers(&mut self, id: i64) {
-        // shutdown request
+    async fn shutdown_with_diagnostic_clear(&mut self, id: i64, uris_to_clear: Vec<Uri>) {
         self.send_request(shutdown_request(id)).await;
 
-        // watcher unregistration expected
-        acknowledge_unregistrations(self).await;
+        for uri in uris_to_clear {
+            let publish_diagnostics = self.recv_notification().await;
+            assert_eq!(publish_diagnostics.method(), "textDocument/publishDiagnostics");
+            let params: PublishDiagnosticsParams =
+                serde_json::from_value(publish_diagnostics.params().unwrap().clone()).unwrap();
+            assert_eq!(params.uri, uri);
+            assert!(params.diagnostics.is_empty());
+        }
 
-        // shutdown response
         let shutdown_result = self.recv_response().await;
-
         assert!(shutdown_result.is_ok());
         assert_eq!(shutdown_result.id(), &Id::Number(id));
     }
 }
 
-fn initialize_request_workspace_folders(
+#[derive(Default)]
+struct InitializeRequestOptions {
     workspace_configuration: bool,
     dynamic_watchers: bool,
     workspace_edit: bool,
+    pull_mode: bool,
     initialization_options: Option<Value>,
-    workspace_folders: Vec<WorkspaceFolder>,
-) -> Request {
+    workspace_folders: Option<Vec<WorkspaceFolder>>,
+    root_uri: Option<Uri>,
+}
+
+fn initialize_request_workspace_folders(options: InitializeRequestOptions) -> Request {
     let params = InitializeParams {
-        workspace_folders: Some(workspace_folders),
+        workspace_folders: options.workspace_folders,
         capabilities: ClientCapabilities {
+            text_document: Some(TextDocumentClientCapabilities {
+                diagnostic: if options.pull_mode {
+                    Some(DiagnosticClientCapabilities::default())
+                } else {
+                    None
+                },
+                ..Default::default()
+            }),
             workspace: Some(WorkspaceClientCapabilities {
-                apply_edit: Some(workspace_edit),
-                configuration: Some(workspace_configuration),
+                apply_edit: Some(options.workspace_edit),
+                configuration: Some(options.workspace_configuration),
+                diagnostics: Some(DiagnosticWorkspaceClientCapabilities {
+                    refresh_support: Some(options.pull_mode),
+                }),
                 did_change_watched_files: Some(DidChangeWatchedFilesClientCapabilities {
-                    dynamic_registration: Some(dynamic_watchers),
+                    dynamic_registration: Some(options.dynamic_watchers),
                     ..Default::default()
                 }),
                 ..Default::default()
             }),
             ..Default::default()
         },
-        initialization_options,
+        initialization_options: options.initialization_options,
         #[expect(deprecated)]
-        root_uri: Some(WORKSPACE.parse().unwrap()),
+        root_uri: options.root_uri,
         ..Default::default()
     };
 
     Request::build("initialize").params(json!(params)).id(1).finish()
 }
 
-fn initialize_request(
-    workspace_configuration: bool,
-    dynamic_watchers: bool,
-    workspace_edit: bool,
-    initialization_options: Option<Value>,
-) -> Request {
-    initialize_request_workspace_folders(
-        workspace_configuration,
-        dynamic_watchers,
-        workspace_edit,
-        initialization_options,
-        vec![WorkspaceFolder { uri: WORKSPACE.parse().unwrap(), name: "workspace".to_string() }],
-    )
+fn initialize_request(mut options: InitializeRequestOptions) -> Request {
+    options.workspace_folders = Some(vec![WorkspaceFolder {
+        uri: WORKSPACE.parse().unwrap(),
+        name: "workspace".to_string(),
+    }]);
+
+    initialize_request_workspace_folders(options)
 }
 
 fn initialized_notification() -> Request {
@@ -387,6 +424,12 @@ async fn acknowledge_unregistrations(server: &mut TestServer) {
 
     // Acknowledge the unregistration
     server.send_ack(unregister_request.id().unwrap()).await;
+}
+
+async fn acknowledge_diagnostic_refresh(server: &mut TestServer) {
+    let diagnostic_refresh_request = server.recv_notification().await;
+    assert_eq!(diagnostic_refresh_request.method(), "workspace/diagnostic/refresh");
+    server.send_ack(diagnostic_refresh_request.id().unwrap()).await;
 }
 
 async fn response_to_configuration(
@@ -481,11 +524,23 @@ fn test_configuration_request(id: i64) -> Request {
     Request::build("test/configuration").id(id).params(json!(null)).finish()
 }
 
+fn diagnostic(id: i64, uri: &str) -> Request {
+    let params = DocumentDiagnosticParams {
+        text_document: TextDocumentIdentifier { uri: uri.parse().unwrap() },
+        identifier: None,
+        previous_result_id: None,
+        work_done_progress_params: WorkDoneProgressParams::default(),
+        partial_result_params: PartialResultParams::default(),
+    };
+
+    Request::build("textDocument/diagnostic").id(id).params(json!(params)).finish()
+}
+
 #[cfg(test)]
 mod test_suite {
     use serde_json::{Value, json};
     use tower_lsp_server::{
-        jsonrpc::{Id, Response},
+        jsonrpc::{Error, ErrorCode, Id, Response},
         ls_types::{
             ApplyWorkspaceEditResponse, InitializeResult, PublishDiagnosticsParams, ServerInfo,
             WorkspaceEdit, WorkspaceFolder,
@@ -495,8 +550,9 @@ mod test_suite {
     use crate::{
         backend::Backend,
         tests::{
-            FAKE_COMMAND, FakeToolBuilder, TestServer, WORKSPACE, WORKSPACE_2,
-            acknowledge_registrations, acknowledge_unregistrations, code_action, did_change,
+            FAKE_COMMAND, FakeToolBuilder, InitializeRequestOptions, TestServer, WORKSPACE,
+            WORKSPACE_2, acknowledge_diagnostic_refresh, acknowledge_registrations,
+            acknowledge_unregistrations, code_action, diagnostic, did_change,
             did_change_configuration, did_change_watched_files, did_close, did_open, did_save,
             execute_command_request, initialize_request, initialize_request_workspace_folders,
             initialized_notification, response_to_configuration, shutdown_request,
@@ -512,7 +568,7 @@ mod test_suite {
     async fn test_basic_start_and_shutdown_flow() {
         let mut server = TestServer::new(|client| Backend::new(client, server_info(), vec![]));
         // initialize request
-        server.send_request(initialize_request(false, false, false, None)).await;
+        server.send_request(initialize_request(InitializeRequestOptions::default())).await;
         let initialize_result = server.recv_response().await;
 
         assert!(initialize_result.is_ok());
@@ -538,20 +594,23 @@ mod test_suite {
 
     #[tokio::test]
     async fn test_initialize_with_options() {
-        let init_options = json!([
-            {
-                "workspaceUri": WORKSPACE,
-                "options": {
-                    "run": true,
-                    "configPath": "./custom.json",
-                    "fmt.experimental": true
+        let init_options = InitializeRequestOptions {
+            initialization_options: Some(json!([
+                {
+                    "workspaceUri": WORKSPACE,
+                    "options": {
+                        "run": true,
+                        "configPath": "./custom.json",
+                        "fmt.experimental": true
+                    }
                 }
-            }
-        ]);
+            ])),
+            ..Default::default()
+        };
 
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![]),
-            initialize_request(false, false, false, Some(init_options.clone())),
+            initialize_request(init_options),
         )
         .await;
 
@@ -575,17 +634,21 @@ mod test_suite {
 
     #[tokio::test]
     async fn test_initialize_with_deprecated_options() {
-        let init_options = json!({
-            "settings": {
-                "run": true,
-                "configPath": "./custom.json",
-                "fmt.experimental": true
-            }
-        });
+        let init_options = InitializeRequestOptions {
+            initialization_options: Some(json!({
+                "settings": {
+                    "run": true,
+                    "configPath": "./custom.json",
+                    "fmt.experimental": true
+                }
+            })),
+            root_uri: Some(WORKSPACE.parse().unwrap()),
+            ..Default::default()
+        };
 
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![]),
-            initialize_request(false, false, false, Some(init_options)),
+            initialize_request_workspace_folders(init_options),
         )
         .await;
 
@@ -607,10 +670,43 @@ mod test_suite {
     }
 
     #[tokio::test]
+    async fn test_initialize_non_file_workspace_uri() {
+        let init_options = InitializeRequestOptions {
+            workspace_folders: Some(vec![WorkspaceFolder {
+                uri: "file://".parse().unwrap(),
+                name: "workspace".to_string(),
+            }]),
+            ..Default::default()
+        };
+
+        let mut server = TestServer::new(|client| Backend::new(client, server_info(), vec![]));
+        let initialize = initialize_request_workspace_folders(init_options);
+
+        let initialize_id = initialize.id().cloned();
+        // Send initialize request
+        server.send_request(initialize).await;
+        let initialize_response = server.recv_response().await;
+
+        assert_eq!(Some(initialize_response.id()), initialize_id.as_ref());
+        assert!(initialize_response.is_error());
+        assert_eq!(
+            *initialize_response.error().unwrap(),
+            Error {
+                code: ErrorCode::InvalidParams,
+                message: "workspace URI is not a valid file path: file://".into(),
+                data: None,
+            }
+        );
+    }
+
+    #[tokio::test]
     async fn test_workspace_configuration_on_initialized() {
+        let init_options =
+            InitializeRequestOptions { workspace_configuration: true, ..Default::default() };
+
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![]),
-            initialize_request(true, false, false, None),
+            initialize_request(init_options),
         )
         .await;
 
@@ -646,9 +742,12 @@ mod test_suite {
 
     #[tokio::test]
     async fn test_dynamic_watched_files_registration() {
+        let init_options =
+            InitializeRequestOptions { dynamic_watchers: true, ..Default::default() };
+
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, true, false, None),
+            initialize_request(init_options),
         )
         .await;
 
@@ -685,24 +784,6 @@ mod test_suite {
         // shutdown request
         server.send_request(shutdown_request(2)).await;
 
-        // client/unregisterCapability request
-        let unregister_request = server.recv_notification().await;
-        assert_eq!(unregister_request.method(), "client/unregisterCapability");
-        assert_eq!(unregister_request.id(), Some(&Id::Number(1)));
-        assert_eq!(
-            unregister_request.params(),
-            Some(&json!({
-                "unregisterations": [
-                    {
-                        "id": format!("watcher-FakeTool-{WORKSPACE}"),
-                        "method": "workspace/didChangeWatchedFiles",
-                    }
-                ]
-            }))
-        );
-        // Acknowledge the unregistration
-        server.send_ack(&Id::Number(1)).await;
-
         // shutdown response
         let shutdown_result = server.recv_response().await;
 
@@ -712,9 +793,11 @@ mod test_suite {
 
     #[tokio::test]
     async fn test_execute_workspace_command_with_apply_edit() {
+        let init_options = InitializeRequestOptions { workspace_edit: true, ..Default::default() };
+
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, false, true, None),
+            initialize_request(init_options),
         )
         .await;
 
@@ -758,7 +841,8 @@ mod test_suite {
 
     #[tokio::test]
     async fn test_initialize_with_options_and_multiple_workspace_folders() {
-        let init_options = json!([
+        let init_options = InitializeRequestOptions {
+            initialization_options: Some(json!([
             // correctly matches options to workspace folders regardless of order
             {
                 "workspaceUri": WORKSPACE_2,
@@ -776,26 +860,20 @@ mod test_suite {
                     "fmt.experimental": true
                 }
             },
-        ]);
+            ])),
+            workspace_folders: Some(vec![
+                WorkspaceFolder { uri: WORKSPACE.parse().unwrap(), name: "workspace".to_string() },
+                WorkspaceFolder {
+                    uri: WORKSPACE_2.parse().unwrap(),
+                    name: "workspace_2".to_string(),
+                },
+            ]),
+            ..Default::default()
+        };
 
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![]),
-            initialize_request_workspace_folders(
-                false,
-                false,
-                false,
-                Some(init_options.clone()),
-                vec![
-                    WorkspaceFolder {
-                        uri: WORKSPACE.parse().unwrap(),
-                        name: "workspace".to_string(),
-                    },
-                    WorkspaceFolder {
-                        uri: WORKSPACE_2.parse().unwrap(),
-                        name: "workspace_2".to_string(),
-                    },
-                ],
-            ),
+            initialize_request_workspace_folders(init_options),
         )
         .await;
 
@@ -828,7 +906,7 @@ mod test_suite {
     async fn test_execute_workspace_command_with_no_edit() {
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, false, false, None),
+            initialize_request(InitializeRequestOptions::default()),
         )
         .await;
 
@@ -850,7 +928,7 @@ mod test_suite {
     async fn test_execute_workspace_command_with_invalid_command() {
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, false, false, None),
+            initialize_request(InitializeRequestOptions::default()),
         )
         .await;
 
@@ -880,7 +958,7 @@ mod test_suite {
 
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, false, false, None),
+            initialize_request(InitializeRequestOptions::default()),
         )
         .await;
         server.send_request(folders_changed_notification).await;
@@ -900,9 +978,12 @@ mod test_suite {
             vec![],
         );
 
+        let init_options =
+            InitializeRequestOptions { dynamic_watchers: true, ..Default::default() };
+
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, true, false, None),
+            initialize_request(init_options),
         )
         .await;
         acknowledge_registrations(&mut server).await;
@@ -910,7 +991,7 @@ mod test_suite {
 
         // new watcher registration expected
         acknowledge_registrations(&mut server).await;
-        server.shutdown_with_watchers(4).await;
+        server.shutdown(4).await;
     }
 
     #[tokio::test]
@@ -924,9 +1005,12 @@ mod test_suite {
             vec![],
         );
 
+        let init_options =
+            InitializeRequestOptions { workspace_configuration: true, ..Default::default() };
+
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(true, false, false, None),
+            initialize_request(init_options),
         )
         .await;
         // workspace configuration request expected, one for initial workspace
@@ -953,7 +1037,7 @@ mod test_suite {
 
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, false, false, None),
+            initialize_request(InitializeRequestOptions::default()),
         )
         .await;
         server.send_request(folders_changed_notification).await;
@@ -973,9 +1057,12 @@ mod test_suite {
             }],
         );
 
+        let init_options =
+            InitializeRequestOptions { dynamic_watchers: true, ..Default::default() };
+
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, true, false, None),
+            initialize_request(init_options),
         )
         .await;
         acknowledge_registrations(&mut server).await;
@@ -989,9 +1076,12 @@ mod test_suite {
 
     #[tokio::test]
     async fn test_watched_file_changed_unknown() {
+        let init_options =
+            InitializeRequestOptions { dynamic_watchers: true, ..Default::default() };
+
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, true, false, None),
+            initialize_request(init_options),
         )
         .await;
         acknowledge_registrations(&mut server).await;
@@ -1004,14 +1094,16 @@ mod test_suite {
         // Since FakeToolBuilder does not know about "unknown.file", no diagnostics or registrations are expected
         // Thus, no further requests or responses should occur
 
-        server.shutdown_with_watchers(3).await;
+        server.shutdown(3).await;
     }
 
     #[tokio::test]
     async fn test_watched_file_changed_new_watchers() {
+        let init_options =
+            InitializeRequestOptions { dynamic_watchers: true, ..Default::default() };
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, true, false, None),
+            initialize_request(init_options),
         )
         .await;
         acknowledge_registrations(&mut server).await;
@@ -1026,14 +1118,84 @@ mod test_suite {
         // New watcher registration expected
         acknowledge_registrations(&mut server).await;
 
-        server.shutdown_with_watchers(3).await;
+        server.shutdown(3).await;
+    }
+
+    #[tokio::test]
+    async fn test_watched_file_changed_revalidate_diagnostics() {
+        let init_options =
+            InitializeRequestOptions { dynamic_watchers: true, ..Default::default() };
+        let mut server = TestServer::new_initialized(
+            |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
+            initialize_request(init_options),
+        )
+        .await;
+        acknowledge_registrations(&mut server).await;
+
+        let uri = format!("{WORKSPACE}/diagnostics.config");
+        let content = "some text";
+        server.send_request(did_open(&uri, content)).await;
+        let diagnostic_response = server.recv_notification().await;
+        assert_eq!(diagnostic_response.method(), "textDocument/publishDiagnostics");
+
+        // Simulate a watched file change notification for "tool.config"
+        let file_change_notification =
+            did_change_watched_files(format!("{WORKSPACE}/tool.config").as_str());
+        server.send_request(file_change_notification).await;
+
+        // expecting diagnostics to be re-validated
+        let diagnostic_response = server.recv_notification().await;
+        assert_eq!(diagnostic_response.method(), "textDocument/publishDiagnostics");
+        let params: PublishDiagnosticsParams =
+            serde_json::from_value(diagnostic_response.params().unwrap().clone()).unwrap();
+        assert_eq!(params.uri, uri.parse().unwrap());
+        assert_eq!(params.diagnostics.len(), 1);
+        assert_eq!(
+            params.diagnostics[0].message,
+            format!("Fake diagnostic for content: {content}")
+        );
+
+        server.shutdown_with_diagnostic_clear(3, vec![uri.parse().unwrap()]).await;
+    }
+
+    #[tokio::test]
+    async fn test_watched_file_changed_revalidate_diagnostics_pull_mode() {
+        let init_options = InitializeRequestOptions {
+            dynamic_watchers: true,
+            pull_mode: true,
+            ..Default::default()
+        };
+
+        let mut server = TestServer::new_initialized(
+            |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
+            initialize_request(init_options),
+        )
+        .await;
+        acknowledge_registrations(&mut server).await;
+
+        let uri = format!("{WORKSPACE}/diagnostics.config");
+        let content = "some text";
+        server.send_request(did_open(&uri, content)).await;
+
+        // Simulate a watched file change notification for "tool.config"
+        let file_change_notification =
+            did_change_watched_files(format!("{WORKSPACE}/tool.config").as_str());
+        server.send_request(file_change_notification).await;
+
+        // Acknowledge the refresh request
+        acknowledge_diagnostic_refresh(&mut server).await;
+
+        server.shutdown(3).await;
     }
 
     #[tokio::test]
     async fn test_did_change_configuration_no_changes() {
+        let init_options =
+            InitializeRequestOptions { dynamic_watchers: true, ..Default::default() };
+
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, true, false, None),
+            initialize_request(init_options),
         )
         .await;
         acknowledge_registrations(&mut server).await;
@@ -1044,14 +1206,17 @@ mod test_suite {
 
         // When `null` is sent and the client does not support workspace configuration requests,
         // no configuration changes occur, so no diagnostics or registrations are expected.
-        server.shutdown_with_watchers(3).await;
+        server.shutdown(3).await;
     }
 
     #[tokio::test]
     async fn test_did_change_configuration_config_passed_new_watchers() {
+        let init_options =
+            InitializeRequestOptions { dynamic_watchers: true, ..Default::default() };
+
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, true, false, None),
+            initialize_request(init_options),
         )
         .await;
         acknowledge_registrations(&mut server).await;
@@ -1070,14 +1235,20 @@ mod test_suite {
         // New watcher registration expected
         acknowledge_registrations(&mut server).await;
 
-        server.shutdown_with_watchers(3).await;
+        server.shutdown(3).await;
     }
 
     #[tokio::test]
     async fn test_did_change_configuration_config_requested_new_watchers() {
+        let init_options = InitializeRequestOptions {
+            dynamic_watchers: true,
+            workspace_configuration: true,
+            ..Default::default()
+        };
+
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(true, true, false, None),
+            initialize_request(init_options),
         )
         .await;
         response_to_configuration(&mut server, vec![json!(null)]).await;
@@ -1095,14 +1266,79 @@ mod test_suite {
         // New watcher registration expected
         acknowledge_registrations(&mut server).await;
 
-        server.shutdown_with_watchers(3).await;
+        server.shutdown(3).await;
+    }
+
+    #[tokio::test]
+    async fn test_did_change_configuration_config_revalidate_diagnostics() {
+        let mut server = TestServer::new_initialized(
+            |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
+            initialize_request(InitializeRequestOptions::default()),
+        )
+        .await;
+        let uri = format!("{WORKSPACE}/diagnostics.config");
+        let content = "some text";
+        server.send_request(did_open(&uri, content)).await;
+        let diagnostic_response = server.recv_notification().await;
+        assert_eq!(diagnostic_response.method(), "textDocument/publishDiagnostics");
+
+        // Simulate a configuration change that affects diagnostics
+        let config_change_notification = did_change_configuration(Some(json!([
+            {
+                "workspaceUri": WORKSPACE,
+                "options": 3
+            }
+        ])));
+        server.send_request(config_change_notification).await;
+
+        // expecting diagnostics to be re-validated
+        let diagnostic_response = server.recv_notification().await;
+        assert_eq!(diagnostic_response.method(), "textDocument/publishDiagnostics");
+        let params: PublishDiagnosticsParams =
+            serde_json::from_value(diagnostic_response.params().unwrap().clone()).unwrap();
+        assert_eq!(params.uri, uri.parse().unwrap());
+        assert_eq!(params.diagnostics.len(), 1);
+        assert_eq!(
+            params.diagnostics[0].message,
+            format!("Fake diagnostic for content: {content}")
+        );
+
+        server.shutdown_with_diagnostic_clear(3, vec![uri.parse().unwrap()]).await;
+    }
+
+    #[tokio::test]
+    async fn test_did_change_configuration_config_revalidate_diagnostics_pull_mode() {
+        let init_options = InitializeRequestOptions { pull_mode: true, ..Default::default() };
+
+        let mut server = TestServer::new_initialized(
+            |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
+            initialize_request(init_options),
+        )
+        .await;
+        let uri = format!("{WORKSPACE}/diagnostics.config");
+        let content = "some text";
+        server.send_request(did_open(&uri, content)).await;
+
+        // Simulate a configuration change that affects diagnostics
+        let config_change_notification = did_change_configuration(Some(json!([
+            {
+                "workspaceUri": WORKSPACE,
+                "options": 3
+            }
+        ])));
+        server.send_request(config_change_notification).await;
+
+        // Acknowledge the refresh request
+        acknowledge_diagnostic_refresh(&mut server).await;
+
+        server.shutdown(3).await;
     }
 
     #[tokio::test]
     async fn test_file_notifications() {
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, false, false, None),
+            initialize_request(InitializeRequestOptions::default()),
         )
         .await;
 
@@ -1119,7 +1355,7 @@ mod test_suite {
     async fn test_code_action_no_actions() {
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, false, false, None),
+            initialize_request(InitializeRequestOptions::default()),
         )
         .await;
 
@@ -1141,7 +1377,7 @@ mod test_suite {
     async fn test_code_actions_with_actions() {
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, false, false, None),
+            initialize_request(InitializeRequestOptions::default()),
         )
         .await;
 
@@ -1166,7 +1402,7 @@ mod test_suite {
     async fn test_diagnostic_on_open() {
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, false, false, None),
+            initialize_request(InitializeRequestOptions::default()),
         )
         .await;
 
@@ -1185,14 +1421,14 @@ mod test_suite {
             format!("Fake diagnostic for content: {content}")
         );
 
-        server.shutdown(4).await;
+        server.shutdown_with_diagnostic_clear(4, vec![file.parse().unwrap()]).await;
     }
 
     #[tokio::test]
     async fn test_diagnostic_on_change() {
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, false, false, None),
+            initialize_request(InitializeRequestOptions::default()),
         )
         .await;
 
@@ -1215,14 +1451,14 @@ mod test_suite {
             format!("Fake diagnostic for content: {content}")
         );
 
-        server.shutdown(4).await;
+        server.shutdown_with_diagnostic_clear(4, vec![file.parse().unwrap()]).await;
     }
 
     #[tokio::test]
     async fn test_diagnostic_on_save() {
         let mut server = TestServer::new_initialized(
             |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
-            initialize_request(false, false, false, None),
+            initialize_request(InitializeRequestOptions::default()),
         )
         .await;
 
@@ -1247,6 +1483,57 @@ mod test_suite {
         assert_eq!(params.diagnostics.len(), 1);
         assert_eq!(
             params.diagnostics[0].message,
+            format!("Fake diagnostic for content: {content}")
+        );
+
+        server.shutdown_with_diagnostic_clear(4, vec![file.parse().unwrap()]).await;
+    }
+
+    #[tokio::test]
+    async fn test_no_diagnostics_on_pull_mode_on_save() {
+        let init_options = InitializeRequestOptions { pull_mode: true, ..Default::default() };
+
+        let mut server = TestServer::new_initialized(
+            |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
+            initialize_request(init_options),
+        )
+        .await;
+
+        let file = format!("{WORKSPACE}/diagnostics.config");
+        let content = "new text";
+        server.send_request(did_open(&file, "old text")).await;
+        server.send_request(did_change(&file, content)).await;
+        server.send_request(did_save(&file, content)).await;
+        server.shutdown(4).await;
+    }
+
+    #[tokio::test]
+    async fn test_diagnostics_pull_mode() {
+        let init_options = InitializeRequestOptions { pull_mode: true, ..Default::default() };
+
+        let mut server = TestServer::new_initialized(
+            |client| Backend::new(client, server_info(), vec![Box::new(FakeToolBuilder)]),
+            initialize_request(init_options),
+        )
+        .await;
+
+        let file = format!("{WORKSPACE}/diagnostics.config");
+        let content = "pull mode text";
+        server.send_request(did_open(&file, content)).await;
+
+        server.send_request(diagnostic(3, &file)).await;
+
+        let diagnostic_response = server.recv_response().await;
+        assert!(diagnostic_response.is_ok());
+        assert_eq!(diagnostic_response.id(), &Id::Number(3));
+
+        let report: serde_json::Value =
+            serde_json::from_value(diagnostic_response.result().unwrap().clone()).unwrap();
+
+        assert_eq!(report["kind"], "full");
+        assert_eq!(report["items"].as_array().unwrap().len(), 1);
+        assert_eq!(
+            report["items"][0]["message"],
             format!("Fake diagnostic for content: {content}")
         );
 

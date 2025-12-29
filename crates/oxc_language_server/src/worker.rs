@@ -1,5 +1,5 @@
 use log::debug;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use serde_json::json;
 use tokio::sync::{Mutex, RwLock};
 use tower_lsp_server::{
@@ -28,14 +28,25 @@ pub struct WorkspaceWorker {
     // Initialized options from the client
     // If None, the worker has not been initialized yet
     pub(crate) options: Mutex<Option<serde_json::Value>>,
+
+    // Whether the client is in diagnostic pull mode
+    diagnostic_pull_mode: bool,
+    // Keep track of published diagnostics to clear them on shutdown (only in push mode)
+    published_diagnostics: Mutex<FxHashSet<Uri>>,
 }
 
 impl WorkspaceWorker {
     /// Create a new workspace worker.
     /// This will not start any programs, use [`start_worker`](Self::start_worker) for that.
-    /// Depending on the client, we need to request the workspace configuration in `initialized.
-    pub fn new(root_uri: Uri) -> Self {
-        Self { root_uri, tools: RwLock::new(vec![]), options: Mutex::new(None) }
+    /// Depending on the client, we need to request the workspace configuration in `initialized` request.
+    pub fn new(root_uri: Uri, diagnostic_pull_mode: bool) -> Self {
+        Self {
+            root_uri,
+            tools: RwLock::new(vec![]),
+            options: Mutex::new(None),
+            diagnostic_pull_mode,
+            published_diagnostics: Mutex::new(FxHashSet::default()),
+        }
     }
 
     /// Get the root URI of the worker
@@ -107,7 +118,7 @@ impl WorkspaceWorker {
         uri: &Uri,
         content: Option<&str>,
         run: F,
-    ) -> Vec<(Uri, Vec<Diagnostic>)>
+    ) -> Result<Vec<(Uri, Vec<Diagnostic>)>, String>
     where
         F: Fn(&Box<dyn Tool>, &Uri, Option<&str>) -> DiagnosticResult,
     {
@@ -116,16 +127,35 @@ impl WorkspaceWorker {
         for tool in self.tools.read().await.iter() {
             let tool_diagnostics = run(tool, uri, content);
 
-            for (entry_uri, mut diags) in tool_diagnostics {
-                aggregated.entry(entry_uri).or_default().append(&mut diags);
+            match tool_diagnostics {
+                Ok(diags) => {
+                    for (entry_uri, mut diags) in diags {
+                        aggregated.entry(entry_uri).or_default().append(&mut diags);
+                    }
+                }
+                Err(err) => {
+                    return Err(err);
+                }
             }
+        }
+
+        // In push mode, keep track of published diagnostics to clear them on shutdown
+        if !self.diagnostic_pull_mode {
+            let new_published_uris: FxHashSet<Uri> = aggregated.keys().cloned().collect();
+            self.published_diagnostics.lock().await.extend(new_published_uris);
+        }
+
+        // In push mode, keep track of published diagnostics to clear them on shutdown
+        if !self.diagnostic_pull_mode {
+            let new_published_uris: FxHashSet<Uri> = aggregated.keys().cloned().collect();
+            self.published_diagnostics.lock().await.extend(new_published_uris);
         }
 
         let mut result = Vec::with_capacity(aggregated.len());
         for (uri, diags) in aggregated {
             result.push((uri, diags));
         }
-        result
+        Ok(result)
     }
 
     /// Run different tools to collect diagnostics.
@@ -133,7 +163,7 @@ impl WorkspaceWorker {
         &self,
         uri: &Uri,
         content: Option<&str>,
-    ) -> Vec<(Uri, Vec<Diagnostic>)> {
+    ) -> Result<Vec<(Uri, Vec<Diagnostic>)>, String> {
         self.collect_diagnostics_with(uri, content, |tool, uri, content| {
             tool.run_diagnostic(uri, content)
         })
@@ -145,7 +175,7 @@ impl WorkspaceWorker {
         &self,
         uri: &Uri,
         content: Option<&str>,
-    ) -> Vec<(Uri, Vec<Diagnostic>)> {
+    ) -> Result<Vec<(Uri, Vec<Diagnostic>)>, String> {
         self.collect_diagnostics_with(uri, content, |tool, uri, content| {
             tool.run_diagnostic_on_change(uri, content)
         })
@@ -157,7 +187,7 @@ impl WorkspaceWorker {
         &self,
         uri: &Uri,
         content: Option<&str>,
-    ) -> Vec<(Uri, Vec<Diagnostic>)> {
+    ) -> Result<Vec<(Uri, Vec<Diagnostic>)>, String> {
         self.collect_diagnostics_with(uri, content, |tool, uri, content| {
             tool.run_diagnostic_on_save(uri, content)
         })
@@ -186,13 +216,11 @@ impl WorkspaceWorker {
         // Watchers that need to be unregistered
         Vec<Unregistration>,
     ) {
-        let mut uris_to_clear_diagnostics = Vec::new();
+        let uris_to_clear_diagnostics =
+            self.published_diagnostics.lock().await.drain().collect::<Vec<Uri>>();
         let mut watchers_to_unregister = Vec::new();
         for tool in self.tools.read().await.iter() {
-            let shutdown_changes = tool.shutdown();
-            if let Some(uris) = shutdown_changes.uris_to_clear_diagnostics {
-                uris_to_clear_diagnostics.extend(uris);
-            }
+            tool.shutdown();
             watchers_to_unregister
                 .push(unregistration_tool_watcher_id(tool.name(), &self.root_uri));
         }
@@ -226,7 +254,8 @@ impl WorkspaceWorker {
     pub async fn did_change_watched_files(
         &self,
         file_event: &FileEvent,
-        file_system: &LSPFileSystem,
+        needs_diagnostic_refresh: &mut bool,
+        file_system: Option<&LSPFileSystem>,
     ) -> (
         // Diagnostic reports that need to be revalidated
         Option<Vec<(Uri, Vec<Diagnostic>)>>,
@@ -241,7 +270,7 @@ impl WorkspaceWorker {
             options_guard.clone().unwrap_or_default()
         };
 
-        self.handle_tool_changes(file_system, |tool| {
+        self.handle_tool_changes(file_system, needs_diagnostic_refresh, |tool| {
             tool.handle_watched_file_change(&file_event.uri, &self.root_uri, options.clone())
         })
         .await
@@ -254,7 +283,8 @@ impl WorkspaceWorker {
     pub async fn did_change_configuration(
         &self,
         changed_options_json: serde_json::Value,
-        file_system: &LSPFileSystem,
+        needs_diagnostic_refresh: &mut bool,
+        file_system: Option<&LSPFileSystem>,
     ) -> (
         // Diagnostic reports that need to be revalidated
         Option<Vec<(Uri, Vec<Diagnostic>)>>,
@@ -277,7 +307,7 @@ impl WorkspaceWorker {
         );
 
         let result = self
-            .handle_tool_changes(file_system, |tool| {
+            .handle_tool_changes(file_system, needs_diagnostic_refresh, |tool| {
                 tool.handle_configuration_change(
                     &self.root_uri,
                     &old_options,
@@ -298,7 +328,8 @@ impl WorkspaceWorker {
     /// diagnostics updates, watcher registrations/unregistrations, and tool replacement
     async fn handle_tool_changes<F>(
         &self,
-        file_system: &LSPFileSystem,
+        file_system: Option<&LSPFileSystem>,
+        needs_diagnostic_refresh: &mut bool,
         change_handler: F,
     ) -> (Option<Vec<(Uri, Vec<Diagnostic>)>>, Vec<Registration>, Vec<Unregistration>)
     where
@@ -323,9 +354,20 @@ impl WorkspaceWorker {
             }
             if let Some(replaced_tool) = change.tool {
                 *tool = replaced_tool;
+                *needs_diagnostic_refresh = true;
+
+                let Some(file_system) = file_system else {
+                    continue;
+                };
 
                 for uri in file_system.keys() {
-                    let mut reports = tool.run_diagnostic(&uri, file_system.get(&uri).as_deref());
+                    let Ok(mut reports) =
+                        tool.run_diagnostic(&uri, file_system.get(&uri).as_deref())
+                    else {
+                        // If diagnostics could not be run, skip this URI, but continue with others
+                        // TODO: Should we aggregate errors instead? One by one, or all together?
+                        continue;
+                    };
                     if !reports.is_empty() {
                         if let Some(existing_diagnostics) = &mut diagnostics {
                             existing_diagnostics.append(&mut reports);
@@ -402,14 +444,14 @@ mod tests {
 
     #[test]
     fn test_get_root_uri() {
-        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap());
+        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap(), false);
 
         assert_eq!(worker.get_root_uri(), &Uri::from_str("file:///root/").unwrap());
     }
 
     #[test]
     fn test_is_responsible() {
-        let worker = WorkspaceWorker::new(Uri::from_str("file:///path/to/root").unwrap());
+        let worker = WorkspaceWorker::new(Uri::from_str("file:///path/to/root").unwrap(), false);
 
         assert!(
             worker.is_responsible_for_uri(&Uri::from_str("file:///path/to/root/file.js").unwrap())
@@ -425,7 +467,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_needs_init_options() {
-        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap());
+        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap(), false);
         assert!(worker.needs_init_options().await);
         worker.start_worker(serde_json::Value::Null, &[]).await;
         assert!(!worker.needs_init_options().await);
@@ -434,7 +476,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_watchers() {
         // with one watcher
-        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap());
+        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap(), false);
         let tools: Vec<Box<dyn ToolBuilder>> = vec![Box::new(FakeToolBuilder)];
         worker.start_worker(serde_json::Value::Null, &tools).await;
         let registrations = worker.init_watchers().await;
@@ -442,7 +484,8 @@ mod tests {
         assert_eq!(registrations[0].id, "watcher-FakeTool-file:///root/");
 
         // with no watchers
-        let worker_no_watchers = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap());
+        let worker_no_watchers =
+            WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap(), false);
         let tools_no_watchers: Vec<Box<dyn ToolBuilder>> = vec![Box::new(FakeToolBuilder)];
         worker_no_watchers
             .start_worker(serde_json::json!({"some_option": true}), &tools_no_watchers)
@@ -453,7 +496,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_execute_command() {
-        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap());
+        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap(), false);
         let tools: Vec<Box<dyn ToolBuilder>> = vec![Box::new(FakeToolBuilder)];
         worker.start_worker(serde_json::Value::Null, &tools).await;
 
@@ -475,7 +518,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_watched_files_change_notification() {
-        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap());
+        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap(), false);
         let tools: Vec<Box<dyn ToolBuilder>> = vec![Box::new(FakeToolBuilder)];
         worker.start_worker(serde_json::Value::Null, &tools).await;
 
@@ -484,6 +527,7 @@ mod tests {
             Uri::from_str("file:///root/diagnostics.config").unwrap(),
             "hello world".to_string(),
         );
+        let mut needs_diagnostic_refresh = false;
 
         let (diagnostics, registrations, unregistrations) = worker
             .did_change_watched_files(
@@ -491,7 +535,8 @@ mod tests {
                     uri: Uri::from_str("file:///root/unknown.file").unwrap(),
                     typ: FileChangeType::CHANGED,
                 },
-                &fs,
+                &mut needs_diagnostic_refresh,
+                Some(&fs),
             )
             .await;
 
@@ -499,6 +544,7 @@ mod tests {
         assert!(diagnostics.is_none());
         assert_eq!(registrations.len(), 0); // No new registrations expected
         assert_eq!(unregistrations.len(), 0); // No unregistrations expected
+        assert!(!needs_diagnostic_refresh); // No need to refresh diagnostics
 
         let (diagnostics, registrations, unregistrations) = worker
             .did_change_watched_files(
@@ -506,7 +552,8 @@ mod tests {
                     uri: Uri::from_str("file:///root/watcher.config").unwrap(),
                     typ: FileChangeType::CHANGED,
                 },
-                &fs,
+                &mut needs_diagnostic_refresh,
+                Some(&fs),
             )
             .await;
 
@@ -516,28 +563,48 @@ mod tests {
         assert_eq!(unregistrations[0].id, "watcher-FakeTool-file:///root/");
         assert_eq!(registrations.len(), 1); // One new registration expected
         assert_eq!(registrations[0].id, "watcher-FakeTool-file:///root/");
+        assert!(!needs_diagnostic_refresh); // No need to refresh diagnostics
 
         let (diagnostics, registrations, unregistrations) = worker
             .did_change_watched_files(
                 &FileEvent {
-                    uri: Uri::from_str("file:///root/diagnostics.config").unwrap(),
+                    uri: Uri::from_str("file:///root/tool.config").unwrap(),
                     typ: FileChangeType::CHANGED,
                 },
-                &fs,
+                &mut needs_diagnostic_refresh,
+                Some(&fs),
             )
             .await;
-        // Since FakeToolBuilder knows about "diagnostics.config", diagnostics are expected
+
+        // Because we passed a file system that knows about "diagnostics.config", diagnostics are expected
         assert!(diagnostics.is_some());
         assert_eq!(diagnostics.unwrap().len(), 1); // One diagnostic report expected
         assert_eq!(registrations.len(), 0); // No new registrations expected
         assert_eq!(unregistrations.len(), 0); // No unregistrations expected
+        assert!(needs_diagnostic_refresh); // Need to refresh diagnostics
 
-        // TODO: add test for tool replacement
+        needs_diagnostic_refresh = false;
+        let (diagnostics, registrations, unregistrations) = worker
+            .did_change_watched_files(
+                &FileEvent {
+                    uri: Uri::from_str("file:///root/tool.config").unwrap(),
+                    typ: FileChangeType::CHANGED,
+                },
+                &mut needs_diagnostic_refresh,
+                None,
+            )
+            .await;
+
+        // No file system passed, so no diagnostics expected
+        assert!(diagnostics.is_none());
+        assert_eq!(registrations.len(), 0); // No new registrations expected
+        assert_eq!(unregistrations.len(), 0); // No unregistrations expected
+        assert!(needs_diagnostic_refresh); // Need to refresh diagnostics
     }
 
     #[tokio::test]
     async fn test_did_change_configuration() {
-        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap());
+        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap(), false);
         worker
             .start_worker(serde_json::json!({"some_option": true}), &[Box::new(FakeToolBuilder)])
             .await;
@@ -547,17 +614,29 @@ mod tests {
             Uri::from_str("file:///root/diagnostics.config").unwrap(),
             "hello world".to_string(),
         );
+        let mut needs_diagnostic_refresh = false;
 
-        let (diagnostics, registrations, unregistrations) =
-            worker.did_change_configuration(serde_json::json!({"some_option": false}), &fs).await;
+        let (diagnostics, registrations, unregistrations) = worker
+            .did_change_configuration(
+                serde_json::json!({"some_option": false}),
+                &mut needs_diagnostic_refresh,
+                Some(&fs),
+            )
+            .await;
 
         // Since FakeToolBuilder does not change anything based on configuration, no diagnostics or registrations are expected
         assert!(diagnostics.is_none());
         assert_eq!(registrations.len(), 0); // No new registrations expected
         assert_eq!(unregistrations.len(), 0); // No unregistrations expected
+        assert!(!needs_diagnostic_refresh); // No need to refresh diagnostics
 
-        let (diagnostics, registrations, unregistrations) =
-            worker.did_change_configuration(serde_json::json!(2), &fs).await;
+        let (diagnostics, registrations, unregistrations) = worker
+            .did_change_configuration(
+                serde_json::json!(2),
+                &mut needs_diagnostic_refresh,
+                Some(&fs),
+            )
+            .await;
 
         // Since FakeToolBuilder changes watcher patterns based on configuration, registrations are expected
         assert!(diagnostics.is_none());
@@ -565,22 +644,27 @@ mod tests {
         assert_eq!(unregistrations[0].id, "watcher-FakeTool-file:///root/");
         assert_eq!(registrations.len(), 1); // One new registration expected
         assert_eq!(registrations[0].id, "watcher-FakeTool-file:///root/");
+        assert!(!needs_diagnostic_refresh); // No need to refresh diagnostics
 
-        let (diagnostics, registrations, unregistrations) =
-            worker.did_change_configuration(serde_json::json!(3), &fs).await;
+        let (diagnostics, registrations, unregistrations) = worker
+            .did_change_configuration(
+                serde_json::json!(3),
+                &mut needs_diagnostic_refresh,
+                Some(&fs),
+            )
+            .await;
 
         // Since FakeToolBuilder changes diagnostics based on configuration, diagnostics are expected
         assert!(diagnostics.is_some());
         assert_eq!(diagnostics.unwrap().len(), 1); // One diagnostic report expected
         assert_eq!(registrations.len(), 0); // No new registrations expected
         assert_eq!(unregistrations.len(), 0); // No unregistrations expected
-
-        // TODO: add test for tool replacement
+        assert!(needs_diagnostic_refresh); // Need to refresh diagnostics
     }
 
     #[tokio::test]
     async fn test_code_action_collection() {
-        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap());
+        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap(), false);
         let tools: Vec<Box<dyn ToolBuilder>> = vec![Box::new(FakeToolBuilder)];
         worker.start_worker(serde_json::Value::Null, &tools).await;
 
@@ -612,47 +696,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_diagnostic() {
-        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap());
+        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap(), false);
         let tools: Vec<Box<dyn ToolBuilder>> = vec![Box::new(FakeToolBuilder)];
         let uri = Uri::from_str("file:///root/diagnostics.config").unwrap();
 
         worker.start_worker(serde_json::Value::Null, &tools).await;
 
-        let diagnostics_no_content = worker.run_diagnostic(&uri, None).await;
-
-        assert_eq!(diagnostics_no_content.len(), 1);
-        assert_eq!(diagnostics_no_content[0].0, uri);
-        assert_eq!(diagnostics_no_content[0].1.len(), 1);
-        assert_eq!(
-            diagnostics_no_content[0].1[0].message,
-            "Fake diagnostic for content: <no content>"
-        );
-
-        let diagnostics_with_content = worker.run_diagnostic(&uri, Some("helloworld")).await;
-
-        assert_eq!(diagnostics_with_content.len(), 1);
-        assert_eq!(diagnostics_with_content[0].0, uri);
-        assert_eq!(diagnostics_with_content[0].1.len(), 1);
-        assert_eq!(
-            diagnostics_with_content[0].1[0].message,
-            "Fake diagnostic for content: helloworld"
-        );
-
-        let no_diagnostics =
-            worker.run_diagnostic(&Uri::from_str("file:///root/unknown.file").unwrap(), None).await;
-
-        assert!(no_diagnostics.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_run_diagnostic_on_change() {
-        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap());
-        let tools: Vec<Box<dyn ToolBuilder>> = vec![Box::new(FakeToolBuilder)];
-        let uri = Uri::from_str("file:///root/diagnostics.config").unwrap();
-
-        worker.start_worker(serde_json::Value::Null, &tools).await;
-
-        let diagnostics_no_content = worker.run_diagnostic_on_change(&uri, None).await;
+        let diagnostics_no_content = worker.run_diagnostic(&uri, None).await.unwrap();
 
         assert_eq!(diagnostics_no_content.len(), 1);
         assert_eq!(diagnostics_no_content[0].0, uri);
@@ -663,7 +713,51 @@ mod tests {
         );
 
         let diagnostics_with_content =
-            worker.run_diagnostic_on_change(&uri, Some("helloworld")).await;
+            worker.run_diagnostic(&uri, Some("helloworld")).await.unwrap();
+
+        assert_eq!(diagnostics_with_content.len(), 1);
+        assert_eq!(diagnostics_with_content[0].0, uri);
+        assert_eq!(diagnostics_with_content[0].1.len(), 1);
+        assert_eq!(
+            diagnostics_with_content[0].1[0].message,
+            "Fake diagnostic for content: helloworld"
+        );
+
+        let no_diagnostics = worker
+            .run_diagnostic(&Uri::from_str("file:///root/unknown.file").unwrap(), None)
+            .await
+            .unwrap();
+
+        assert!(no_diagnostics.is_empty());
+
+        let error = worker
+            .run_diagnostic(&Uri::from_str("file:///root/error.config").unwrap(), None)
+            .await
+            .unwrap_err();
+
+        assert_eq!(error, "Fake diagnostic error");
+    }
+
+    #[tokio::test]
+    async fn test_run_diagnostic_on_change() {
+        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap(), false);
+        let tools: Vec<Box<dyn ToolBuilder>> = vec![Box::new(FakeToolBuilder)];
+        let uri = Uri::from_str("file:///root/diagnostics.config").unwrap();
+
+        worker.start_worker(serde_json::Value::Null, &tools).await;
+
+        let diagnostics_no_content = worker.run_diagnostic_on_change(&uri, None).await.unwrap();
+
+        assert_eq!(diagnostics_no_content.len(), 1);
+        assert_eq!(diagnostics_no_content[0].0, uri);
+        assert_eq!(diagnostics_no_content[0].1.len(), 1);
+        assert_eq!(
+            diagnostics_no_content[0].1[0].message,
+            "Fake diagnostic for content: <no content>"
+        );
+
+        let diagnostics_with_content =
+            worker.run_diagnostic_on_change(&uri, Some("helloworld")).await.unwrap();
 
         assert_eq!(diagnostics_with_content.len(), 1);
         assert_eq!(diagnostics_with_content[0].0, uri);
@@ -675,19 +769,27 @@ mod tests {
 
         let no_diagnostics = worker
             .run_diagnostic_on_change(&Uri::from_str("file:///root/unknown.file").unwrap(), None)
-            .await;
+            .await
+            .unwrap();
 
         assert!(no_diagnostics.is_empty());
+
+        let error = worker
+            .run_diagnostic_on_change(&Uri::from_str("file:///root/error.config").unwrap(), None)
+            .await
+            .unwrap_err();
+
+        assert_eq!(error, "Fake diagnostic error");
     }
 
     #[tokio::test]
     async fn test_run_diagnostic_on_save() {
-        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap());
+        let worker = WorkspaceWorker::new(Uri::from_str("file:///root/").unwrap(), false);
         let tools: Vec<Box<dyn ToolBuilder>> = vec![Box::new(FakeToolBuilder)];
         let uri = Uri::from_str("file:///root/diagnostics.config").unwrap();
         worker.start_worker(serde_json::Value::Null, &tools).await;
 
-        let diagnostics_no_content = worker.run_diagnostic_on_save(&uri, None).await;
+        let diagnostics_no_content = worker.run_diagnostic_on_save(&uri, None).await.unwrap();
 
         assert_eq!(diagnostics_no_content.len(), 1);
         assert_eq!(diagnostics_no_content[0].0, uri);
@@ -698,7 +800,7 @@ mod tests {
         );
 
         let diagnostics_with_content =
-            worker.run_diagnostic_on_save(&uri, Some("helloworld")).await;
+            worker.run_diagnostic_on_save(&uri, Some("helloworld")).await.unwrap();
 
         assert_eq!(diagnostics_with_content.len(), 1);
         assert_eq!(diagnostics_with_content[0].0, uri);
@@ -710,8 +812,16 @@ mod tests {
 
         let no_diagnostics = worker
             .run_diagnostic_on_save(&Uri::from_str("file:///root/unknown.file").unwrap(), None)
-            .await;
+            .await
+            .unwrap();
 
         assert!(no_diagnostics.is_empty());
+
+        let error = worker
+            .run_diagnostic_on_save(&Uri::from_str("file:///root/error.config").unwrap(), None)
+            .await
+            .unwrap_err();
+
+        assert_eq!(error, "Fake diagnostic error");
     }
 }
