@@ -70,7 +70,7 @@ pub struct FuncStyle {
 declare_oxc_lint!(
     /// ### What it does
     ///
-    /// Enforce the consistent use of either function declarations or expressions assigned to variables
+    /// Enforce the consistent use of either function declarations or expressions assigned to variables.
     ///
     /// ### Why is this bad?
     ///
@@ -95,18 +95,18 @@ declare_oxc_lint!(
     /// };
     /// ```
     ///
-    /// Examples of incorrect code for this rule with the default "expression" option:
+    /// Examples of **incorrect** code for this rule with the default `"expression"` option:
     /// ```js
-    /// /*eslint func-style: ["error", "expression"]*/
+    /// /* func-style: ["error", "expression"] */
     ///
     /// function foo() {
     ///     // ...
     /// }
     /// ```
     ///
-    /// Examples of incorrect code for this rule with the "declaration" option:
+    /// Examples of **incorrect** code for this rule with the `"declaration"` option:
     /// ```js
-    /// /*eslint func-style: ["error", "declaration"]*/
+    /// /* func-style: ["error", "declaration"] */
     /// var foo = function() {
     ///     // ...
     /// };
@@ -114,17 +114,17 @@ declare_oxc_lint!(
     /// var foo = () => {};
     /// ```
     ///
-    /// Examples of incorrect code for this rule with the "declaration" and {"overrides": { "namedExports": "expression" }} option:
+    /// Examples of **incorrect** code for this rule with the `"declaration"` and `{"overrides": { "namedExports": "expression" }}` option:
     /// ```js
-    /// /*eslint func-style: ["error", "declaration", { "overrides": { "namedExports": "expression" } }]*/
+    /// /* func-style: ["error", "declaration", { "overrides": { "namedExports": "expression" } }] */
     /// export function foo() {
     ///     // ...
     /// }
     /// ```
     ///
-    /// Examples of incorrect code for this rule with the "expression" and {"overrides": { "namedExports": "declaration" }} option:
+    /// Examples of **incorrect** code for this rule with the `"expression"` and `{"overrides": { "namedExports": "declaration" }}` option:
     /// ```js
-    /// /*eslint func-style: ["error", "expression", { "overrides": { "namedExports": "declaration" } }]*/
+    /// /* func-style: ["error", "expression", { "overrides": { "namedExports": "declaration" } }] */
     /// export var foo = function() {
     ///     // ...
     /// };
@@ -132,17 +132,17 @@ declare_oxc_lint!(
     /// export var bar = () => {};
     /// ```
     ///
-    /// Examples of correct code for this rule with the default "expression" option:
+    /// Examples of **correct** code for this rule with the default `"expression"` option:
     /// ```js
-    /// /*eslint func-style: ["error", "expression"]*/
+    /// /* func-style: ["error", "expression"] */
     /// var foo = function() {
     ///     // ...
     /// };
     /// ```
     ///
-    /// Examples of correct code for this rule with the "declaration" option:
+    /// Examples of **correct** code for this rule with the `"declaration"` option:
     /// ```js
-    /// /*eslint func-style: ["error", "declaration"]*/
+    /// /* func-style: ["error", "declaration"] */
     /// function foo() {
     ///     // ...
     /// }
@@ -152,32 +152,32 @@ declare_oxc_lint!(
     /// };
     /// ```
     ///
-    /// Examples of additional correct code for this rule with the "declaration", { "allowArrowFunctions": true } options:
+    /// Examples of additional correct code for this rule with the `"declaration"`, `{ "allowArrowFunctions": true }` options:
     /// ```js
-    /// /*eslint func-style: ["error", "declaration", { "allowArrowFunctions": true }]*/
+    /// /* func-style: ["error", "declaration", { "allowArrowFunctions": true }] */
     /// var foo = () => {};
     /// ```
     ///
-    /// Examples of correct code for this rule with the "declaration" and {"overrides": { "namedExports": "expression" }} option:
+    /// Examples of **correct** code for this rule with the `"declaration"` and `{"overrides": { "namedExports": "expression" }}` option:
     /// ```js
-    /// /*eslint func-style: ["error", "declaration", { "overrides": { "namedExports": "expression" } }]*/
+    /// /* func-style: ["error", "declaration", { "overrides": { "namedExports": "expression" } }] */
     /// export var foo = function() {
     ///     // ...
     /// };
     /// export var bar = () => {};
     /// ```
     ///
-    /// Examples of correct code for this rule with the "expression" and {"overrides": { "namedExports": "declaration" }} option:
+    /// Examples of **correct** code for this rule with the `"expression"` and `{"overrides": { "namedExports": "declaration" }}` option:
     /// ```js
-    /// /*eslint func-style: ["error", "expression", { "overrides": { "namedExports": "declaration" } }]*/
+    /// /* func-style: ["error", "expression", { "overrides": { "namedExports": "declaration" } }] */
     /// export function foo() {
     ///     // ...
     /// }
     /// ```
     ///
-    /// Examples of correct code for this rule with the {"overrides": { "namedExports": "ignore" }} option:
+    /// Examples of **correct** code for this rule with the `{"overrides": { "namedExports": "ignore" }}` option:
     /// ```js
-    /// /*eslint func-style: ["error", "expression", { "overrides": { "namedExports": "ignore" } }]*/
+    /// /* func-style: ["error", "expression", { "overrides": { "namedExports": "ignore" } }] */
     /// export var foo = function() {
     ///     // ...
     /// };
@@ -204,11 +204,11 @@ fn is_ancestor_export_name_decl<'a>(node: &AstNode<'a>, ctx: &LintContext<'a>) -
 }
 
 impl Rule for FuncStyle {
-    fn from_configuration(value: Value) -> Self {
+    fn from_configuration(value: Value) -> Result<Self, serde_json::error::Error> {
         let obj1 = value.get(0);
         let obj2 = value.get(1);
 
-        Self {
+        Ok(Self {
             style: obj1.and_then(Value::as_str).map(Style::from).unwrap_or_default(),
             allow_arrow_functions: obj2
                 .and_then(|v| v.get("allowArrowFunctions"))
@@ -223,8 +223,9 @@ impl Rule for FuncStyle {
                 .and_then(|v| v.get("namedExports"))
                 .and_then(Value::as_str)
                 .map(NamedExports::from),
-        }
+        })
     }
+
     fn run_once<'a>(&self, ctx: &LintContext) {
         let semantic = ctx.semantic();
         let is_decl_style = self.style == Style::Declaration;

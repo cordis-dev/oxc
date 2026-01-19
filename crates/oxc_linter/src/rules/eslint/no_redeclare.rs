@@ -2,7 +2,7 @@ use javascript_globals::GLOBALS;
 
 use oxc_diagnostics::OxcDiagnostic;
 use oxc_macros::declare_oxc_lint;
-use oxc_span::{ModuleKind, Span};
+use oxc_span::Span;
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -67,10 +67,10 @@ declare_oxc_lint!(
 );
 
 impl Rule for NoRedeclare {
-    fn from_configuration(value: serde_json::Value) -> Self {
-        serde_json::from_value::<DefaultRuleConfig<NoRedeclare>>(value)
+    fn from_configuration(value: serde_json::Value) -> Result<Self, serde_json::error::Error> {
+        Ok(serde_json::from_value::<DefaultRuleConfig<Self>>(value)
             .unwrap_or_default()
-            .into_inner()
+            .into_inner())
     }
 
     fn run_once(&self, ctx: &LintContext) {
@@ -122,8 +122,8 @@ impl Rule for NoRedeclare {
     }
 
     fn should_run(&self, ctx: &ContextHost) -> bool {
-        // Modules run in their own scope, and don't conflict with existing globals
-        ctx.source_type().module_kind() == ModuleKind::Script
+        // ES modules run in their own scope, and don't conflict with existing globals
+        !ctx.source_type().is_module()
     }
 }
 

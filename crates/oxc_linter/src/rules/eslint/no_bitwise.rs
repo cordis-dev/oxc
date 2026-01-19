@@ -98,10 +98,10 @@ declare_oxc_lint!(
 );
 
 impl Rule for NoBitwise {
-    fn from_configuration(value: Value) -> Self {
-        serde_json::from_value::<DefaultRuleConfig<NoBitwise>>(value)
+    fn from_configuration(value: Value) -> Result<Self, serde_json::error::Error> {
+        Ok(serde_json::from_value::<DefaultRuleConfig<Self>>(value)
             .unwrap_or_default()
-            .into_inner()
+            .into_inner())
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
@@ -188,6 +188,7 @@ fn test() {
         ("a << b", None),
         ("a >> b", None),
         ("a >>> b", None),
+        ("a|0", None),
         ("~a", None),
         ("a ^= b", None),
         ("a |= b", None),

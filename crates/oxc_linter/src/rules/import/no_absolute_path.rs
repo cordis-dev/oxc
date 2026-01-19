@@ -41,7 +41,7 @@ pub struct NoAbsolutePath {
     /// If set to `true`, dependency paths for AMD-style define and require calls will be resolved:
     ///
     /// ```js
-    /// /* eslint import/no-absolute-path: ['error', { commonjs: false, amd: true }] */
+    /// /* import/no-absolute-path: ["error", { "commonjs": false, "amd": true }] */
     /// define(['/foo'], function (foo) { /*...*/ }) // reported
     /// require(['/foo'], function (foo) { /*...*/ }) // reported
     ///
@@ -107,10 +107,10 @@ declare_oxc_lint!(
 );
 
 impl Rule for NoAbsolutePath {
-    fn from_configuration(value: Value) -> Self {
-        serde_json::from_value::<DefaultRuleConfig<NoAbsolutePath>>(value)
+    fn from_configuration(value: Value) -> Result<Self, serde_json::error::Error> {
+        Ok(serde_json::from_value::<DefaultRuleConfig<Self>>(value)
             .unwrap_or_default()
-            .into_inner()
+            .into_inner())
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
