@@ -94,21 +94,21 @@ declare_oxc_lint!(
     /// export default class MyClass {};
     /// export default function foo() {};
     /// export default foo(bar);
-    /// /* eslint import/no-anonymous-default-export: ['error', {"allowLiteral": true}] */
+    /// /* import/no-anonymous-default-export: ["error", { "allowLiteral": true }] */
     /// export default 123;
-    /// /* eslint import/no-anonymous-default-export: ['error, {"allowArray": true}] */
+    /// /* import/no-anonymous-default-export: ["error", { "allowArray": true }] */
     /// export default []
-    /// /* eslint import/no-anonymous-default-export: ['error, {"allowArrowFunction": true}] */
+    /// /* import/no-anonymous-default-export: ["error", { "allowArrowFunction": true }] */
     /// export default () => {};
-    /// /* eslint import/no-anonymous-default-export: ['error, {"allowAnonymousClass": true}] */
+    /// /* import/no-anonymous-default-export: ["error", { "allowAnonymousClass": true }] */
     /// export default class {};
-    /// /* eslint import/no-anonymous-default-export: ['error, {"allowAnonymousFunction": true}] */
+    /// /* import/no-anonymous-default-export: ["error", { "allowAnonymousFunction": true }] */
     /// export default function() {};
-    /// /* eslint import/no-anonymous-default-export: ['error, {"allowObject": true}] */
+    /// /* import/no-anonymous-default-export: ["error", { "allowObject": true }] */
     /// export default {};
-    /// /* eslint import/no-anonymous-default-export: ['error, {"allowNew": true}] */
+    /// /* import/no-anonymous-default-export: ["error", { "allowNew": true }] */
     /// export default new Foo();
-    /// /* eslint import/no-anonymous-default-export: ['error, {"allowCallExpression": true}] */
+    /// /* import/no-anonymous-default-export: ["error", { "allowCallExpression": true }] */
     /// export default foo(bar);
     /// ```
     ///
@@ -121,10 +121,10 @@ declare_oxc_lint!(
 );
 
 impl Rule for NoAnonymousDefaultExport {
-    fn from_configuration(value: Value) -> Self {
-        serde_json::from_value::<DefaultRuleConfig<NoAnonymousDefaultExport>>(value)
+    fn from_configuration(value: Value) -> Result<Self, serde_json::error::Error> {
+        Ok(serde_json::from_value::<DefaultRuleConfig<Self>>(value)
             .unwrap_or_default()
-            .into_inner()
+            .into_inner())
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {

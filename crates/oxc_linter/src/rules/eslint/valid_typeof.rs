@@ -158,10 +158,10 @@ impl Rule for ValidTypeof {
         }
     }
 
-    fn from_configuration(value: serde_json::Value) -> Self {
-        serde_json::from_value::<DefaultRuleConfig<ValidTypeof>>(value)
+    fn from_configuration(value: serde_json::Value) -> Result<Self, serde_json::error::Error> {
+        Ok(serde_json::from_value::<DefaultRuleConfig<Self>>(value)
             .unwrap_or_default()
-            .into_inner()
+            .into_inner())
     }
 }
 
@@ -199,7 +199,6 @@ fn test() {
         ("typeof(foo) != 'string'", None),
         ("var oddUse = typeof foo + 'thing'", None),
         ("function f(undefined) { typeof x === undefined }", None),
-        ("typeof foo === `str${somethingElse}`", None),
         ("typeof foo === 'number'", Some(serde_json::json!([{ "requireStringLiterals": true }]))),
         ("typeof foo === \"number\"", Some(serde_json::json!([{ "requireStringLiterals": true }]))),
         (
@@ -209,6 +208,7 @@ fn test() {
         ("typeof foo === typeof bar", Some(serde_json::json!([{ "requireStringLiterals": true }]))),
         ("typeof foo === `string`", Some(serde_json::json!([{ "requireStringLiterals": true }]))),
         ("`object` === typeof foo", Some(serde_json::json!([{ "requireStringLiterals": true }]))),
+        ("typeof foo === `str${somethingElse}`", None), // { "ecmaVersion": 6 }
     ];
 
     let fail = vec![
