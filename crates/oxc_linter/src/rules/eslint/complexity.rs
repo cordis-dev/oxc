@@ -99,7 +99,7 @@ impl Rule for Complexity {
         }
     }
 
-    fn from_configuration(value: Value) -> Self {
+    fn from_configuration(value: Value) -> Result<Self, serde_json::Error> {
         // The configuration can be either a number or an object with a "max" property.
         let config = value.get(0);
         let max = if let Some(num) = config.and_then(Value::as_u64) {
@@ -124,7 +124,7 @@ impl Rule for Complexity {
             })
             .unwrap_or(ComplexityVariant::Classic);
 
-        Self { max, variant }
+        Ok(Self { max, variant })
     }
 }
 
