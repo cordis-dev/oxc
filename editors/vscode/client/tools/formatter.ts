@@ -134,6 +134,7 @@ export default class FormatterTool implements ToolInterface {
       "yyp",
       // JSONC
       "jsonc",
+      "json5",
       "code-snippets",
       "code-workspace",
       "sublime-build",
@@ -319,19 +320,19 @@ export default class FormatterTool implements ToolInterface {
 
   async restartClient(): Promise<void> {
     if (this.client === undefined) {
-      window.showErrorMessage("oxc client not found");
+      window.showErrorMessage("oxfmt client not found");
       return;
     }
 
     try {
       if (this.client.isRunning()) {
         await this.client.restart();
-        window.showInformationMessage("oxc server restarted.");
+        window.showInformationMessage("oxfmt server restarted.");
       } else {
         await this.client.start();
       }
     } catch (err) {
-      this.client.error("Restarting client failed", err, "force");
+      this.client.error("Restarting oxfmt client failed", err, "force");
     }
   }
 
