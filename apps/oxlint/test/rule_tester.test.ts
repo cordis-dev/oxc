@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RuleTester } from "../src-js/index.ts";
 
-import type { Rule } from "../src-js/index.ts";
+import type { Rule } from "../src-js/plugins.ts";
 
 /**
  * Test case.
@@ -2205,6 +2205,46 @@ describe("RuleTester", () => {
           ]
         `);
       });
+
+      it("is overridden by `filename`", () => {
+        const tester = new RuleTester();
+        tester.run("no-foo", simpleRule, {
+          valid: [
+            {
+              code: "let x: number;",
+              filename: "foo.ts",
+              languageOptions: { parserOptions: { lang: "js" } },
+            },
+            {
+              code: "<div />",
+              filename: "foo.jsx",
+              languageOptions: { parserOptions: { lang: "ts" } },
+            },
+          ],
+          invalid: [
+            {
+              code: "let x: number;",
+              filename: "foo.jsx",
+              languageOptions: { parserOptions: { lang: "ts" } },
+              errors: 1,
+            },
+            {
+              code: "<div />",
+              filename: "foo.ts",
+              languageOptions: { parserOptions: { lang: "jsx" } },
+              errors: 1,
+            },
+          ],
+        });
+        expect(runCases()).toMatchInlineSnapshot(`
+          [
+            null,
+            null,
+            [Error: Parsing failed],
+            [Error: Parsing failed],
+          ]
+        `);
+      });
     });
 
     describe("ecmaFeatures.jsx", () => {
@@ -3168,6 +3208,78 @@ describe("RuleTester", () => {
         ],
       });
       expect(runCases()).toEqual([null, null]);
+    });
+  });
+
+  describe("`cwd` option", () => {
+    const cwdReporterRule: Rule = {
+      create(context) {
+        return {
+          Program(node) {
+            context.report({
+              message: `cwd: ${context.cwd}`,
+              node,
+            });
+          },
+        };
+      },
+    };
+
+    it("set globally", () => {
+      RuleTester.setDefaultConfig({ cwd: "/a/b/c" });
+
+      const tester = new RuleTester();
+      tester.run("cwd", cwdReporterRule, {
+        valid: [],
+        invalid: [
+          {
+            code: "",
+            errors: [
+              {
+                message: "cwd: /a/b/c",
+              },
+            ],
+          },
+        ],
+      });
+      expect(runCases()).toEqual([null]);
+    });
+
+    it("set in `RuleTester` options", () => {
+      const tester = new RuleTester({ cwd: "/a/b/c" });
+      tester.run("cwd", cwdReporterRule, {
+        valid: [],
+        invalid: [
+          {
+            code: "",
+            errors: [
+              {
+                message: "cwd: /a/b/c",
+              },
+            ],
+          },
+        ],
+      });
+      expect(runCases()).toEqual([null]);
+    });
+
+    it("set in test case", () => {
+      const tester = new RuleTester();
+      tester.run("cwd", cwdReporterRule, {
+        valid: [],
+        invalid: [
+          {
+            code: "",
+            cwd: "/a/b/c",
+            errors: [
+              {
+                message: "cwd: /a/b/c",
+              },
+            ],
+          },
+        ],
+      });
+      expect(runCases()).toEqual([null]);
     });
   });
 });

@@ -2,13 +2,14 @@
  * Shim of `RuleTester` class.
  */
 
+import { dirname, isAbsolute as isAbsolutePath, sep as pathSep } from "node:path";
 // @ts-expect-error - internal module of ESLint with no types
 import eslintGlobals from "../submodules/eslint/conf/globals.js";
-import { RuleTester } from "#oxlint";
-import { describe, it, setCurrentTest } from "./capture.ts";
+import { RuleTester } from "#oxlint/plugins-dev";
+import { describe, it, currentGroup, setCurrentTest } from "./capture.ts";
 import { SHOULD_SKIP_CODE } from "./filter.ts";
 
-import type { Rule } from "#oxlint";
+import type { Rule } from "#oxlint/plugins";
 import type { ParserDetails } from "./index.ts";
 import type {
   LanguageOptionsInternal,
@@ -17,7 +18,7 @@ import type {
 
 type DescribeFn = RuleTester.DescribeFn;
 type ItFn = RuleTester.ItFn;
-type TestCases = RuleTester.TestCases;
+export type TestCases = RuleTester.TestCases;
 type Globals = RuleTester.Globals;
 export type Language = RuleTester.Language;
 export type LanguageOptions = LanguageOptionsInternal;
@@ -34,9 +35,13 @@ export type ValidTestCase = RuleTester.ValidTestCase & TestCaseExtension;
 export type InvalidTestCase = RuleTester.InvalidTestCase & TestCaseExtension;
 export type TestCase = ValidTestCase | InvalidTestCase;
 
-// Maps of parser modules and parser paths to parser details (language + specifier)
-export const parserModules: Map<unknown, ParserDetails> = new Map();
-export const parserModulePaths: Map<string, ParserDetails> = new Map();
+// Replace backslashes with forward slashes on Windows. Do nothing on Mac/Linux.
+const normalizeSlashes =
+  pathSep === "\\" ? (path: string) => path.replaceAll("\\", "/") : (path: string) => path;
+
+// Maps of parser `parseForESLint` functions and parser paths to parser details (language + specifier)
+export const parseForESLintFns: Map<Function, ParserDetails> = new Map();
+export const parserPaths: Map<string, ParserDetails> = new Map();
 
 // Set up `RuleTester` to use our hooks
 RuleTester.describe = describe;
@@ -152,6 +157,24 @@ function modifyTestCase(test: TestCase): void {
   // This makes `RuleTester` adjust column indexes in diagnostics to match ESLint's behavior.
   test.eslintCompat = true;
 
+  // Set CWD for test case to the test files directory.
+  // If `filename` is provided and is absolute, use the deepest directory which is in common
+  // between `filename` and `testFilesDirPath` as CWD.
+  let cwd = currentGroup!.testFilesDirPath;
+  if (test.filename != null && isAbsolutePath(test.filename)) {
+    const filename = normalizeSlashes(test.filename);
+    while (true) {
+      let normalizedCwd = normalizeSlashes(cwd);
+      if (!normalizedCwd.endsWith("/")) normalizedCwd += "/";
+      if (filename.startsWith(normalizedCwd)) break; // Found common directory
+
+      const nextCwd = dirname(cwd);
+      if (nextCwd === cwd) break; // Reached root of filesystem
+      cwd = nextCwd;
+    }
+  }
+  test.cwd = cwd;
+
   // Ignore parsing errors. ESLint's test cases include invalid code.
   languageOptions = { ...test.languageOptions };
   test.languageOptions = languageOptions;
@@ -174,8 +197,8 @@ function modifyTestCase(test: TestCase): void {
   // - Old ESLint versions: `test.parser` (absolute path to parser)
   let parserDetails: ParserDetails | null = null;
 
-  if (languageOptions.parser != null) {
-    parserDetails = parserModules.get(languageOptions.parser) ?? null;
+  if (languageOptions.parser?.parseForESLint != null) {
+    parserDetails = parseForESLintFns.get(languageOptions.parser.parseForESLint) ?? null;
     if (parserDetails !== null) delete languageOptions.parser;
   }
 
@@ -183,7 +206,7 @@ function modifyTestCase(test: TestCase): void {
     if (parserDetails !== null) {
       throw new Error("Both `test.parser` and `test.languageOptions.parser` specified");
     }
-    parserDetails = parserModulePaths.get(test.parser) ?? null;
+    parserDetails = parserPaths.get(test.parser) ?? null;
     if (parserDetails === null) {
       // Set `languageOptions.parser` so an error is thrown.
       // Store in stored test case so appears in snapshot.
@@ -194,15 +217,19 @@ function modifyTestCase(test: TestCase): void {
   }
 
   if (parserDetails !== null) {
-    let { lang } = parserDetails;
-    if (parserOptions.ecmaFeatures?.jsx === true) {
-      if (lang === "ts") {
-        lang = "tsx";
-      } else if (lang === "js") {
-        lang = "jsx";
+    // If test case provides a filename, that takes precedence over the parser's default language.
+    // Don't set `lang` option, to allow Rust-side code to determine language from file extension.
+    if (test.filename == null) {
+      let { lang } = parserDetails;
+      if (parserOptions.ecmaFeatures?.jsx === true) {
+        if (lang === "ts") {
+          lang = "tsx";
+        } else if (lang === "js") {
+          lang = "jsx";
+        }
       }
+      parserOptions.lang = lang;
     }
-    parserOptions.lang = lang;
 
     // Store parser details in test case so tests using different parsers don't get detected as duplicates.
     // Store in stored test case so they appear in snapshot.

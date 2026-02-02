@@ -2,6 +2,7 @@
 #![cfg_attr(not(feature = "napi"), allow(dead_code))]
 
 mod command;
+mod config_loader;
 mod init;
 mod lint;
 mod lsp;
@@ -21,6 +22,8 @@ pub mod cli {
 // Only include code to run linter when the `napi` feature is enabled.
 // Without this, `tasks/website` will not compile on Linux or Windows.
 // `tasks/website` depends on `oxlint` as a normal library, which causes linker errors if NAPI is enabled.
+#[cfg(feature = "napi")]
+mod js_config;
 #[cfg(feature = "napi")]
 mod run;
 #[cfg(feature = "napi")]
@@ -47,7 +50,8 @@ mod js_plugins;
 #[global_allocator]
 static GLOBAL: mimalloc_safe::MiMalloc = mimalloc_safe::MiMalloc;
 
-const DEFAULT_OXLINTRC: &str = ".oxlintrc.json";
+const DEFAULT_OXLINTRC_NAME: &str = ".oxlintrc.json";
+const DEFAULT_TS_OXLINTRC_NAME: &str = "oxlint.config.ts";
 
 /// Return a JSON blob containing metadata for all available oxlint rules.
 ///

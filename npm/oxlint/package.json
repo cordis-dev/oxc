@@ -1,6 +1,6 @@
 {
   "name": "oxlint",
-  "version": "1.42.0",
+  "version": "1.43.0",
   "description": "Linter for the JavaScript Oxidation Compiler",
   "keywords": [
     "eslint",
@@ -34,6 +34,20 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./plugins": {
+      "types": "./dist/plugins.d.ts",
+      "default": "./dist/plugins.js"
+    },
+    "./plugins-dev": {
+      "types": "./dist/plugins-dev.d.ts",
+      "default": "./dist/plugins-dev.js"
+    }
+  },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   }

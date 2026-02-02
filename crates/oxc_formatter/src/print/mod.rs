@@ -52,7 +52,9 @@ use crate::{
         Format, Formatter,
         prelude::*,
         separated::FormatSeparatedIter,
-        token::number::{NumberFormatOptions, format_number_token},
+        token::number::{
+            NumberFormatOptions, format_number_token, format_trimmed_number, is_simple_number,
+        },
         trivia::{
             DanglingIndentMode, FormatDanglingComments, FormatLeadingComments,
             FormatTrailingComments,
@@ -70,7 +72,7 @@ use crate::{
         object::{format_property_key, should_preserve_quote},
         statement_body::FormatStatementBody,
         string::{FormatLiteralStringToken, StringLiteralParentKind},
-        tailwindcss::write_tailwind_string_literal,
+        tailwindcss::{tailwind_context_for_string_literal, write_tailwind_string_literal},
     },
     write,
 };
@@ -968,11 +970,58 @@ impl<'a> FormatWrite<'a> for AstNode<'a, NullLiteral> {
 
 impl<'a> FormatWrite<'a> for AstNode<'a, NumericLiteral<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) {
-        format_number_token(
-            f.source_text().text_for(self),
-            NumberFormatOptions::keep_one_trailing_decimal_zero(),
-        )
-        .fmt(f);
+        let source_text = f.source_text().text_for(self);
+        let options = NumberFormatOptions::keep_one_trailing_decimal_zero();
+
+        // Check if this numeric literal is a property key (not a value) that should be quoted
+        // when quoteProps is "consistent" and another property requires quotes.
+        // We need to check that this literal's span matches the key's span, not just that the parent is a property.
+        let is_property_key = match self.parent() {
+            AstNodes::ObjectProperty(prop) => prop.key.span() == self.span(),
+            AstNodes::TSPropertySignature(prop) => prop.key.span() == self.span(),
+            AstNodes::TSMethodSignature(prop) => prop.key.span() == self.span(),
+            AstNodes::MethodDefinition(prop) => prop.key.span() == self.span(),
+            AstNodes::PropertyDefinition(prop) => prop.key.span() == self.span(),
+            AstNodes::AccessorProperty(prop) => prop.key.span() == self.span(),
+            _ => false,
+        };
+
+        if is_property_key && f.context().is_quote_needed() {
+            // Get the formatted number text
+            let formatted = format_trimmed_number(source_text, options);
+
+            // Check if the number is "simple" (only digits, or digits.digits)
+            // and the value matches the formatted representation.
+            // This follows Prettier's behavior in shouldQuotePropertyKey.
+            //
+            // For TypeScript, quoting numbers is not safe (it changes the type),
+            // so we skip this logic for TypeScript files.
+            let should_quote =
+                !f.context().source_type().is_typescript() && is_simple_number(&formatted) && {
+                    // Check if String(value) === formatted
+                    // In JavaScript: String(1.0) = "1", String(1.5) = "1.5"
+                    let value = self.value;
+                    let value_str = if value.fract() == 0.0 && value.abs() < 1e15 {
+                        // Integer-like values: format without decimal point
+                        format!("{value:.0}")
+                    } else {
+                        // Use default float formatting
+                        format!("{value}")
+                    };
+                    value_str == *formatted
+                };
+
+            if should_quote {
+                let quote_str = f.options().quote_style.as_str();
+                write!(
+                    f,
+                    [quote_str, text(f.context().allocator().alloc_str(&formatted)), quote_str]
+                );
+                return;
+            }
+        }
+
+        format_number_token(source_text, options).fmt(f);
     }
 }
 
@@ -980,20 +1029,7 @@ impl<'a> FormatWrite<'a> for AstNode<'a, StringLiteral<'a>> {
     fn write(&self, f: &mut Formatter<'_, 'a>) {
         // Check if we're in a Tailwind context via stack (O(1) lookup)
         // This handles nested string literals inside JSXAttribute/CallExpression values
-        let tailwind_ctx = f.context().tailwind_context().copied().filter(|ctx| {
-            // Skip:
-            // - if context is disabled (e.g., inside nested non-Tailwind call expressions)
-            // - empty string literals (which have no classes to sort)
-            if ctx.disabled || self.value.is_empty() {
-                return false;
-            }
-
-            // No whitespace means only one class, so no need to sort
-            let content = f.source_text().text_for(self);
-            content.as_bytes().iter().any(|&b| b.is_ascii_whitespace())
-        });
-
-        if let Some(ctx) = tailwind_ctx {
+        if let Some(ctx) = tailwind_context_for_string_literal(self, f) {
             // We're inside a Tailwind context - sort this string literal as Tailwind classes
             write_tailwind_string_literal(self, ctx, f);
         } else {

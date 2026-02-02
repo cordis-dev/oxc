@@ -1,13 +1,29 @@
 {
   "name": "oxlint-app",
-  "version": "1.42.0",
+  "version": "1.43.0",
   "private": true,
   "description": "Internal development package for oxlint. For the published package.json template, see `npm/oxlint/package.json`.",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
   "imports": {
-    "#oxlint": "./dist/index.js"
+    "#oxlint": "./dist/index.js",
+    "#oxlint/plugins": "./dist/plugins.js",
+    "#oxlint/plugins-dev": "./dist/plugins-dev.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./plugins": {
+      "types": "./dist/plugins.d.ts",
+      "default": "./dist/plugins.js"
+    },
+    "./plugins-dev": {
+      "types": "./dist/plugins-dev.d.ts",
+      "default": "./dist/plugins-dev.js"
+    }
   },
   "scripts": {
     "build": "pnpm run build-napi-release && pnpm run build-js",
@@ -18,6 +34,7 @@
     "build-napi-test": "pnpm run build-napi --features testing",
     "build-napi-release": "pnpm run build-napi --release --features allocator",
     "build-js": "node scripts/build.ts",
+    "generate-config-types": "node scripts/generate-config-types.ts",
     "test": "vitest --dir ./test run",
     "init-conformance": "cd conformance; ./init.sh",
     "conformance": "cross-env NODE_DISABLE_COLORS=1 tsx ./conformance/src/index.ts"
@@ -30,16 +47,17 @@
     "@types/json-schema": "^7.0.15",
     "@types/json-stable-stringify-without-jsonify": "^1.0.2",
     "@types/node": "catalog:",
-    "@typescript-eslint/parser": "^8.53.1",
-    "@typescript-eslint/scope-manager": "8.53.1",
+    "@typescript-eslint/parser": "^8.54.0",
+    "@typescript-eslint/scope-manager": "^8.54.0",
     "ajv": "^6.12.6",
     "cross-env": "catalog:",
     "eslint": "catalog:",
     "eslint-vitest-rule-tester": "^3.0.1",
     "esquery": "^1.6.0",
     "execa": "^9.6.0",
+    "json-schema-to-typescript": "^15.0.4",
     "json-stable-stringify-without-jsonify": "^1.0.1",
-    "oxc-parser": "^0.111.0",
+    "oxc-parser": "^0.112.0",
     "rolldown": "catalog:",
     "tsdown": "catalog:",
     "tsx": "^4.21.0",

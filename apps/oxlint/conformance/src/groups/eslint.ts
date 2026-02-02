@@ -23,17 +23,6 @@ const group: TestGroup = {
     // These are not handled by `RuleTester`.
     if (code.match(/\/\/\s*eslint-disable((-next)?-line)?(\s|$)/)) return true;
 
-    // Tests rely on directives being parsed as plain `StringLiteral`s in ES3.
-    // Oxc parser does not support parsing as ES3.
-    if (
-      (ruleName === "no-eval" ||
-        ruleName === "no-invalid-this" ||
-        ruleName === "no-unused-expressions") &&
-      test.languageOptions?.ecmaVersion === 3
-    ) {
-      return true;
-    }
-
     // Test relies on scope analysis to follow ES5 semantics where function declarations in blocks are bound in parent scope.
     // TS-ESLint scope manager does not support ES5. Oxc also doesn't support parsing/semantic as ES5.
     if (
@@ -59,7 +48,7 @@ const group: TestGroup = {
     return false;
   },
 
-  ruleTesters: ["../../../lib/rule-tester/rule-tester.js"],
+  ruleTesters: [{ specifier: "../../../lib/rule-tester/rule-tester.js", propName: null }],
   parsers: [{ specifier: "@typescript-eslint/parser", lang: "ts" }],
 };
 

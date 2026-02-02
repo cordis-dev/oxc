@@ -103,6 +103,7 @@ impl ConfigStoreBuilder {
         oxlintrc: Oxlintrc,
         external_linter: Option<&ExternalLinter>,
         external_plugin_store: &mut ExternalPluginStore,
+        workspace_uri: Option<&str>,
     ) -> Result<Self, ConfigBuilderError> {
         // TODO: this can be cached to avoid re-computing the same oxlintrc
         fn resolve_oxlintrc_config(
@@ -189,6 +190,7 @@ impl ConfigStoreBuilder {
                     external_linter,
                     &resolver,
                     external_plugin_store,
+                    workspace_uri,
                 )?;
             }
         }
@@ -524,15 +526,8 @@ impl ConfigStoreBuilder {
         external_linter: &ExternalLinter,
         resolver: &Resolver,
         external_plugin_store: &mut ExternalPluginStore,
+        workspace_uri: Option<&str>,
     ) -> Result<(), ConfigBuilderError> {
-        // Print warning on 1st attempt to load a plugin
-        #[expect(clippy::print_stderr)]
-        if external_plugin_store.is_empty() {
-            eprintln!(
-                "WARNING: JS plugins are experimental and not subject to semver.\nBreaking changes are possible while JS plugins support is under development."
-            );
-        }
-
         // Resolve the specifier relative to the config directory
         let resolved = resolver.resolve(resolve_dir, plugin_specifier).map_err(|e| {
             ConfigBuilderError::PluginLoadFailed {
@@ -584,13 +579,18 @@ impl ConfigStoreBuilder {
 
         // Convert path to a `file://...` URL, as required by `import(...)` on JS side.
         // Note: `unwrap()` here is infallible as `plugin_path` is an absolute path.
-        let plugin_url = Url::from_file_path(&plugin_path).unwrap().as_str().to_string();
+        let plugin_url = String::from(Url::from_file_path(&plugin_path).unwrap());
 
-        let result = (external_linter.load_plugin)(plugin_url, plugin_name, alias.is_some())
-            .map_err(|error| ConfigBuilderError::PluginLoadFailed {
-                plugin_specifier: plugin_specifier.to_string(),
-                error,
-            })?;
+        let result = (external_linter.load_plugin)(
+            plugin_url,
+            plugin_name,
+            alias.is_some(),
+            workspace_uri.map(String::from),
+        )
+        .map_err(|error| ConfigBuilderError::PluginLoadFailed {
+            plugin_specifier: plugin_specifier.to_string(),
+            error,
+        })?;
         let plugin_name = result.name;
 
         if LintPlugins::try_from(plugin_name.as_str()).is_err() {
@@ -1000,8 +1000,14 @@ mod test {
         .unwrap();
         let builder = {
             let mut external_plugin_store = ExternalPluginStore::default();
-            ConfigStoreBuilder::from_oxlintrc(false, oxlintrc, None, &mut external_plugin_store)
-                .unwrap()
+            ConfigStoreBuilder::from_oxlintrc(
+                false,
+                oxlintrc,
+                None,
+                &mut external_plugin_store,
+                None,
+            )
+            .unwrap()
         };
         for (rule, severity) in &builder.rules {
             let name = rule.name();
@@ -1181,6 +1187,7 @@ mod test {
                 .unwrap(),
                 None,
                 &mut external_plugin_store,
+                None,
             )
         };
         let err = invalid_config.unwrap_err();
@@ -1327,6 +1334,7 @@ mod test {
             current_oxlintrc,
             None,
             &mut external_plugin_store,
+            None,
         )
         .unwrap();
 
@@ -1354,6 +1362,7 @@ mod test {
             Oxlintrc::from_file(&PathBuf::from(path)).unwrap(),
             None,
             &mut external_plugin_store,
+            None,
         )
         .unwrap()
         .build(&mut external_plugin_store)
@@ -1367,6 +1376,7 @@ mod test {
             serde_json::from_str(s).unwrap(),
             None,
             &mut external_plugin_store,
+            None,
         )
         .unwrap()
         .build(&mut external_plugin_store)

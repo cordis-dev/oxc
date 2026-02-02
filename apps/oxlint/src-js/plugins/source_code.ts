@@ -12,6 +12,7 @@ import { deserializeProgramOnly, resetBuffer } from "../generated/deserialize.js
 
 import visitorKeys from "../generated/keys.ts";
 import * as commentMethods from "./comments.ts";
+import { ecmaVersion } from "./context.ts";
 import * as locationMethods from "./location.ts";
 import { getNodeLoc, initLines, lines, lineStartIndices, resetLines } from "./location.ts";
 import { resetScopeManager, SCOPE_MANAGER } from "./scope.ts";
@@ -43,23 +44,14 @@ let sourceStartPos: number = 0;
 let sourceByteLen: number = 0;
 export let ast: Program | null = null;
 
-// Parser services object. Set before linting a file by `setupSourceForFile`.
-let parserServices: Record<string, unknown> | null = null;
-
 /**
  * Set up source for the file about to be linted.
  * @param bufferInput - Buffer containing AST
  * @param hasBOMInput - `true` if file's original source text has Unicode BOM
- * @param parserServicesInput - Parser services object for the file
  */
-export function setupSourceForFile(
-  bufferInput: BufferWithArrays,
-  hasBOMInput: boolean,
-  parserServicesInput: Record<string, unknown>,
-): void {
+export function setupSourceForFile(bufferInput: BufferWithArrays, hasBOMInput: boolean): void {
   buffer = bufferInput;
   hasBOM = hasBOMInput;
-  parserServices = parserServicesInput;
 }
 
 /**
@@ -83,7 +75,48 @@ export function initAst(): void {
   debugAssertIsNonNull(buffer);
 
   ast = deserializeProgramOnly(buffer, sourceText, sourceStartPos, sourceByteLen, getNodeLoc);
+
+  // In conformance tests, fix AST when parsing as ES3
+  if (CONFORMANCE) fixES3Ast();
+
   debugAssertIsNonNull(ast);
+}
+
+/**
+ * Fix AST for conformance tests.
+ *
+ * Oxc parser always parses as latest ECMAScript version.
+ * Some conformance tests request parsing with `ecmaVersion: 3`, and expect directives to be parsed as string literals.
+ * When using ES3, traverse the AST and remove the `directive` property from `ExpressionStatement`s.
+ *
+ * This function is only called in conformance tests. In standard builds, minifier removes this function entirely.
+ */
+function fixES3Ast(): void {
+  if (!CONFORMANCE) throw new Error("Should be unreachable outside of conformance tests");
+
+  debugAssertIsNonNull(ast);
+  if (ecmaVersion === 3) fixES3NodesArray(ast.body);
+}
+
+function fixES3NodesArray(nodes: any[]): void {
+  for (const node of nodes) {
+    if (node !== null) fixES3Node(node);
+  }
+}
+
+function fixES3Node(node: any): void {
+  if (node.type === "ExpressionStatement") node.directive = null;
+
+  for (const key in node) {
+    if (key === "parent" || key === "range" || key === "loc") continue;
+
+    const child = node[key];
+    if (Array.isArray(child)) {
+      fixES3NodesArray(child);
+    } else if (typeof child === "object" && child !== null) {
+      fixES3Node(child);
+    }
+  }
 }
 
 /**
@@ -100,7 +133,6 @@ export function resetSourceAndAst(): void {
   buffer = null;
   sourceText = null;
   ast = null;
-  parserServices = null;
   resetBuffer();
   resetLines();
   resetScopeManager();
@@ -185,11 +217,10 @@ export const SOURCE_CODE = Object.freeze({
 
   /**
    * Parser services for the file.
+   *
+   * Oxlint does not offer any parser services.
    */
-  get parserServices(): Record<string, unknown> {
-    debugAssertIsNonNull(parserServices);
-    return parserServices;
-  },
+  parserServices: Object.freeze({} as Record<string, unknown>),
 
   /**
    * Source text as array of lines, split according to specification's definition of line breaks.

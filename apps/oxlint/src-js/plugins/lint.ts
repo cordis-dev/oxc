@@ -9,7 +9,7 @@ import { HAS_BOM_FLAG_POS } from "../generated/constants.ts";
 import { typeAssertIs, debugAssert, debugAssertIsNonNull } from "../utils/asserts.ts";
 import { getErrorMessage } from "../utils/utils.ts";
 import { setGlobalsForFile, resetGlobals } from "./globals.ts";
-
+import { switchWorkspace } from "./workspace.ts";
 import {
   addVisitorToCompiled,
   compiledVisitor,
@@ -39,9 +39,6 @@ export const buffers: (BufferWithArrays | null)[] = [];
 // Array of `after` hooks to run after traversal. This array reused for every file.
 const afterHooks: AfterHook[] = [];
 
-// Default parser services object (empty object).
-const PARSER_SERVICES_DEFAULT: Record<string, unknown> = Object.freeze({});
-
 /**
  * Lint a file.
  *
@@ -54,6 +51,7 @@ const PARSER_SERVICES_DEFAULT: Record<string, unknown> = Object.freeze({});
  * @param optionsIds - IDs of options to use for rules on this file, in same order as `ruleIds`
  * @param settingsJSON - Settings for this file, as JSON string
  * @param globalsJSON - Globals for this file, as JSON string
+ * @param workspaceUri - Workspace URI (`null` in CLI, string in LSP)
  * @returns Diagnostics or error serialized to JSON string
  */
 export function lintFile(
@@ -64,9 +62,19 @@ export function lintFile(
   optionsIds: number[],
   settingsJSON: string,
   globalsJSON: string,
+  workspaceUri: string | null,
 ): string | null {
   try {
-    lintFileImpl(filePath, bufferId, buffer, ruleIds, optionsIds, settingsJSON, globalsJSON);
+    lintFileImpl(
+      filePath,
+      bufferId,
+      buffer,
+      ruleIds,
+      optionsIds,
+      settingsJSON,
+      globalsJSON,
+      workspaceUri,
+    );
 
     let ret: string | null = null;
 
@@ -100,6 +108,7 @@ export function lintFile(
  * @param optionsIds - IDs of options to use for rules on this file, in same order as `ruleIds`
  * @param settingsJSON - Settings for this file, as JSON string
  * @param globalsJSON - Globals for this file, as JSON string
+ * @param workspaceUri - Workspace URI (`null` in CLI, string in LSP)
  * @throws {Error} If any parameters are invalid
  * @throws {*} If any rule throws
  */
@@ -111,6 +120,7 @@ export function lintFileImpl(
   optionsIds: number[],
   settingsJSON: string,
   globalsJSON: string,
+  workspaceUri: string | null,
 ) {
   // If new buffer, add it to `buffers` array. Otherwise, get existing buffer from array.
   // Do this before checks below, to make sure buffer doesn't get garbage collected when not expected
@@ -144,6 +154,12 @@ export function lintFileImpl(
     "`ruleIds` and `optionsIds` should be same length",
   );
 
+  // Switch to requested workspace.
+  // In CLI, `workspaceUri` is `null`, and there's only 1 workspace, so no need to switch.
+  // In LSP, there can be multiple workspaces, so we need to switch if we're not already in the right one.
+  if (workspaceUri !== null) switchWorkspace(workspaceUri);
+  debugAssertIsNonNull(allOptions, "`allOptions` should be initialized");
+
   // Pass file path to context module, so `Context`s know what file is being linted
   setupFileContext(filePath);
 
@@ -156,8 +172,7 @@ export function lintFileImpl(
   // But... source text and AST can be accessed in body of `create` method, or `before` hook, via `context.sourceCode`.
   // So we pass the buffer to source code module here, so it can decode source text / deserialize AST on demand.
   const hasBOM = buffer[HAS_BOM_FLAG_POS] === 1;
-  const parserServices = PARSER_SERVICES_DEFAULT; // TODO: Set this correctly
-  setupSourceForFile(buffer, hasBOM, parserServices);
+  setupSourceForFile(buffer, hasBOM);
 
   // Pass settings and globals JSON to modules that handle them
   setSettingsForFile(settingsJSON);
@@ -176,7 +191,6 @@ export function lintFileImpl(
 
     // Set `options` for rule
     const optionsId = optionsIds[i];
-    debugAssertIsNonNull(allOptions);
     debugAssert(optionsId < allOptions.length, "Options ID out of bounds");
 
     // If the rule has no user-provided options, use the plugin-provided default

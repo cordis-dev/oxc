@@ -13,6 +13,7 @@ import {
 } from "vscode";
 import {
   activateExtension,
+  deleteFixtures,
   fixturesWorkspaceUri,
   loadFixture,
   sleep,
@@ -31,6 +32,7 @@ teardown(async () => {
   await wsConfig.update("fixKind", undefined, ConfigurationTarget.WorkspaceFolder);
   await workspace.getConfiguration("editor").update("codeActionsOnSave", undefined);
   await workspace.saveAll();
+  await deleteFixtures();
 });
 
 suite("code actions", () => {
@@ -41,7 +43,7 @@ suite("code actions", () => {
 
   // flaky test for multi workspace mode
   testSingleFolderMode("listed code actions", async () => {
-    await loadFixture("debugger");
+    await loadFixture("debugger_empty_config");
     await sleep(500);
     const fileUri = Uri.joinPath(fixturesWorkspaceUri(), "fixtures", "debugger.js");
     // await window.showTextDocument(fileUri); -- should also work without opening the file
@@ -158,6 +160,7 @@ suite("code actions", () => {
       .getConfiguration("oxc", fixturesWorkspaceUri())
       .update("fixKind", "dangerous_fix", ConfigurationTarget.WorkspaceFolder);
     await workspace.saveAll();
+    await sleep(500);
 
     const codeActionsWithFix: ProviderResult<Array<CodeAction>> = await commands.executeCommand(
       "vscode.executeCodeActionProvider",
@@ -196,6 +199,8 @@ suite("code actions", () => {
     strictEqual(quickFixesNoFix.length, 0);
     await workspace.getConfiguration("oxc").update("unusedDisableDirectives", "warn");
     await workspace.saveAll();
+    await sleep(500);
+
     const codeActionsWithFix: ProviderResult<Array<CodeAction>> = await commands.executeCommand(
       "vscode.executeCodeActionProvider",
       fileUri,

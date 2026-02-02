@@ -1,3 +1,4 @@
+import { join as pathJoin } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   getTokens,
@@ -54,7 +55,8 @@ function setup(sourceText: string) {
   resetSourceAndAst();
 
   // Set file path
-  const path = "dummy.js";
+  const filename = "dummy.js";
+  const path = pathJoin(import.meta.dirname, filename);
   setupFileContext(path);
 
   // Parse source text into buffer
@@ -63,7 +65,7 @@ function setup(sourceText: string) {
   // Set buffer (`parseRaw` adds buffer containing AST to `buffers` at index 0)
   const buffer = buffers[0];
   debugAssertIsNonNull(buffer);
-  setupSourceForFile(buffer, /* hasBOM */ false, /* parserServices */ {});
+  setupSourceForFile(buffer, /* hasBOM */ false);
 
   // Initialize source text (deserialize from buffer)
   initSourceText();

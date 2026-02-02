@@ -8,6 +8,7 @@
  */
 
 import { default as assert, AssertionError } from "node:assert";
+import { join as pathJoin, isAbsolute as isAbsolutePath, dirname } from "node:path";
 import util from "node:util";
 import stableJsonStringify from "json-stable-stringify-without-jsonify";
 import { ecmaFeaturesOverride, setEcmaVersion, ECMA_VERSION } from "../plugins/context.ts";
@@ -111,7 +112,17 @@ interface Config {
    * If `true`, column offsets in diagnostics are incremented by 1, to match ESLint's behavior.
    */
   eslintCompat?: boolean;
+
+  /**
+   * Language options.
+   */
   languageOptions?: LanguageOptions;
+
+  /**
+   * Current working directory for the linter.
+   * If not provided, defaults to the directory containing the test file.
+   */
+  cwd?: string;
 }
 
 /**
@@ -179,6 +190,9 @@ interface ParserOptions {
   ecmaFeatures?: EcmaFeatures;
   /**
    * Language variant to parse file as.
+   *
+   * If test case provides a filename, that takes precedence over `lang` option.
+   * Language will be inferred from file extension.
    */
   lang?: Language;
   /**
@@ -338,6 +352,10 @@ interface Diagnostic {
 
 // Default path (without extension) for test cases if not provided
 const DEFAULT_FILENAME_BASE = "file";
+
+// Default CWD for test cases if not provided.
+// Root of `oxlint` package once bundled into `dist`.
+const DEFAULT_CWD = dirname(import.meta.dirname);
 
 // ------------------------------------------------------------------------------
 // `RuleTester` class
@@ -971,28 +989,39 @@ function lint(test: TestCase, plugin: Plugin): Diagnostic[] {
   // Get parse options
   const parseOptions = getParseOptions(test);
 
-  // Determine filename.
-  // If not provided, use default filename based on `parseOptions.lang`.
-  let { filename } = test;
-  if (filename == null) {
-    let ext: string | undefined = parseOptions.lang;
-    if (ext == null) {
-      ext = "js";
-    } else if (ext === "dts") {
-      ext = "d.ts";
+  // Determine path and CWD.
+  // If not provided, use default filename based on `parseOptions.lang`,
+  // and the directory of this file as CWD.
+  // If `filename` is an absolute path, make `cwd` the directory containing `filename`.
+  let path: string;
+  let { filename, cwd } = test;
+  if (filename != null && isAbsolutePath(filename)) {
+    if (cwd == null) cwd = dirname(filename);
+    path = filename;
+  } else {
+    if (filename == null) {
+      let ext: string | undefined = parseOptions.lang;
+      if (ext == null) {
+        ext = "js";
+      } else if (ext === "dts") {
+        ext = "d.ts";
+      }
+      filename = `${DEFAULT_FILENAME_BASE}.${ext}`;
     }
-    filename = `${DEFAULT_FILENAME_BASE}.${ext}`;
+
+    if (cwd == null) cwd = DEFAULT_CWD;
+    path = pathJoin(cwd, filename);
   }
 
   try {
     // Register plugin. This adds rule to `registeredRules` array.
-    registerPlugin(plugin, null, false);
+    registerPlugin(plugin, null, false, null);
 
     // Set up options
-    const optionsId = setupOptions(test);
+    const optionsId = setupOptions(test, cwd);
 
     // Parse file into buffer
-    parse(filename, test.code, parseOptions);
+    parse(path, test.code, parseOptions);
 
     // In conformance tests, set `context.languageOptions.ecmaVersion`.
     // This is not supported outside of conformance tests.
@@ -1004,7 +1033,7 @@ function lint(test: TestCase, plugin: Plugin): Diagnostic[] {
 
     // Lint file.
     // Buffer is stored already, at index 0. No need to pass it.
-    lintFileImpl(filename, 0, null, [0], [optionsId], settingsJSON, globalsJSON);
+    lintFileImpl(path, 0, null, [0], [optionsId], settingsJSON, globalsJSON, null);
 
     // Return diagnostics
     const ruleId = `${plugin.meta!.name!}/${Object.keys(plugin.rules)[0]}`;
@@ -1090,12 +1119,14 @@ function getParseOptions(test: TestCase): ParseOptions {
     // Handle `parserOptions.ignoreNonFatalErrors`
     if (parserOptions.ignoreNonFatalErrors === true) parseOptions.ignoreNonFatalErrors = true;
 
-    // Handle `parserOptions.lang`
-    const { lang } = parserOptions;
-    if (lang != null) {
-      parseOptions.lang = lang;
-    } else if (parserOptions.ecmaFeatures?.jsx === true) {
-      parseOptions.lang = "jsx";
+    // Handle `parserOptions.lang`. `filename` takes precedence over `lang` if provided.
+    if (test.filename == null) {
+      const { lang } = parserOptions;
+      if (lang != null) {
+        parseOptions.lang = lang;
+      } else if (parserOptions.ecmaFeatures?.jsx === true) {
+        parseOptions.lang = "jsx";
+      }
     }
   }
 
@@ -1194,9 +1225,10 @@ function getGlobalsJson(test: TestCase): string {
  * Returns the options ID to pass to `lintFileImpl` (either 0 for default options, or 1 for user-provided options).
  *
  * @param test - Test case
+ * @param cwd - Current working directory for test case
  * @returns Options ID to pass to `lintFileImpl`
  */
-function setupOptions(test: TestCase): number {
+function setupOptions(test: TestCase, cwd: string): number {
   // Initial entries for default options
   const allOptions: Options[] = [[]],
     allRuleIds: number[] = [0];
@@ -1214,7 +1246,12 @@ function setupOptions(test: TestCase): number {
   // Serialize to JSON and pass to `setOptions`
   let allOptionsJson: string;
   try {
-    allOptionsJson = JSON.stringify({ options: allOptions, ruleIds: allRuleIds });
+    allOptionsJson = JSON.stringify({
+      options: allOptions,
+      ruleIds: allRuleIds,
+      cwd,
+      workspaceUri: null,
+    });
   } catch (err) {
     throw new Error(`Failed to serialize options: ${err}`);
   }
@@ -1243,18 +1280,21 @@ function setEcmaVersionAndFeatures(test: TestCase) {
   // In ESLint, the branch for `undefined` is actually dead code, because `undefined` is replaced by default value
   // in an early step of config parsing.
   const languageOptions = test.languageOptions as LanguageOptionsInternal | undefined;
-  const ecmaVersion = languageOptions?.ecmaVersion;
+  let ecmaVersion = languageOptions?.ecmaVersion;
 
-  let version = ECMA_VERSION;
   if (typeof ecmaVersion === "number") {
-    version = ecmaVersion >= 2015 ? ecmaVersion : ecmaVersion + 2009;
+    if (ecmaVersion > 5 && ecmaVersion < 2015) ecmaVersion += 2009;
+  } else {
+    ecmaVersion = ECMA_VERSION;
   }
-  setEcmaVersion(version);
+  setEcmaVersion(ecmaVersion);
 
   // Set `globalReturn` and `impliedStrict` in scope analyzer options
   const ecmaFeatures = languageOptions?.parserOptions?.ecmaFeatures;
   ecmaFeaturesOverride.globalReturn = ecmaFeatures?.globalReturn ?? null;
-  ecmaFeaturesOverride.impliedStrict = ecmaFeatures?.impliedStrict ?? null;
+  // Strict mode does not exist in ES3
+  ecmaFeaturesOverride.impliedStrict =
+    ecmaVersion === 3 ? false : (ecmaFeatures?.impliedStrict ?? null);
 }
 
 // Regex to match other control characters (except tab, newline, carriage return)

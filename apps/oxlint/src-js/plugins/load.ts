@@ -1,6 +1,7 @@
 import { createContext } from "./context.ts";
 import { deepFreezeJsonArray } from "./json.ts";
 import { compileSchema, DEFAULT_OPTIONS } from "./options.ts";
+import { switchWorkspace } from "./workspace.ts";
 import { getErrorMessage } from "../utils/utils.ts";
 import { debugAssertIsNonNull } from "../utils/asserts.ts";
 
@@ -28,7 +29,7 @@ export interface Plugin {
  * If `createOnce` method is present, `create` is ignored.
  *
  * If defining the rule with `createOnce`, and you want the rule to work with ESLint too,
- * you need to wrap the rule with `defineRule`.
+ * you need to wrap the plugin containing the rule with `eslintCompatPlugin`.
  */
 export type Rule = CreateRule | CreateOnceRule;
 
@@ -79,12 +80,18 @@ interface CreateOnceRuleDetails extends RuleDetailsBase {
   readonly afterHook: AfterHook | null;
 }
 
-// Absolute paths of plugins which have been loaded
-const registeredPluginUrls = new Set<string>();
-
 // Rule objects for loaded rules.
 // Indexed by `ruleId`, which is passed to `lintFile`.
-export const registeredRules: RuleDetails[] = [];
+// May be changed when switching workspaces.
+export let registeredRules: RuleDetails[] = [];
+
+/**
+ * Set `registeredRules`. Used when switching workspaces.
+ * @param rules - Array of `RuleDetails` objects
+ */
+export function setRegisteredRules(rules: RuleDetails[]) {
+  registeredRules = rules;
+}
 
 // `before` hook which makes rule never run.
 const neverRunBeforeHook: BeforeHook = () => false;
@@ -107,21 +114,18 @@ interface PluginDetails {
  * @param url - Absolute path of plugin file as a `file://...` URL
  * @param pluginName - Plugin name (either alias or package name)
  * @param pluginNameIsAlias - `true` if plugin name is an alias (takes priority over name that plugin defines itself)
+ * @param workspaceUri - Workspace URI (`null` in CLI, string in LSP)
  * @returns Plugin details or error serialized to JSON string
  */
 export async function loadPlugin(
   url: string,
   pluginName: string | null,
   pluginNameIsAlias: boolean,
+  workspaceUri: string | null,
 ): Promise<string> {
   try {
-    if (DEBUG) {
-      if (registeredPluginUrls.has(url)) throw new Error("This plugin has already been registered");
-      registeredPluginUrls.add(url);
-    }
-
     const plugin = (await import(url)).default as Plugin;
-    const res = registerPlugin(plugin, pluginName, pluginNameIsAlias);
+    const res = registerPlugin(plugin, pluginName, pluginNameIsAlias, workspaceUri);
     return JSON.stringify({ Success: res });
   } catch (err) {
     return JSON.stringify({ Failure: getErrorMessage(err) });
@@ -134,6 +138,7 @@ export async function loadPlugin(
  * @param plugin - Plugin
  * @param pluginName - Plugin name (either alias or package name)
  * @param pluginNameIsAlias - `true` if plugin name is an alias (takes priority over name that plugin defines itself)
+ * @param workspaceUri - Workspace URI (`null` in CLI, string in LSP)
  * @returns - Plugin details
  * @throws {Error} If `plugin.meta.name` is `null` / `undefined` and `packageName` not provided
  * @throws {TypeError} If one of plugin's rules is malformed, or its `createOnce` method returns invalid visitor
@@ -143,10 +148,16 @@ export function registerPlugin(
   plugin: Plugin,
   pluginName: string | null,
   pluginNameIsAlias: boolean,
+  workspaceUri: string | null,
 ): PluginDetails {
   // TODO: Use a validation library to assert the shape of the plugin, and of rules
 
   pluginName = getPluginName(plugin, pluginName, pluginNameIsAlias);
+
+  // Switch to requested workspace.
+  // In CLI, `workspaceUri` is `null`, and there's only 1 workspace, so no need to switch.
+  // In LSP, there can be multiple workspaces, so we need to switch if we're not already in the right one.
+  if (workspaceUri !== null) switchWorkspace(workspaceUri);
 
   const offset = registeredRules.length;
   const { rules } = plugin;
@@ -170,10 +181,17 @@ export function registerPlugin(
 
       const { fixable } = ruleMeta;
       if (fixable != null) {
-        if (fixable !== "code" && fixable !== "whitespace") {
+        // `true` and `false` aren't valid values for `meta.fixable`, but we accept them for
+        // backward compatibility with some ESLint plugins
+        if (
+          fixable !== "code" &&
+          fixable !== "whitespace" &&
+          fixable !== true &&
+          fixable !== false
+        ) {
           throw new TypeError("Invalid `rule.meta.fixable`");
         }
-        isFixable = true;
+        isFixable = (fixable as "code" | "whitespace" | true | false) !== false;
       }
 
       // If `schema` provided, compile schema to validator for applying schema defaults to options

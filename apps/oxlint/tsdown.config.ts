@@ -37,7 +37,7 @@ export default defineConfig([
   // Main build
   {
     ...commonConfig,
-    entry: ["src-js/cli.ts", "src-js/index.ts"],
+    entry: ["src-js/cli.ts", "src-js/index.ts", "src-js/plugins.ts", "src-js/plugins-dev.ts"],
     format: "esm",
     external: [
       // External native bindings
@@ -204,6 +204,10 @@ const GLOBALS = new Set([
   "TextDecoder", "BroadcastChannel", "MessageChannel", "MessagePort", "Blob", "File"
 ]);
 
+// Global properties which cannot be converted to top-level vars, because they're methods which use `this`.
+// e.g. `const r = Promise.resolve; r(1);` throws "TypeError: PromiseResolve called on non-object".
+const SKIP_GLOBALS = new Set(["Promise.resolve", "Promise.allSettled"]);
+
 /**
  * Create a plugin to replace usage of properties of globals with global vars defined in `utils/globals.ts`.
  *
@@ -288,15 +292,18 @@ function createReplaceGlobalsPlugin(): Plugin {
 
             const propName = propNames.reverse().join(".");
 
+            const fullName = `${object.name}.${propName}`;
+            if (SKIP_GLOBALS.has(fullName)) return;
+
             const mapping = availableGlobals.get(globalName);
             if (!mapping) {
-              missingGlobalVars.add(`\`${object.name}.${propName}\``);
+              missingGlobalVars.add(`\`${fullName}\``);
               return;
             }
 
             const varName = mapping.get(propName);
             if (!varName) {
-              missingGlobalVars.add(`\`${object.name}.${propName}\``);
+              missingGlobalVars.add(`\`${fullName}\``);
               return;
             }
 
@@ -323,7 +330,9 @@ function createReplaceGlobalsPlugin(): Plugin {
         if (varNames.size === 0) return;
 
         // Some globals were found. Import them from `utils/globals.ts`.
-        const relativePath = pathRelative(dirname(path), GLOBALS_PATH);
+        let relativePath = pathRelative(dirname(path), GLOBALS_PATH);
+        relativePath = relativePath.replace(/\\/g, "/");
+        relativePath = relativePath.startsWith(".") ? relativePath : `./${relativePath}`;
         const importStmt = `import { ${[...varNames].join(", ")} } from ${JSON.stringify(relativePath)};\n`;
 
         magicString.prepend(importStmt);

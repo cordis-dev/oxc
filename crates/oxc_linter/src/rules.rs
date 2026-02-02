@@ -1,7 +1,7 @@
 //! All registered lint rules.
 //!
 //! New rules need to be added to these `mod` statements.
-//! Then run `cargo run -p oxc_linter_codegen` to regenerate the `RuleEnum`.
+//! Then run `cargo lintgen` to regenerate the RuleEnum and RuleRunnerImpls.
 
 /// <https://github.com/import-js/eslint-plugin-import>
 pub(crate) mod import {
@@ -30,6 +30,7 @@ pub(crate) mod import {
     pub mod no_named_default;
     pub mod no_named_export;
     pub mod no_namespace;
+    pub mod no_nodejs_modules;
     pub mod no_relative_parent_imports;
     pub mod no_self_import;
     pub mod no_unassigned_import;
@@ -183,6 +184,7 @@ pub(crate) mod eslint {
     pub mod no_warning_comments;
     pub mod no_with;
     pub mod operator_assignment;
+    pub mod prefer_const;
     pub mod prefer_destructuring;
     pub mod prefer_exponentiation_operator;
     pub mod prefer_numeric_literals;
@@ -326,6 +328,7 @@ pub(crate) mod jest {
     pub mod no_standalone_expect;
     pub mod no_test_prefixes;
     pub mod no_test_return_statement;
+    pub mod no_unneeded_async_expect_function;
     pub mod no_untyped_mock_factory;
     pub mod padding_around_test_blocks;
     pub mod prefer_called_with;
@@ -387,6 +390,7 @@ pub(crate) mod react {
     pub mod no_direct_mutation_state;
     pub mod no_find_dom_node;
     pub mod no_is_mounted;
+    pub mod no_multi_comp;
     pub mod no_namespace;
     pub mod no_redundant_should_component_update;
     pub mod no_render_return_value;
@@ -674,7 +678,6 @@ pub(crate) mod vitest {
     pub mod hoisted_apis_on_top;
     pub mod no_conditional_tests;
     pub mod no_import_node_test;
-    pub mod no_unneeded_async_expect_function;
     pub mod prefer_called_once;
     pub mod prefer_called_times;
     pub mod prefer_describe_function_title;

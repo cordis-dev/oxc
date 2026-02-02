@@ -37,6 +37,7 @@ ready:
   git diff --exit-code --quiet
   pnpm install
   typos
+  cargo lintgen
   just fmt
   just check
   just test
@@ -268,6 +269,10 @@ website path:
 # Generate linter schema json for `npm/oxlint/configuration_schema.json`
 linter-schema-json:
   cargo run -p website_linter schema-json > npm/oxlint/configuration_schema.json
+
+# Generate linter config TypeScript types for `apps/oxlint/src-js/package/config.generated.ts`
+linter-config-ts:
+  pnpm --filter oxlint-app generate-config-types
 
 # Generate formatter schema json for `npm/oxfmt/configuration_schema.json`
 formatter-schema-json:

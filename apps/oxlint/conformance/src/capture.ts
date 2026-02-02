@@ -31,7 +31,7 @@ export interface TestResult {
 const describeStack: string[] = [];
 
 // Current test group
-let currentGroup: TestGroup | null = null;
+export let currentGroup: TestGroup | null = null;
 
 /**
  * Set the current group being tested.
@@ -43,7 +43,7 @@ export function setCurrentGroup(group: TestGroup): void {
 }
 
 // Current rule being tested
-let currentRule: RuleResult | null = null;
+export let currentRule: RuleResult | null = null;
 
 /**
  * Set the current rule being tested.
@@ -82,9 +82,23 @@ export function setCurrentTest(test: TestCase): void {
 export function describe(name: string, fn: () => void): void {
   describeStack.push(name);
   try {
-    fn();
-  } finally {
+    const res = fn() as any;
+
+    // If returned a promise, ignore the promise's rejection, and create a test case which throws an error,
+    // so it appears in the snapshot. This can only happen if `describe` is used manually.
+    if (res instanceof Promise) {
+      res.catch(() => {});
+      throw new Error("Test case returned a promise");
+    }
+
     describeStack.pop();
+  } catch (err) {
+    // Error. Treat it as a test case (`it`), so it ends up in snapshot and doesn't cause the file to fail to load.
+    // This is useful for test files which use `describe` and `it` manually.
+    describeStack.pop();
+    it(name, () => {
+      throw err;
+    });
   }
 }
 
@@ -113,18 +127,20 @@ export function it(code: string, fn: () => void): void {
 
     testResult.isPassed = true;
   } catch (err) {
-    testResult.testCase = currentTest;
-
-    if (!(err instanceof Error)) {
-      testResult.error = new Error("Unknown error");
-    } else if (currentTest === null) {
-      testResult.error = new Error("Test case was not run with `RuleTester`");
-    } else {
-      testResult.error = err;
-
-      const ruleName = describeStack[0];
-      if (shouldSkipTest(ruleName, currentTest, code, err)) testResult.isSkipped = true;
+    if (currentTest === null) {
+      // oxlint-disable-next-line no-ex-assign
+      err = new Error("Test case was not run with `RuleTester`");
+      currentTest = { code };
+    } else if (!(err instanceof Error)) {
+      // oxlint-disable-next-line no-ex-assign
+      err = new Error("Unknown error");
     }
+
+    testResult.testCase = currentTest;
+    testResult.error = err;
+
+    const ruleName = describeStack[0];
+    if (shouldSkipTest(ruleName, currentTest, code, err)) testResult.isSkipped = true;
   } finally {
     // Reset current test
     currentTest = null;

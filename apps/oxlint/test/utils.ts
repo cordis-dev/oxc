@@ -1,19 +1,18 @@
 import fs from "node:fs/promises";
 import { readdirSync, readFileSync } from "node:fs";
-import { join as pathJoin, sep as pathSep } from "node:path";
+import { join as pathJoin, relative as pathRelative, sep as pathSep } from "node:path";
 
 import { execa } from "execa";
 import { expect as defaultExpect, type ExpectStatic } from "vitest";
 
-// Replace backslashes with forward slashes on Windows. Do nothing on Mac/Linux.
-const normalizeSlashes =
-  pathSep === "\\" ? (path: string) => path.replaceAll("\\", "/") : (path: string) => path;
+const isWindows = pathSep === "\\";
+const normalizeSlashes = (path: string) => path.replaceAll("\\", "/");
 
 export const PACKAGE_ROOT_PATH = pathJoin(import.meta.dirname, ".."); // `/path/to/oxc/apps/oxlint`
 const FIXTURES_DIR_PATH = pathJoin(import.meta.dirname, "fixtures"); // `/path/to/oxc/apps/oxlint/test/fixtures`
 
 const REPO_ROOT_PATH = pathJoin(PACKAGE_ROOT_PATH, "../.."); // `/path/to/oxc`
-const FIXTURES_SUBPATH = normalizeSlashes(FIXTURES_DIR_PATH.slice(REPO_ROOT_PATH.length)); // `/apps/oxlint/test/fixtures`
+export const FIXTURES_SUBPATH = `/${normalizeSlashes(pathRelative(REPO_ROOT_PATH, FIXTURES_DIR_PATH))}`; // `/apps/oxlint/test/fixtures`
 
 const FIXTURES_URL = new URL("./fixtures/", import.meta.url).href; // `file:///path/to/oxc/apps/oxlint/test/fixtures/`
 
@@ -30,6 +29,10 @@ export interface Fixture {
     fix: boolean;
     // Run Oxlint single-threaded. Default: `false`.
     singleThread: boolean;
+    // Run Oxlint/ESLint in a specific working directory.
+    // If provided, `cwd` is relative to the fixture's directory.
+    // Default: `null`.
+    cwd: string | null;
   };
 }
 
@@ -38,6 +41,7 @@ const DEFAULT_OPTIONS: Fixture["options"] = {
   eslint: false,
   fix: false,
   singleThread: false,
+  cwd: null,
 };
 
 /**
@@ -78,6 +82,9 @@ export function getFixtures(): Fixture[] {
         "`oxlint`, `eslint`, `fix`, and `singleThread` properties in `options.json` must be booleans",
       );
     }
+    if (options.cwd !== null && typeof options.cwd !== "string") {
+      throw new TypeError("`cwd` property in `options.json` must be a string or null");
+    }
 
     fixtures.push({ name, dirPath, options });
   }
@@ -107,7 +114,7 @@ interface TestFixtureOptions {
  */
 export async function testFixtureWithCommand(options: TestFixtureOptions): Promise<void> {
   const { expect = defaultExpect } = options;
-  const { name: fixtureName, dirPath } = options.fixture,
+  const { name: fixtureName, dirPath, options: fixtureOptions } = options.fixture,
     pathPrefixLen = dirPath.length + 1;
 
   // Read all the files in fixture's directory
@@ -127,8 +134,10 @@ export async function testFixtureWithCommand(options: TestFixtureOptions): Promi
   );
 
   // Run command
+  const cwd = fixtureOptions.cwd === null ? dirPath : pathJoin(dirPath, fixtureOptions.cwd);
+
   let { stdout, stderr, exitCode } = await execa(options.command, options.args, {
-    cwd: dirPath,
+    cwd,
     reject: false,
   });
 
@@ -166,13 +175,14 @@ export async function testFixtureWithCommand(options: TestFixtureOptions): Promi
   await expect(snapshot).toMatchFileSnapshot(snapshotPath);
 }
 
+export const NORMALIZED_REPO_ROOT = normalizeSlashes(REPO_ROOT_PATH);
 // Regexp to match paths in output.
 // Matches `/path/to/oxc`, `/path/to/oxc/`, `/path/to/oxc/whatever`,
 // when preceded by whitespace, `(`, or a quote, and followed by whitespace, `)`, or a quote.
-const PATH_REGEXP = new RegExp(
+export const PATH_REGEXP = new RegExp(
   // @ts-expect-error - `RegExp.escape` is new in NodeJS v24
-  `(?<=^|[\\s\\('"\`])${RegExp.escape(REPO_ROOT_PATH)}(${RegExp.escape(pathSep)}[^\\s\\)'"\`]*)?(?=$|[\\s\\)'"\`])`,
-  "g",
+  `(?<=^|[\\s\\('"\`])${RegExp.escape(NORMALIZED_REPO_ROOT).replace(/\\\//g, "[\\\\/]")}([\\\\\\\\/][^\\s\\)'"\`]*)?(?=$|[\\s\\)'"\`])`,
+  isWindows ? "gi" : "g",
 );
 
 // Regexp to match lines of form `whatever      plugin/rule` in ESLint output.
@@ -195,7 +205,7 @@ const ESLINT_SPACES_MIN = 4;
  * @param isESLint - `true` if the output is from ESLint
  * @returns Normalized output
  */
-function normalizeStdout(stdout: string, fixtureName: string, isESLint: boolean): string {
+export function normalizeStdout(stdout: string, fixtureName: string, isESLint: boolean): string {
   // Normalize line breaks, and trim line breaks from start and end
   stdout = stdout.replace(/\r\n?/g, "\n").replace(/^\n+/, "").replace(/\n+$/, "");
   if (stdout === "") return "";
@@ -217,6 +227,12 @@ function normalizeStdout(stdout: string, fixtureName: string, isESLint: boolean)
   // Remove lines from stack traces which are outside `fixtures` directory.
   // Shorten paths in output with `<root>`, `<fixtures>`, or `<fixture>`.
   lines = lines.flatMap((line) => {
+    // Normalize Windows backslashes in codeframe headers.
+    // e.g. `,-[files\\foo\\bar.js:1:1]` -> `,-[files/foo/bar.js:1:1]`
+    line = line.replace(/(,-\[)([^\]]+)(\])/g, (_match, prefix, content, suffix) => {
+      return `${prefix}${content.replaceAll("\\", "/")}${suffix}`;
+    });
+
     // Handle stack trace lines.
     // e.g. ` at file:///path/to/oxc/apps/oxlint/test/fixtures/foo/bar.js:1:1`
     // e.g. ` at whatever (file:///path/to/oxc/apps/oxlint/test/fixtures/foo/bar.js:1:1)`
@@ -225,12 +241,40 @@ function normalizeStdout(stdout: string, fixtureName: string, isESLint: boolean)
     const match = line.match(/^(\s*\|?\s+at (?:.+?\()?)(.+)$/);
     if (match) {
       let [, preamble, at] = match;
-      if (!at.startsWith(FIXTURES_URL)) return [];
-      at = convertFixturesSubPath(at.slice(FIXTURES_URL.length - 1), fixtureName);
-      return [`${preamble}${at}`];
+
+      const fixturesUrl = isWindows ? FIXTURES_URL.toLowerCase() : FIXTURES_URL;
+      const atCmp = isWindows ? at.toLowerCase() : at;
+      if (atCmp.startsWith(fixturesUrl)) {
+        at = convertFixturesSubPath(at.slice(FIXTURES_URL.length - 1), fixtureName);
+        return [`${preamble}${at}`];
+      }
+
+      // Some stack traces can use file paths instead of file URLs on Windows.
+      // Keep frames in fixtures, drop everything else.
+      // oxlint-disable-next-line oxc/bad-replace-all-arg
+      const normalizedAt = at.replaceAll(PATH_REGEXP, (_, subPath) => {
+        if (subPath === undefined) return "<root>";
+        return convertSubPath(normalizeSlashes(subPath), fixtureName);
+      });
+
+      if (normalizedAt.includes("<fixture>") || normalizedAt.includes("<fixtures>")) {
+        return [`${preamble}${normalizedAt}`];
+      }
+
+      return [];
     }
 
+    // Handle fixture file URLs anywhere else in the line.
+    // e.g. `... file:///path/to/oxc/apps/oxlint/test/fixtures/foo/bar.js:1:1 ...`
+    // oxlint-disable-next-line oxc/bad-replace-all-arg
+    line = line.replaceAll(
+      // @ts-expect-error - `RegExp.escape` is new in NodeJS v24
+      new RegExp(`${RegExp.escape(FIXTURES_URL)}([^\\s\\)'"\`]+)`, isWindows ? "gi" : "g"),
+      (_match, subPath) => convertFixturesSubPath(`/${subPath}`, fixtureName),
+    );
+
     // Handle paths anywhere else in the line
+    // oxlint-disable-next-line oxc/bad-replace-all-arg
     line = line.replaceAll(PATH_REGEXP, (_, subPath) => {
       if (subPath === undefined) return "<root>";
       return convertSubPath(normalizeSlashes(subPath), fixtureName);
@@ -268,7 +312,7 @@ function normalizeStdout(stdout: string, fixtureName: string, isESLint: boolean)
  * - `/apps/oxlint/test/fixtures/foo` => `<fixtures>/foo`
  * - `/apps/oxlint/something/else` => `<root>/apps/oxlint/something/else`
  */
-function convertSubPath(subPath: string, fixtureName: string): string {
+export function convertSubPath(subPath: string, fixtureName: string): string {
   if (subPath.startsWith(FIXTURES_SUBPATH)) {
     const relPath = subPath.slice(FIXTURES_SUBPATH.length);
     if (relPath === "") return "<fixtures>";
@@ -289,7 +333,7 @@ function convertSubPath(subPath: string, fixtureName: string): string {
  * - `/foo/bar.js` => `<fixture>/bar.js`
  * - `/foo` => `<fixtures>/foo`
  */
-function convertFixturesSubPath(subPath: string, fixtureName: string): string {
+export function convertFixturesSubPath(subPath: string, fixtureName: string): string {
   subPath = subPath.slice(1);
   if (subPath.startsWith(fixtureName)) {
     const relPath = subPath.slice(fixtureName.length);

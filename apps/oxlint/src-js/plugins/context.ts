@@ -41,12 +41,21 @@ import type { Settings } from "./settings.ts";
 import type { SourceCode } from "./source_code.ts";
 import type { ModuleKind, Program } from "../generated/types.d.ts";
 
-// Cached current working directory
-let cwd: string | null = null;
-
 // Absolute path of file being linted.
 // When `null`, indicates that no file is currently being linted (in `createOnce`, or between linting files).
 export let filePath: string | null = null;
+
+// Current working directory for file being linted.
+// Set by `setOptions` at end of registering all plugins, and may also be changed when switching workspaces.
+export let cwd: string | null = null;
+
+/**
+ * Set CWD. Used when switching workspaces.
+ * @param cwdInput - CWD
+ */
+export function setCwd(cwdInput: string) {
+  cwd = cwdInput;
+}
 
 /**
  * Set up context for linting a file.
@@ -265,7 +274,7 @@ const LANGUAGE_OPTIONS = {
 // In conformance build, replace `LANGUAGE_OPTIONS.ecmaVersion` with a getter which returns value of local var.
 // This is to allow changing the ECMAScript version in conformance tests.
 // Some of ESLint's rules change behavior based on the version, and ESLint's tests rely on this.
-let ecmaVersion = ECMA_VERSION;
+export let ecmaVersion = ECMA_VERSION;
 
 export function setEcmaVersion(version: number): void {
   if (!CONFORMANCE) throw new Error("Should be unreachable in release or debug builds");
@@ -364,7 +373,7 @@ const FILE_CONTEXT = Object.freeze({
   get cwd(): string {
     // Note: If we change this implementation, also change `getCwd` method below
     if (filePath === null) throw new Error("Cannot access `context.cwd` in `createOnce`");
-    if (cwd === null) cwd = process.cwd();
+    debugAssertIsNonNull(cwd, "`cwd` should not be null");
     return cwd;
   },
 
@@ -375,7 +384,7 @@ const FILE_CONTEXT = Object.freeze({
    */
   getCwd(): string {
     if (filePath === null) throw new Error("Cannot call `context.getCwd` in `createOnce`");
-    if (cwd === null) cwd = process.cwd();
+    debugAssertIsNonNull(cwd, "`cwd` should not be null");
     return cwd;
   },
 
@@ -445,9 +454,9 @@ const FILE_CONTEXT = Object.freeze({
    * The path to the parser used to parse this file.
    * @deprecated No longer supported.
    */
-  get parserPath(): string {
-    // TODO: Implement this?
-    throw new Error("`context.parserPath` is unsupported at present (and deprecated)");
+  get parserPath(): string | undefined {
+    if (filePath === null) throw new Error("Cannot access `context.parserPath` in `createOnce`");
+    return undefined;
   },
 });
 

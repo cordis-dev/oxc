@@ -7,9 +7,6 @@ use crate::rules::RuleEntry;
 /// Generate the RuleEnum and related code that replaces `declare_all_lint_rules!` macro.
 pub fn generate_rules_enum(rule_entries: &[RuleEntry<'_>]) -> String {
     let header = quote! {
-        // Auto-generated code, DO NOT EDIT DIRECTLY!
-        // To regenerate: `cargo run -p oxc_linter_codegen`
-
         #![expect(
             clippy::default_constructed_unit_structs,  // Many rules are unit structs
             clippy::semicolon_if_nothing_returned,     // Match arms in void-returning methods
@@ -42,7 +39,10 @@ pub fn generate_rules_enum(rule_entries: &[RuleEntry<'_>]) -> String {
         #rules_static
     };
 
-    tokens.to_string()
+    // Prepend header comment as a string since `quote!` strips comments
+    let header_comment =
+        "// Auto-generated code, DO NOT EDIT DIRECTLY!\n// To regenerate: `cargo lintgen`\n\n";
+    format!("{header_comment}{tokens}")
 }
 
 /// Create an identifier from a rule entry for the enum variant name.
@@ -218,6 +218,14 @@ fn generate_rule_enum_impl(rule_entries: &[RuleEntry<'_>]) -> TokenStream {
         })
         .collect();
 
+    let has_config_arms: Vec<TokenStream> = rule_entries
+        .iter()
+        .map(|rule| {
+            let enum_name = make_enum_ident(rule);
+            quote! { Self::#enum_name(_) => #enum_name::HAS_CONFIG }
+        })
+        .collect();
+
     let types_info_arms: Vec<TokenStream> = rule_entries
         .iter()
         .map(|rule| {
@@ -233,6 +241,8 @@ fn generate_rule_enum_impl(rule_entries: &[RuleEntry<'_>]) -> TokenStream {
             quote! { Self::#enum_name(rule) => rule.run_info() }
         })
         .collect();
+
+    // Whether a rule declares a configuration type (i.e. `config = FooConfig`)
 
     quote! {
         impl RuleEnum {
@@ -324,6 +334,13 @@ fn generate_rule_enum_impl(rule_entries: &[RuleEntry<'_>]) -> TokenStream {
             pub fn is_tsgolint_rule(&self) -> bool {
                 match self {
                     #(#is_tsgolint_rule_arms),*
+                }
+            }
+
+            /// Whether this rule declares a configuration type.
+            pub fn has_config(&self) -> bool {
+                match self {
+                    #(#has_config_arms),*
                 }
             }
 
