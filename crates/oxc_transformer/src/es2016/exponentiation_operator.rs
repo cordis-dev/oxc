@@ -40,21 +40,20 @@ use oxc_syntax::operator::{AssignmentOperator, BinaryOperator};
 use oxc_traverse::{BoundIdentifier, Traverse};
 
 use crate::{
-    context::{TransformCtx, TraverseCtx},
-    state::TransformState,
+    common::var_declarations::VarDeclarationsStore, context::TraverseCtx, state::TransformState,
 };
 
-pub struct ExponentiationOperator<'a, 'ctx> {
-    ctx: &'ctx TransformCtx<'a>,
+pub struct ExponentiationOperator<'a> {
+    _marker: std::marker::PhantomData<&'a ()>,
 }
 
-impl<'a, 'ctx> ExponentiationOperator<'a, 'ctx> {
-    pub fn new(ctx: &'ctx TransformCtx<'a>) -> Self {
-        Self { ctx }
+impl ExponentiationOperator<'_> {
+    pub fn new() -> Self {
+        Self { _marker: std::marker::PhantomData }
     }
 }
 
-impl<'a> Traverse<'a, TransformState<'a>> for ExponentiationOperator<'a, '_> {
+impl<'a> Traverse<'a, TransformState<'a>> for ExponentiationOperator<'a> {
     // Note: Do not transform to `Math.pow` with BigInt arguments - that's a runtime error
     fn enter_expression(&mut self, expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
         match expr {
@@ -101,7 +100,7 @@ impl<'a> Traverse<'a, TransformState<'a>> for ExponentiationOperator<'a, '_> {
     }
 }
 
-impl<'a> ExponentiationOperator<'a, '_> {
+impl<'a> ExponentiationOperator<'a> {
     /// Convert `BinaryExpression`.
     ///
     /// `left ** right` -> `Math.pow(left, right)`
@@ -162,12 +161,11 @@ impl<'a> ExponentiationOperator<'a, '_> {
         let pow_left = if let Some(symbol_id) = reference.symbol_id() {
             // This variable is declared in scope so evaluating it multiple times can't trigger a getter.
             // No need for a temp var.
-            ctx.create_bound_ident_expr(SPAN, ident.name.into(), symbol_id, ReferenceFlags::Read)
+            ctx.create_bound_ident_expr(SPAN, ident.name, symbol_id, ReferenceFlags::Read)
         } else {
             // Unbound reference. Could possibly trigger a getter so we need to only evaluate it once.
             // Assign to a temp var.
-            let reference =
-                ctx.create_unbound_ident_expr(SPAN, ident.name.into(), ReferenceFlags::Read);
+            let reference = ctx.create_unbound_ident_expr(SPAN, ident.name, ReferenceFlags::Read);
             let binding = self.create_temp_var(reference, &mut temp_var_inits, ctx);
             binding.create_read_expression(ctx)
         };
@@ -489,7 +487,7 @@ impl<'a> ExponentiationOperator<'a, '_> {
                     // No need for a temp var.
                     return ctx.create_bound_ident_expr(
                         SPAN,
-                        ident.name.into(),
+                        ident.name,
                         symbol_id,
                         ReferenceFlags::Read,
                     );
@@ -537,9 +535,9 @@ impl<'a> ExponentiationOperator<'a, '_> {
         right: Expression<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) -> Expression<'a> {
-        let math_symbol_id = ctx.scoping().find_binding(ctx.current_scope_id(), "Math");
-        let object =
-            ctx.create_ident_expr(SPAN, Atom::from("Math"), math_symbol_id, ReferenceFlags::Read);
+        let math = ctx.ast.ident("Math");
+        let math_symbol_id = ctx.scoping().find_binding(ctx.current_scope_id(), math);
+        let object = ctx.create_ident_expr(SPAN, math, math_symbol_id, ReferenceFlags::Read);
         let property = ctx.ast.identifier_name(SPAN, "pow");
         let callee =
             Expression::from(ctx.ast.member_expression_static(SPAN, object, property, false));
@@ -551,6 +549,7 @@ impl<'a> ExponentiationOperator<'a, '_> {
     /// Add a `var _name;` statement to enclosing scope.
     /// Add initialization expression `_name = expr` to `temp_var_inits`.
     /// Return `BoundIdentifier` for the temp var.
+    #[expect(clippy::unused_self)]
     fn create_temp_var(
         &self,
         expr: Expression<'a>,
@@ -558,7 +557,7 @@ impl<'a> ExponentiationOperator<'a, '_> {
         ctx: &mut TraverseCtx<'a>,
     ) -> BoundIdentifier<'a> {
         // var _name;
-        let binding = self.ctx.var_declarations.create_uid_var_based_on_node(&expr, ctx);
+        let binding = VarDeclarationsStore::create_uid_var_based_on_node(&expr, ctx);
 
         // Add new reference `_name = name` to `temp_var_inits`
         temp_var_inits.push(ctx.ast.expression_assignment(

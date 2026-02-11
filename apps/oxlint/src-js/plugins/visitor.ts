@@ -133,7 +133,7 @@ interface CompilingNonLeafVisitorEntry {
 // Visitor state.
 // Returned by `finalizeCompiledVisitor`.
 // This a "poor man's enum", which compiles down better than TS enums.
-export type VisitorState = 0 | 1 | 2;
+export type VisitorState = typeof VISITOR_EMPTY | typeof VISITOR_NOT_EMPTY | typeof VISITOR_CFG;
 
 export const VISITOR_EMPTY = 0; // Empty visitor (no need to walk AST)
 export const VISITOR_NOT_EMPTY = 1; // Not empty visitor (need to walk AST)
@@ -352,6 +352,10 @@ export function addVisitorToCompiled(visitor: Visitor): void {
     }
 
     // `*` selector or some other selector that matches all node types
+    // TODO: Add 2 arrays for "enter all" and "exit all" selectors.
+    // Where visitor contains multiple selectors which match all node types, this would avoid merging them
+    // into a single visit function 100+ times for each node type. Could just merge them once and assign the same
+    // merged function to all node types (except those which have other visit functions).
     for (typeId = 0; typeId < LEAF_NODE_TYPES_COUNT; typeId++) {
       addLeafVisitFn(typeId, visitProp);
     }

@@ -30,8 +30,11 @@ export declare const enum Severity {
  * NAPI based format API entry point.
  *
  * Since it internally uses `await prettier.format()` in JS side, `formatSync()` cannot be provided.
+ *
+ * # Panics
+ * Panics if the current working directory cannot be determined.
  */
-export declare function format(filename: string, sourceText: string, options: any | undefined | null, initExternalFormatterCb: (numThreads: number) => Promise<string[]>, formatEmbeddedCb: (options: Record<string, any>, parserName: string, code: string) => Promise<string>, formatFileCb: (options: Record<string, any>, parserName: string, fileName: string, code: string) => Promise<string>, sortTailwindClassesCb: (filepath: string, options: Record<string, any>, classes: string[]) => Promise<string[]>): Promise<FormatResult>
+export declare function format(filename: string, sourceText: string, options: any | undefined | null, initExternalFormatterCb: (numThreads: number) => Promise<string[]>, formatEmbeddedCb: (options: Record<string, any>, code: string) => Promise<string>, formatFileCb: (options: Record<string, any>, code: string) => Promise<string>, sortTailwindClassesCb: (options: Record<string, any>, classes: string[]) => Promise<string[]>): Promise<FormatResult>
 
 export interface FormatResult {
   /** The formatted code. */
@@ -55,4 +58,4 @@ export interface FormatResult {
  * - `mode`: If main logic will run in JS side, use this to indicate which mode
  * - `exitCode`: If main logic already ran in Rust side, return the exit code
  */
-export declare function runCli(args: Array<string>, initExternalFormatterCb: (numThreads: number) => Promise<string[]>, formatEmbeddedCb: (options: Record<string, any>, parserName: string, code: string) => Promise<string>, formatFileCb: (options: Record<string, any>, parserName: string, fileName: string, code: string) => Promise<string>, sortTailwindcssClassesCb: (filepath: string, options: Record<string, any>, classes: string[]) => Promise<string[]>): Promise<[string, number | undefined | null]>
+export declare function runCli(args: Array<string>, initExternalFormatterCb: (numThreads: number) => Promise<string[]>, formatEmbeddedCb: (options: Record<string, any>, code: string) => Promise<string>, formatFileCb: (options: Record<string, any>, code: string) => Promise<string>, sortTailwindcssClassesCb: (options: Record<string, any>, classes: string[]) => Promise<string[]>): Promise<[string, number | undefined | null]>

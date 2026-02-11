@@ -1,6 +1,6 @@
 {
   "name": "oxlint-app",
-  "version": "1.43.0",
+  "version": "1.46.0",
   "private": true,
   "description": "Internal development package for oxlint. For the published package.json template, see `npm/oxlint/package.json`.",
   "license": "MIT",
@@ -8,17 +8,13 @@
   "main": "dist/index.js",
   "imports": {
     "#oxlint": "./dist/index.js",
-    "#oxlint/plugins": "./dist/plugins.js",
+    "#oxlint/plugins": "./dist-pkg-plugins/index.js",
     "#oxlint/plugins-dev": "./dist/plugins-dev.js"
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    },
-    "./plugins": {
-      "types": "./dist/plugins.d.ts",
-      "default": "./dist/plugins.js"
     },
     "./plugins-dev": {
       "types": "./dist/plugins-dev.d.ts",
@@ -41,7 +37,9 @@
   },
   "devDependencies": {
     "@arethetypeswrong/core": "catalog:",
+    "@babel/code-frame": "^7.28.6",
     "@napi-rs/cli": "catalog:",
+    "@types/babel__code-frame": "^7.27.0",
     "@types/esquery": "^1.5.4",
     "@types/estree": "^1.0.8",
     "@types/json-schema": "^7.0.15",
@@ -63,20 +61,29 @@
     "tsx": "^4.21.0",
     "type-fest": "^5.2.0",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "vscode-languageserver-protocol": "^3.17.5"
   },
   "napi": {
     "binaryName": "oxlint",
     "packageName": "@oxlint/binding",
     "targets": [
-      "win32-x64",
-      "win32-arm64",
-      "linux-x64-gnu",
-      "linux-arm64-gnu",
-      "linux-x64-musl",
-      "linux-arm64-musl",
-      "darwin-x64",
-      "darwin-arm64"
+      "aarch64-apple-darwin",
+      "aarch64-linux-android",
+      "aarch64-pc-windows-msvc",
+      "aarch64-unknown-linux-gnu",
+      "aarch64-unknown-linux-musl",
+      "aarch64-unknown-linux-ohos",
+      "armv7-linux-androideabi",
+      "armv7-unknown-linux-gnueabihf",
+      "armv7-unknown-linux-musleabihf",
+      "i686-pc-windows-msvc",
+      "powerpc64le-unknown-linux-gnu",
+      "x86_64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-freebsd",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl"
     ]
   },
   "engines": {

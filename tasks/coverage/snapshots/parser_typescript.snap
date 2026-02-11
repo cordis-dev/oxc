@@ -1,9 +1,9 @@
-commit: 7f6a8467
+commit: 95e3aaa9
 
 parser_typescript Summary:
-AST Parsed     : 9842/9843 (99.99%)
-Positive Passed: 9837/9843 (99.94%)
-Negative Passed: 1510/2555 (59.10%)
+AST Parsed     : 9840/9840 (100.00%)
+Positive Passed: 9840/9840 (100.00%)
+Negative Passed: 1530/2558 (59.81%)
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/FunctionDeclaration3.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/FunctionDeclaration4.ts
@@ -193,8 +193,6 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/contextualTy
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/contextualTypingWithFixedTypeParameters1.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/continueNotInIterationStatement4.ts
-
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/corrupted.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/crashDeclareGlobalTypeofExport.ts
 
@@ -668,8 +666,6 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/moduleVariab
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/moduleVisibilityTest2.ts
 
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/multipleClassPropertyModifiers.ts
-
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/multipleExportAssignments.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/multipleExportAssignmentsInAmbientDeclaration.ts
@@ -717,8 +713,6 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/omitTypeTest
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/omittedExpressionForOfLoop.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/operationsAvailableOnPromisedType.ts
-
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/optionalChainWithInstantiationExpression1.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/optionalParamReferencingOtherParams2.ts
 
@@ -847,8 +841,6 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/staticClassM
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/staticInstanceResolution4.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/staticMemberExportAccess.ts
-
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/staticMustPrecedePublic.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/compiler/staticPropSuper.ts
 
@@ -996,8 +988,6 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/async/es6
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/async/es6/functionDeclarations/asyncFunctionDeclaration3_es6.ts
 
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/classes/classDeclarations/classAbstractKeyword/classAbstractMixedWithModifiers.ts
-
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/classes/classDeclarations/classAbstractKeyword/classAbstractProperties.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/classes/classExpressions/classWithStaticFieldInParameterBindingPattern.2.ts
@@ -1015,8 +1005,6 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/classes/c
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/classes/constructorDeclarations/constructorParameters/constructorParameterProperties.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/classes/constructorDeclarations/constructorParameters/constructorParameterProperties2.ts
-
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/classes/constructorDeclarations/constructorParameters/readonlyInConstructorParameters.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/classes/constructorDeclarations/superCalls/derivedClassParameterProperties.ts
 
@@ -1063,8 +1051,6 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/classes/m
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/classes/members/privateNames/privateNameNestedClassMethodShadowing.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/classes/members/privateNames/privateNameStaticFieldAccess.ts
-
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/classes/members/privateNames/privateNameStaticMethodAsync.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/classes/members/privateNames/privateNamesAndDecorators.ts
 
@@ -1468,6 +1454,8 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/externalM
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/externalModules/rewriteRelativeImportExtensions/emit.ts
 
+Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/externalModules/topLevelAwaitErrors.11.ts
+
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/externalModules/topLevelAwaitNonModule.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/externalModules/topLevelModuleDeclarationAndFile.ts
@@ -1692,8 +1680,6 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/node/node
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/node/nodeModulesExportsBlocksTypesVersions.ts
 
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/node/nodeModulesForbidenSyntax.ts
-
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/node/nodeModulesGeneratedNameCollisions.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/node/nodeModulesImportAssertions.ts
@@ -1709,10 +1695,6 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/node/node
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/node/nodeModulesNoDirectoryModule.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/node/nodeModulesTopLevelAwait.ts
-
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/override/override11.ts
-
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/override/overrideKeywordOrder.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/override/override_js3.ts
 
@@ -1744,12 +1726,6 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ec
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/EnumDeclarations/parserEnumDeclaration3.d.ts
 
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/ErrorRecovery/AccessibilityAfterStatic/parserAccessibilityAfterStatic1.ts
-
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/ErrorRecovery/AccessibilityAfterStatic/parserAccessibilityAfterStatic10.ts
-
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/ErrorRecovery/AccessibilityAfterStatic/parserAccessibilityAfterStatic7.ts
-
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/ErrorRecovery/parserModifierOnStatementInBlock1.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/ErrorRecovery/parserModifierOnStatementInBlock2.ts
@@ -1774,10 +1750,6 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ec
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/FunctionDeclarations/parserFunctionDeclaration7.ts
 
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/Generics/parserMemberAccessExpression1.ts
-
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/Generics/parserMemberAccessOffOfGenericType1.ts
-
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/IndexMemberDeclarations/parserIndexMemberDeclaration5.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/MemberAccessorDeclarations/parserMemberAccessor1.ts
@@ -1789,12 +1761,6 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ec
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/MemberAccessorDeclarations/parserMemberAccessorDeclaration2.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/MemberAccessorDeclarations/parserMemberAccessorDeclaration3.ts
-
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/MemberAccessorDeclarations/parserMemberAccessorDeclaration9.ts
-
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/MemberFunctionDeclarations/parserMemberFunctionDeclaration3.ts
-
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/MemberVariableDeclarations/parserMemberVariableDeclaration3.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/ModuleDeclarations/parserModuleDeclaration1.d.ts
 
@@ -1817,8 +1783,6 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ec
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/ParameterLists/parserParameterList16.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/ParameterLists/parserParameterList17.ts
-
-Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/Protected/Protected6.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/RegressionTests/parser509618.ts
 
@@ -1968,6 +1932,8 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/statement
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/statements/for-ofStatements/ES5For-of35.ts
 
+Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/statements/labeledStatements/labeledStatementDeclarationListInLoopNoCrash2.ts
+
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/types/any/narrowFromAnyWithTypePredicate.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/types/conditional/conditionalTypes1.ts
@@ -2093,68 +2059,6 @@ Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/types/uni
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/types/uniqueSymbol/uniqueSymbolsPropertyNames.ts
 
 Expect Syntax Error: tasks/coverage/typescript/tests/cases/conformance/types/witness/witness.ts
-
-Expect to Parse: tasks/coverage/typescript/tests/cases/compiler/sourceMapValidationDecorators.ts
-
-  × Unexpected token
-    ╭─[typescript/tests/cases/compiler/sourceMapValidationDecorators.ts:18:7]
- 17 │       @ParameterDecorator2(30) 
- 18 │       ...b: string[]) {
-    ·       ───
- 19 │     }
-    ╰────
-
-Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/async/es6/asyncWithVarShadowing_es6.ts
-
-  × Identifier `x` has already been declared
-     ╭─[typescript/tests/cases/conformance/async/es6/asyncWithVarShadowing_es6.ts:130:14]
- 129 │     }
- 130 │     catch ({ x }) {
-     ·              ┬
-     ·              ╰── `x` has already been declared here
- 131 │         var x;
-     ·             ┬
-     ·             ╰── It can not be redeclared here
- 132 │     }
-     ╰────
-
-Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/dynamicImport/importCallExpressionInScriptContext1.ts
-
-  × Cannot assign to 'arguments' in strict mode
-   ╭─[typescript/tests/cases/conformance/dynamicImport/importCallExpressionInScriptContext1.ts:2:10]
- 1 │ var p1 = import("./0");
- 2 │ function arguments() { } // this is allow as the file doesn't have implicit "use strict"
-   ·          ─────────
-   ╰────
-
-Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript5/ComputedPropertyNames/parserES5ComputedPropertyName11.ts
-
-  × TS(2391): Function implementation is missing or not immediately following the declaration.
-   ╭─[typescript/tests/cases/conformance/parser/ecmascript5/ComputedPropertyNames/parserES5ComputedPropertyName11.ts:2:5]
- 1 │ class C {
- 2 │    [e]();
-   ·     ─
- 3 │ }
-   ╰────
-
-Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/parser/ecmascript6/ComputedPropertyNames/parserComputedPropertyName11.ts
-
-  × TS(2391): Function implementation is missing or not immediately following the declaration.
-   ╭─[typescript/tests/cases/conformance/parser/ecmascript6/ComputedPropertyNames/parserComputedPropertyName11.ts:2:5]
- 1 │ class C {
- 2 │    [e]();
-   ·     ─
- 3 │ }
-   ╰────
-
-Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/VariableStatements/usingDeclarations/usingDeclarations.14.ts
-
-  × 'using' declarations are not allowed at the top level of a script
-   ╭─[typescript/tests/cases/conformance/statements/VariableStatements/usingDeclarations/usingDeclarations.14.ts:1:1]
- 1 │ using x = {};
-   · ─────────────
-   ╰────
-  help: Wrap this code in a block or use a module
 
 
   × TS(1090): 'public' modifier cannot appear on a parameter.
@@ -2407,6 +2311,13 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
    ·              ─────────────
  5 │ }
    ╰────
+
+  × Expected a semicolon or an implicit semicolon after a statement, but found none
+   ╭─[typescript/tests/cases/compiler/TransportStream.ts:1:2]
+ 1 │ G@�G@�G@�
+   ·  ▲
+   ╰────
+  help: Try inserting a semicolon here
 
   × Getters and setters must have an implementation.
     ╭─[typescript/tests/cases/compiler/abstractPropertyNegative.ts:16:9]
@@ -4682,6 +4593,8 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  293 │     class interface { }
      ╰────
 
+  × TS(1490): File appears to be binary.
+
   × TS(2391): Function implementation is missing or not immediately following the declaration.
    ╭─[typescript/tests/cases/compiler/crashOnMethodSignatures.ts:2:5]
  1 │ class A {
@@ -4745,6 +4658,30 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
 
   × TS(1187): A parameter property may not be declared using a binding pattern.
     ╭─[typescript/tests/cases/compiler/declarationEmitDestructuringParameterProperties.ts:14:17]
+ 13 │ class C3 {
+ 14 │     constructor(public { x, y, z }: ObjType1) {
+    ·                 ────────────────────────────
+ 15 │     }
+    ╰────
+
+  × TS(1187): A parameter property may not be declared using a binding pattern.
+   ╭─[typescript/tests/cases/compiler/declarationEmitDestructuringParameterProperties2.ts:2:17]
+ 1 │ class C1 {
+ 2 │     constructor(public [x, y, z]: string[]) {
+   ·                 ──────────────────────────
+ 3 │     }
+   ╰────
+
+  × TS(1187): A parameter property may not be declared using a binding pattern.
+   ╭─[typescript/tests/cases/compiler/declarationEmitDestructuringParameterProperties2.ts:8:17]
+ 7 │ class C2 {
+ 8 │     constructor(public [x, y, z]: TupleType1) {
+   ·                 ────────────────────────────
+ 9 │     }
+   ╰────
+
+  × TS(1187): A parameter property may not be declared using a binding pattern.
+    ╭─[typescript/tests/cases/compiler/declarationEmitDestructuringParameterProperties2.ts:14:17]
  13 │ class C3 {
  14 │     constructor(public { x, y, z }: ObjType1) {
     ·                 ────────────────────────────
@@ -6486,6 +6423,13 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  5 │ }
    ╰────
   help: Allowed modifiers are: declare, async
+
+  × TS(1477): An instantiation expression cannot be followed by a property access.
+   ╭─[typescript/tests/cases/compiler/genericCallWithoutArgs.ts:4:1]
+ 3 │ 
+ 4 │ f<number,string>.
+   · ─────────────────
+   ╰────
 
   × Unexpected token
    ╭─[typescript/tests/cases/compiler/genericCallWithoutArgs.ts:4:18]
@@ -8293,6 +8237,22 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  2 │     .then((role: Role) =>
    ╰────
 
+  × TS(1029): 'public' modifier must precede 'static' modifier.
+   ╭─[typescript/tests/cases/compiler/multipleClassPropertyModifiers.ts:3:12]
+ 2 │     public static p1;
+ 3 │     static public p2;
+   ·            ──────
+ 4 │     private static p3;
+   ╰────
+
+  × TS(1029): 'private' modifier must precede 'static' modifier.
+   ╭─[typescript/tests/cases/compiler/multipleClassPropertyModifiers.ts:5:12]
+ 4 │     private static p3;
+ 5 │     static private p4;
+   ·            ───────
+ 6 │ }
+   ╰────
+
   × TS(1028): Accessibility modifier already seen.
    ╭─[typescript/tests/cases/compiler/multipleClassPropertyModifiersErrors.ts:2:9]
  1 │ class C {
@@ -8967,6 +8927,14 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
    ·             ─
    ╰────
 
+  × TS(1477): An instantiation expression cannot be followed by a property access.
+    ╭─[typescript/tests/cases/compiler/optionalChainWithInstantiationExpression1.ts:12:1]
+ 11 │ 
+ 12 │ a?.b<c>.d;
+    · ────────
+ 13 │ 
+    ╰────
+
   × Identifier `C1M5` has already been declared
     ╭─[typescript/tests/cases/compiler/optionalParamArgsTest.ts:31:12]
  30 │ 
@@ -9157,12 +9125,11 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
    · ─
    ╰────
 
-  × Expected `:` but found `,`
-   ╭─[typescript/tests/cases/compiler/parseAssertEntriesError.ts:2:36]
+  × Unexpected token
+   ╭─[typescript/tests/cases/compiler/parseAssertEntriesError.ts:2:32]
  1 │ export type LocalInterface =
  2 │     & import("pkg", { assert: {1234, "resolution-mode": "require"} }).RequireInterface
-   ·                                    ┬
-   ·                                    ╰── `:` expected
+   ·                                ────
  3 │     & import("pkg", { assert: {1234, "resolution-mode": "import"} }).ImportInterface;
    ╰────
 
@@ -9204,12 +9171,11 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  3 │ }
    ╰────
 
-  × Expected `:` but found `,`
-   ╭─[typescript/tests/cases/compiler/parseImportAttributesError.ts:2:34]
+  × Unexpected token
+   ╭─[typescript/tests/cases/compiler/parseImportAttributesError.ts:2:30]
  1 │ export type LocalInterface =
  2 │     & import("pkg", { with: {1234, "resolution-mode": "require"} }).RequireInterface
-   ·                                  ┬
-   ·                                  ╰── `:` expected
+   ·                              ────
  3 │     & import("pkg", { with: {1234, "resolution-mode": "import"} }).ImportInterface;
    ╰────
 
@@ -10545,6 +10511,22 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
    ·                   ─┬─
    ·                    ╰── `;` expected
  3 │     public static static bar() { }
+   ╰────
+
+  × TS(1029): 'public' modifier must precede 'static' modifier.
+   ╭─[typescript/tests/cases/compiler/staticMustPrecedePublic.ts:2:12]
+ 1 │ class Outer {
+ 2 │     static public intI: number;
+   ·            ──────
+ 3 │     static private stringF: string;
+   ╰────
+
+  × TS(1029): 'private' modifier must precede 'static' modifier.
+   ╭─[typescript/tests/cases/compiler/staticMustPrecedePublic.ts:3:12]
+ 2 │     static public intI: number;
+ 3 │     static private stringF: string;
+   ·            ───────
+ 4 │ }
    ╰────
 
   × Classes may not have a static property named 'prototype'
@@ -13024,6 +13006,30 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  3 │ }
    ╰────
 
+  × TS(1029): 'public' modifier must precede 'abstract' modifier.
+   ╭─[typescript/tests/cases/conformance/classes/classDeclarations/classAbstractKeyword/classAbstractMixedWithModifiers.ts:8:14]
+ 7 │ 
+ 8 │     abstract public foo_bb();
+   ·              ──────
+ 9 │     abstract protected foo_cc();
+   ╰────
+
+  × TS(1029): 'protected' modifier must precede 'abstract' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/classDeclarations/classAbstractKeyword/classAbstractMixedWithModifiers.ts:9:14]
+  8 │     abstract public foo_bb();
+  9 │     abstract protected foo_cc();
+    ·              ─────────
+ 10 │     abstract private foo_dd();
+    ╰────
+
+  × TS(1029): 'private' modifier must precede 'abstract' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/classDeclarations/classAbstractKeyword/classAbstractMixedWithModifiers.ts:10:14]
+  9 │     abstract protected foo_cc();
+ 10 │     abstract private foo_dd();
+    ·              ───────
+ 11 │ 
+    ╰────
+
   × TS(2391): Function implementation is missing or not immediately following the declaration.
     ╭─[typescript/tests/cases/conformance/classes/classDeclarations/classAbstractKeyword/classAbstractOverloads.ts:15:5]
  14 │     
@@ -13229,6 +13235,14 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
    ·     ──────
  7 │         // something
    ╰────
+
+  × TS(1029): 'private' modifier must precede 'readonly' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/classStaticBlock/classStaticBlock20.ts:10:14]
+  9 │ 
+ 10 │     readonly private static {
+    ·              ───────
+ 11 │         // something
+    ╰────
 
   × TS(1184): Modifiers cannot appear here.
     ╭─[typescript/tests/cases/conformance/classes/classStaticBlock/classStaticBlock20.ts:10:5]
@@ -13465,6 +13479,14 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  2 │     constructor(readonly x: number);
    ·                 ──────────────────
  3 │     method(readonly x: number);
+   ╰────
+
+  × TS(1029): 'public' modifier must precede 'readonly' modifier.
+   ╭─[typescript/tests/cases/conformance/classes/constructorDeclarations/constructorParameters/readonlyInConstructorParameters.ts:7:26]
+ 6 │ class E {
+ 7 │     constructor(readonly public x: number) {}
+   ·                          ──────
+ 8 │ }
    ╰────
 
   × TS(1030): 'readonly' modifier already seen.
@@ -14692,6 +14714,14 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  13 │     }
     ╰────
 
+  × TS(1029): 'static' modifier must precede 'async' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/members/privateNames/privateNameStaticMethodAsync.ts:11:11]
+ 10 │     }
+ 11 │     async static *#bazBad() { yield 42; }
+    ·           ──────
+ 12 │ }
+    ╰────
+
   × Private identifier '#method' is not allowed outside class bodies
     ╭─[typescript/tests/cases/conformance/classes/members/privateNames/privateNameStaticMethodClassExpression.ts:9:14]
   8 │ console.log(C.getClass().getField());
@@ -15005,6 +15035,102 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  3 │ }
    ╰────
 
+  × TS(1029): 'private' modifier must precede 'static' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/accessibilityModifiers.ts:21:12]
+ 20 │ class D {
+ 21 │     static private privateProperty;
+    ·            ───────
+ 22 │     static private privateMethod() { }
+    ╰────
+
+  × TS(1029): 'private' modifier must precede 'static' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/accessibilityModifiers.ts:22:12]
+ 21 │     static private privateProperty;
+ 22 │     static private privateMethod() { }
+    ·            ───────
+ 23 │     static private get privateGetter() { return 0; }
+    ╰────
+
+  × TS(1029): 'private' modifier must precede 'static' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/accessibilityModifiers.ts:23:12]
+ 22 │     static private privateMethod() { }
+ 23 │     static private get privateGetter() { return 0; }
+    ·            ───────
+ 24 │     static private set privateSetter(a: number) { }
+    ╰────
+
+  × TS(1029): 'private' modifier must precede 'static' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/accessibilityModifiers.ts:24:12]
+ 23 │     static private get privateGetter() { return 0; }
+ 24 │     static private set privateSetter(a: number) { }
+    ·            ───────
+ 25 │ 
+    ╰────
+
+  × TS(1029): 'protected' modifier must precede 'static' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/accessibilityModifiers.ts:26:12]
+ 25 │ 
+ 26 │     static protected protectedProperty;
+    ·            ─────────
+ 27 │     static protected protectedMethod() { }
+    ╰────
+
+  × TS(1029): 'protected' modifier must precede 'static' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/accessibilityModifiers.ts:27:12]
+ 26 │     static protected protectedProperty;
+ 27 │     static protected protectedMethod() { }
+    ·            ─────────
+ 28 │     static protected get protectedGetter() { return 0; }
+    ╰────
+
+  × TS(1029): 'protected' modifier must precede 'static' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/accessibilityModifiers.ts:28:12]
+ 27 │     static protected protectedMethod() { }
+ 28 │     static protected get protectedGetter() { return 0; }
+    ·            ─────────
+ 29 │     static protected set protectedSetter(a: number) { }
+    ╰────
+
+  × TS(1029): 'protected' modifier must precede 'static' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/accessibilityModifiers.ts:29:12]
+ 28 │     static protected get protectedGetter() { return 0; }
+ 29 │     static protected set protectedSetter(a: number) { }
+    ·            ─────────
+ 30 │ 
+    ╰────
+
+  × TS(1029): 'public' modifier must precede 'static' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/accessibilityModifiers.ts:31:12]
+ 30 │ 
+ 31 │     static public publicProperty;
+    ·            ──────
+ 32 │     static public publicMethod() { }
+    ╰────
+
+  × TS(1029): 'public' modifier must precede 'static' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/accessibilityModifiers.ts:32:12]
+ 31 │     static public publicProperty;
+ 32 │     static public publicMethod() { }
+    ·            ──────
+ 33 │     static public get publicGetter() { return 0; }
+    ╰────
+
+  × TS(1029): 'public' modifier must precede 'static' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/accessibilityModifiers.ts:33:12]
+ 32 │     static public publicMethod() { }
+ 33 │     static public get publicGetter() { return 0; }
+    ·            ──────
+ 34 │     static public set publicSetter(a: number) { }
+    ╰────
+
+  × TS(1029): 'public' modifier must precede 'static' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/accessibilityModifiers.ts:34:12]
+ 33 │     static public get publicGetter() { return 0; }
+ 34 │     static public set publicSetter(a: number) { }
+    ·            ──────
+ 35 │ }
+    ╰────
+
   × TS(1028): Accessibility modifier already seen.
     ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/accessibilityModifiers.ts:39:13]
  38 │ class E {
@@ -15100,6 +15226,46 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
    ╰────
   help: Allowed modifiers are: private, protected, public, static, abstract, override
 
+  × TS(1029): 'public' modifier must precede 'accessor' modifier.
+   ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/autoAccessorDisallowedModifiers.ts:5:14]
+ 4 │     declare accessor c: any;
+ 5 │     accessor public d: any;
+   ·              ──────
+ 6 │     accessor private e: any;
+   ╰────
+
+  × TS(1029): 'private' modifier must precede 'accessor' modifier.
+   ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/autoAccessorDisallowedModifiers.ts:6:14]
+ 5 │     accessor public d: any;
+ 6 │     accessor private e: any;
+   ·              ───────
+ 7 │     accessor protected f: any;
+   ╰────
+
+  × TS(1029): 'protected' modifier must precede 'accessor' modifier.
+   ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/autoAccessorDisallowedModifiers.ts:7:14]
+ 6 │     accessor private e: any;
+ 7 │     accessor protected f: any;
+   ·              ─────────
+ 8 │     accessor abstract g: any;
+   ╰────
+
+  × TS(1029): 'abstract' modifier must precede 'accessor' modifier.
+   ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/autoAccessorDisallowedModifiers.ts:8:14]
+ 7 │     accessor protected f: any;
+ 8 │     accessor abstract g: any;
+   ·              ────────
+ 9 │     accessor static h: any;
+   ╰────
+
+  × TS(1029): 'static' modifier must precede 'accessor' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/autoAccessorDisallowedModifiers.ts:9:14]
+  8 │     accessor abstract g: any;
+  9 │     accessor static h: any;
+    ·              ──────
+ 10 │     accessor i() {}
+    ╰────
+
   × TS(1276): An 'accessor' property cannot be declared optional.
     ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/autoAccessorDisallowedModifiers.ts:14:15]
  13 │     accessor constructor() {}
@@ -15126,6 +15292,14 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  17 │ }
     ╰────
   help: Allowed modifiers are: private, protected, public, static, abstract, override
+
+  × TS(1029): 'override' modifier must precede 'accessor' modifier.
+    ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/autoAccessorDisallowedModifiers.ts:20:14]
+ 19 │ class C2 extends C1 {
+ 20 │     accessor override g: any;
+    ·              ────────
+ 21 │ }
+    ╰────
 
   × TS(1070): 'accessor' modifier cannot appear on a type member.
     ╭─[typescript/tests/cases/conformance/classes/propertyMemberDeclarations/autoAccessorDisallowedModifiers.ts:24:5]
@@ -19860,20 +20034,6 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
    ╰────
 
   × Cannot use `await` as an identifier in an async context
-   ╭─[typescript/tests/cases/conformance/externalModules/topLevelAwaitErrors.11.ts:3:8]
- 2 │ declare var require: any;
- 3 │ import await = require("./other");
-   ·        ─────
-   ╰────
-
-  × The keyword 'await' is reserved
-   ╭─[typescript/tests/cases/conformance/externalModules/topLevelAwaitErrors.11.ts:3:8]
- 2 │ declare var require: any;
- 3 │ import await = require("./other");
-   ·        ─────
-   ╰────
-
-  × Cannot use `await` as an identifier in an async context
    ╭─[typescript/tests/cases/conformance/externalModules/topLevelAwaitErrors.12.ts:5:8]
  4 │ // await disallowed in import=namespace when in a module
  5 │ import await = foo.await;
@@ -19945,25 +20105,11 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  3 │ }
    ╰────
 
-  × Cannot use `await` as an identifier in an async context
-   ╭─[typescript/tests/cases/conformance/externalModules/topLevelAwaitErrors.7.ts:2:13]
- 1 │ // await disallowed in namespace import
- 2 │ import * as await from "./other";
-   ·             ─────
-   ╰────
-
   × The keyword 'await' is reserved
    ╭─[typescript/tests/cases/conformance/externalModules/topLevelAwaitErrors.7.ts:2:13]
  1 │ // await disallowed in namespace import
  2 │ import * as await from "./other";
    ·             ─────
-   ╰────
-
-  × Cannot use `await` as an identifier in an async context
-   ╭─[typescript/tests/cases/conformance/externalModules/topLevelAwaitErrors.8.ts:2:8]
- 1 │ // await disallowed in default import
- 2 │ import await from "./other";
-   ·        ─────
    ╰────
 
   × The keyword 'await' is reserved
@@ -20039,14 +20185,6 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
    ·        ┬      ┬
    ·        │      ╰── `,` or `}` expected
    ·        ╰── Opened here
-   ╰────
-
-  × TS(1029): 'export' modifier must precede 'declare' modifier.
-   ╭─[typescript/tests/cases/conformance/externalModules/umd-errors.ts:3:8]
- 2 │ export var p;
- 3 │ static export as namespace oo1;
-   ·        ──────
- 4 │ declare export as namespace oo2;
    ╰────
 
   × Unexpected token
@@ -20195,11 +20333,12 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  9 │ const g = import('./0', {}, {})
    ╰────
 
-  × Unexpected token
+  × Expected `}` but found `,`
     ╭─[typescript/tests/cases/conformance/importAttributes/importAttributes10.ts:22:5]
  21 │     type: "json"
  22 │   },,
-    ·     ─
+    ·     ┬
+    ·     ╰── `}` expected
  23 │ });
     ╰────
 
@@ -20751,9 +20890,9 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
    ╰────
 
   × Expected `>` but found `<`
-   ╭─[typescript/tests/cases/conformance/jsx/jsxCheckJsxNoTypeArgumentsAllowed.tsx:4:16]
- 3 │ 
- 4 │ let x = <MyComp<Prop> a={10} b="hi" />; // error, no type arguments in js
+   ╭─[typescript/tests/cases/conformance/jsx/jsxCheckJsxNoTypeArgumentsAllowed.tsx:5:16]
+ 4 │ 
+ 5 │ let x = <MyComp<Prop> a={10} b="hi" />; // error, no type arguments in js
    ·                ┬
    ·                ╰── `>` expected
    ╰────
@@ -20866,13 +21005,21 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
    ·       ─
    ╰────
 
-  × Expected `>` but found `Identifier`
+  × Expected corresponding closing tag for JSX fragment.
     ╭─[typescript/tests/cases/conformance/jsx/tsxFragmentErrors.tsx:9:7]
   8 │ 
   9 │ <>hi</div> // Error
-    ·       ─┬─
-    ·        ╰── `>` expected
+    · ─┬    ─┬─
+    ·  │     ╰── Expected `</>`
+    ·  ╰── Opened here
  10 │ 
+    ╰────
+
+  × Unexpected token
+    ╭─[typescript/tests/cases/conformance/jsx/tsxFragmentErrors.tsx:11:2]
+ 10 │ 
+ 11 │ <>eof   // Error
+    ·  ─
     ╰────
 
   × Unexpected token. Did you mean `{'>'}` or `&gt;`?
@@ -20884,91 +21031,91 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
    ╰────
 
   × Expected `,` or `}` but found `;`
-    ╭─[typescript/tests/cases/conformance/jsx/tsxStatelessFunctionComponents1.tsx:41:16]
- 39 │ 
- 40 │ let o = {
+    ╭─[typescript/tests/cases/conformance/jsx/tsxStatelessFunctionComponents1.tsx:43:16]
+ 41 │ 
+ 42 │ let o = {
     ·         ┬
     ·         ╰── Opened here
- 41 │     prop1: true;
+ 43 │     prop1: true;
     ·                ┬
     ·                ╰── `,` or `}` expected
- 42 │ }
-    ╰────
-
-  × TS(1099): Type argument list cannot be empty.
-    ╭─[typescript/tests/cases/conformance/jsx/tsxTypeArgumentResolution.tsx:24:12]
- 23 │ 
- 24 │ x = <MyComp<> a={10} b="hi" />; // error
-    ·            ──
- 25 │ 
+ 44 │ }
     ╰────
 
   × TS(1099): Type argument list cannot be empty.
     ╭─[typescript/tests/cases/conformance/jsx/tsxTypeArgumentResolution.tsx:26:12]
  25 │ 
- 26 │ x = <MyComp<> a={10} b="hi"></MyComp>; // error
+ 26 │ x = <MyComp<> a={10} b="hi" />; // error
     ·            ──
  27 │ 
     ╰────
 
+  × TS(1099): Type argument list cannot be empty.
+    ╭─[typescript/tests/cases/conformance/jsx/tsxTypeArgumentResolution.tsx:28:12]
+ 27 │ 
+ 28 │ x = <MyComp<> a={10} b="hi"></MyComp>; // error
+    ·            ──
+ 29 │ 
+    ╰────
+
   × Expected corresponding JSX closing tag for '\u0061'.
-    ╭─[typescript/tests/cases/conformance/jsx/unicodeEscapesInJsxtags.tsx:15:13]
- 14 │ // tag name:
- 15 │ ; <\u0061></a>
+    ╭─[typescript/tests/cases/conformance/jsx/unicodeEscapesInJsxtags.tsx:16:13]
+ 15 │ // tag name:
+ 16 │ ; <\u0061></a>
     ·    ───┬──   ┬
     ·       │     ╰── Expected `</\u0061>`
     ·       ╰── Opened here
- 16 │ ; <\u0061-b></a-b>
+ 17 │ ; <\u0061-b></a-b>
     ╰────
 
   × Expected corresponding JSX closing tag for '\u0061-b'.
-    ╭─[typescript/tests/cases/conformance/jsx/unicodeEscapesInJsxtags.tsx:16:15]
- 15 │ ; <\u0061></a>
- 16 │ ; <\u0061-b></a-b>
+    ╭─[typescript/tests/cases/conformance/jsx/unicodeEscapesInJsxtags.tsx:17:15]
+ 16 │ ; <\u0061></a>
+ 17 │ ; <\u0061-b></a-b>
     ·    ────┬───   ─┬─
     ·        │       ╰── Expected `</\u0061-b>`
     ·        ╰── Opened here
- 17 │ ; <a-\u0063></a-c>
+ 18 │ ; <a-\u0063></a-c>
     ╰────
 
   × Expected corresponding JSX closing tag for 'a-'.
-    ╭─[typescript/tests/cases/conformance/jsx/unicodeEscapesInJsxtags.tsx:17:15]
- 16 │ ; <\u0061-b></a-b>
- 17 │ ; <a-\u0063></a-c>
+    ╭─[typescript/tests/cases/conformance/jsx/unicodeEscapesInJsxtags.tsx:18:15]
+ 17 │ ; <\u0061-b></a-b>
+ 18 │ ; <a-\u0063></a-c>
     ·    ─┬         ─┬─
     ·     │          ╰── Expected `</a->`
     ·     ╰── Opened here
- 18 │ ; <Comp\u0061 x={12} />
+ 19 │ ; <Comp\u0061 x={12} />
     ╰────
 
   × Expected corresponding JSX closing tag for '\u{0061}'.
-    ╭─[typescript/tests/cases/conformance/jsx/unicodeEscapesInJsxtags.tsx:20:15]
- 19 │ ; <x.\u0076ideo />
- 20 │ ; <\u{0061}></a>
+    ╭─[typescript/tests/cases/conformance/jsx/unicodeEscapesInJsxtags.tsx:21:15]
+ 20 │ ; <x.\u0076ideo />
+ 21 │ ; <\u{0061}></a>
     ·    ────┬───   ┬
     ·        │      ╰── Expected `</\u{0061}>`
     ·        ╰── Opened here
- 21 │ ; <\u{0061}-b></a-b>
+ 22 │ ; <\u{0061}-b></a-b>
     ╰────
 
   × Expected corresponding JSX closing tag for '\u{0061}-b'.
-    ╭─[typescript/tests/cases/conformance/jsx/unicodeEscapesInJsxtags.tsx:21:17]
- 20 │ ; <\u{0061}></a>
- 21 │ ; <\u{0061}-b></a-b>
+    ╭─[typescript/tests/cases/conformance/jsx/unicodeEscapesInJsxtags.tsx:22:17]
+ 21 │ ; <\u{0061}></a>
+ 22 │ ; <\u{0061}-b></a-b>
     ·    ─────┬────   ─┬─
     ·         │        ╰── Expected `</\u{0061}-b>`
     ·         ╰── Opened here
- 22 │ ; <a-\u{0063}></a-c>
+ 23 │ ; <a-\u{0063}></a-c>
     ╰────
 
   × Expected corresponding JSX closing tag for 'a-'.
-    ╭─[typescript/tests/cases/conformance/jsx/unicodeEscapesInJsxtags.tsx:22:17]
- 21 │ ; <\u{0061}-b></a-b>
- 22 │ ; <a-\u{0063}></a-c>
+    ╭─[typescript/tests/cases/conformance/jsx/unicodeEscapesInJsxtags.tsx:23:17]
+ 22 │ ; <\u{0061}-b></a-b>
+ 23 │ ; <a-\u{0063}></a-c>
     ·    ─┬           ─┬─
     ·     │            ╰── Expected `</a->`
     ·     ╰── Opened here
- 23 │ ; <Comp\u{0061} x={12} />
+ 24 │ ; <Comp\u{0061} x={12} />
     ╰────
 
   × TS(8002): 'import ... =' can only be used in TypeScript files.
@@ -21112,23 +21259,107 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
    ╰────
   help: TypeScript transforms 'import ... =' to 'const ... ='
 
-  × Expected `{` but found `[`
-   ╭─[typescript/tests/cases/conformance/node/nodeModulesImportAttributesTypeModeDeclarationEmitErrors.ts:3:21]
- 2 │ export type LocalInterface =
- 3 │     & import("pkg", [ {"resolution-mode": "require"} ]).RequireInterface
-   ·                     ┬
-   ·                     ╰── `{` expected
- 4 │     & import("pkg", [ {"resolution-mode": "import"} ]).ImportInterface;
+  × TS(7060): This syntax is reserved in files with the .mts or .cts extension. Add a trailing comma or explicit constraint.
+   ╭─[typescript/tests/cases/conformance/node/nodeModulesForbidenSyntax.ts:2:12]
+ 1 │ // cjs format file
+ 2 │ const x = <T>() => <T><any>(void 0);
+   ·            ─
+ 3 │ export {x};
    ╰────
 
-  × Expected `{` but found `[`
-   ╭─[typescript/tests/cases/conformance/node/nodeModulesImportTypeModeDeclarationEmitErrors1.ts:3:21]
- 2 │ export type LocalInterface =
- 3 │     & import("pkg", [ {"resolution-mode": "require"} ]).RequireInterface
-   ·                     ┬
-   ·                     ╰── `{` expected
- 4 │     & import("pkg", [ {"resolution-mode": "import"} ]).ImportInterface;
+  × TS(7059): This syntax is reserved in files with the .mts or .cts extension. Use an `as` expression instead.
+   ╭─[typescript/tests/cases/conformance/node/nodeModulesForbidenSyntax.ts:2:23]
+ 1 │ // cjs format file
+ 2 │ const x = <T>() => <T><any>(void 0);
+   ·                       ─────────────
+ 3 │ export {x};
    ╰────
+
+  × TS(7059): This syntax is reserved in files with the .mts or .cts extension. Use an `as` expression instead.
+   ╭─[typescript/tests/cases/conformance/node/nodeModulesForbidenSyntax.ts:2:20]
+ 1 │ // cjs format file
+ 2 │ const x = <T>() => <T><any>(void 0);
+   ·                    ────────────────
+ 3 │ export {x};
+   ╰────
+
+  × Expected 'with' in import type options
+   ╭─[typescript/tests/cases/conformance/node/nodeModulesImportAttributesTypeModeDeclarationEmitErrors.ts:3:22]
+ 2 │ export type LocalInterface =
+ 3 │     & import("pkg", {"resolution-mode": "require"}).RequireInterface
+   ·                      ─────────────────
+ 4 │     & import("pkg", {"resolution-mode": "import"}).ImportInterface;
+   ╰────
+
+  × Expected 'with' in import type options
+   ╭─[typescript/tests/cases/conformance/node/nodeModulesImportAttributesTypeModeDeclarationEmitErrors.ts:4:22]
+ 3 │     & import("pkg", {"resolution-mode": "require"}).RequireInterface
+ 4 │     & import("pkg", {"resolution-mode": "import"}).ImportInterface;
+   ·                      ─────────────────
+ 5 │ 
+   ╰────
+
+  × Expected 'with' in import type options
+   ╭─[typescript/tests/cases/conformance/node/nodeModulesImportAttributesTypeModeDeclarationEmitErrors.ts:6:49]
+ 5 │ 
+ 6 │ export const a = (null as any as import("pkg", {"resolution-mode": "require"}).RequireInterface);
+   ·                                                 ─────────────────
+ 7 │ export const b = (null as any as import("pkg", {"resolution-mode": "import"}).ImportInterface);
+   ╰────
+
+  × Expected 'with' in import type options
+   ╭─[typescript/tests/cases/conformance/node/nodeModulesImportAttributesTypeModeDeclarationEmitErrors.ts:7:49]
+ 6 │ export const a = (null as any as import("pkg", {"resolution-mode": "require"}).RequireInterface);
+ 7 │ export const b = (null as any as import("pkg", {"resolution-mode": "import"}).ImportInterface);
+   ·                                                 ─────────────────
+   ╰────
+
+  × Expected 'with' in import type options
+   ╭─[typescript/tests/cases/conformance/node/nodeModulesImportTypeModeDeclarationEmitErrors1.ts:3:22]
+ 2 │ export type LocalInterface =
+ 3 │     & import("pkg", {"resolution-mode": "require"}).RequireInterface
+   ·                      ─────────────────
+ 4 │     & import("pkg", {"resolution-mode": "import"}).ImportInterface;
+   ╰────
+
+  × Expected 'with' in import type options
+   ╭─[typescript/tests/cases/conformance/node/nodeModulesImportTypeModeDeclarationEmitErrors1.ts:4:22]
+ 3 │     & import("pkg", {"resolution-mode": "require"}).RequireInterface
+ 4 │     & import("pkg", {"resolution-mode": "import"}).ImportInterface;
+   ·                      ─────────────────
+ 5 │ 
+   ╰────
+
+  × Expected 'with' in import type options
+   ╭─[typescript/tests/cases/conformance/node/nodeModulesImportTypeModeDeclarationEmitErrors1.ts:6:49]
+ 5 │ 
+ 6 │ export const a = (null as any as import("pkg", {"resolution-mode": "require"}).RequireInterface);
+   ·                                                 ─────────────────
+ 7 │ export const b = (null as any as import("pkg", {"resolution-mode": "import"}).ImportInterface);
+   ╰────
+
+  × Expected 'with' in import type options
+   ╭─[typescript/tests/cases/conformance/node/nodeModulesImportTypeModeDeclarationEmitErrors1.ts:7:49]
+ 6 │ export const a = (null as any as import("pkg", {"resolution-mode": "require"}).RequireInterface);
+ 7 │ export const b = (null as any as import("pkg", {"resolution-mode": "import"}).ImportInterface);
+   ·                                                 ─────────────────
+   ╰────
+
+  × TS(1029): 'public' modifier must precede 'override' modifier.
+   ╭─[typescript/tests/cases/conformance/override/override11.ts:6:27]
+ 5 │ class Sub extends Base {
+ 6 │     constructor (override public foo: number) {
+   ·                           ──────
+ 7 │         super();
+   ╰────
+
+  × TS(1029): 'override' modifier must precede 'readonly' modifier.
+    ╭─[typescript/tests/cases/conformance/override/override5.ts:16:14]
+ 15 │ 
+ 16 │     readonly override p3: number;
+    ·              ────────
+ 17 │ 
+    ╰────
 
   × TS(1030): 'override' modifier already seen.
     ╭─[typescript/tests/cases/conformance/override/override5.ts:22:14]
@@ -21139,6 +21370,38 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
     ╰────
   help: Remove the duplicate modifier.
 
+  × TS(1029): 'public' modifier must precede 'override' modifier.
+    ╭─[typescript/tests/cases/conformance/override/override5.ts:25:14]
+ 24 │     public override pp: number;
+ 25 │     override public op: number;
+    ·              ──────
+ 26 │ 
+    ╰────
+
+  × TS(1029): 'abstract' modifier must precede 'override' modifier.
+    ╭─[typescript/tests/cases/conformance/override/override5.ts:39:14]
+ 38 │ abstract class AD extends AB {
+ 39 │     override abstract f(): void;
+    ·              ────────
+ 40 │     abstract override b(): void;
+    ╰────
+
+  × TS(1029): 'abstract' modifier must precede 'override' modifier.
+    ╭─[typescript/tests/cases/conformance/override/override5.ts:44:14]
+ 43 │ abstract class AND {
+ 44 │     override abstract f(): void;
+    ·              ────────
+ 45 │     abstract override b(): void;
+    ╰────
+
+  × TS(1029): 'override' modifier must precede 'readonly' modifier.
+    ╭─[typescript/tests/cases/conformance/override/override7.ts:13:14]
+ 12 │ 
+ 13 │     readonly override p3: number;
+    ·              ────────
+ 14 │ 
+    ╰────
+
   × TS(1030): 'override' modifier already seen.
     ╭─[typescript/tests/cases/conformance/override/override7.ts:19:14]
  18 │ 
@@ -21147,6 +21410,30 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  20 │ 
     ╰────
   help: Remove the duplicate modifier.
+
+  × TS(1029): 'public' modifier must precede 'override' modifier.
+    ╭─[typescript/tests/cases/conformance/override/override7.ts:22:14]
+ 21 │     public override pp: number;
+ 22 │     override public op: number;
+    ·              ──────
+ 23 │ 
+    ╰────
+
+  × TS(1029): 'abstract' modifier must precede 'override' modifier.
+    ╭─[typescript/tests/cases/conformance/override/override7.ts:36:14]
+ 35 │ abstract class AD extends AB {
+ 36 │     override abstract f(): void;
+    ·              ────────
+ 37 │     abstract override b(): void;
+    ╰────
+
+  × TS(1029): 'abstract' modifier must precede 'override' modifier.
+    ╭─[typescript/tests/cases/conformance/override/override7.ts:41:14]
+ 40 │ abstract class AND {
+ 41 │     override abstract f(): void;
+    ·              ────────
+ 42 │     abstract override b(): void;
+    ╰────
 
   × TS(1070): 'override' modifier cannot appear on a type member.
    ╭─[typescript/tests/cases/conformance/override/override9.ts:8:5]
@@ -21166,6 +21453,54 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
     ╰────
   help: Only 'readonly' modifier is allowed here.
 
+  × TS(1029): 'override' modifier must precede 'async' modifier.
+    ╭─[typescript/tests/cases/conformance/override/overrideKeywordOrder.ts:12:9]
+ 11 │   override async m1() {}
+ 12 │   async override m2() {} // error
+    ·         ────────
+ 13 │ }
+    ╰────
+
+  × TS(1029): 'static' modifier must precede 'override' modifier.
+    ╭─[typescript/tests/cases/conformance/override/overrideKeywordOrder.ts:15:12]
+ 14 │ class Test2 extends Base {
+ 15 │   override static s1() {} // error
+    ·            ──────
+ 16 │   static override s2() {}
+    ╰────
+
+  × TS(1029): 'public' modifier must precede 'override' modifier.
+    ╭─[typescript/tests/cases/conformance/override/overrideKeywordOrder.ts:21:12]
+ 20 │ class Test3 extends Base {
+ 21 │   override public m1() {} // error
+    ·            ──────
+ 22 │   public override m2() {}
+    ╰────
+
+  × TS(1029): 'override' modifier must precede 'readonly' modifier.
+    ╭─[typescript/tests/cases/conformance/override/overrideKeywordOrder.ts:26:12]
+ 25 │   override readonly p1: any;
+ 26 │   readonly override p2: any; // error
+    ·            ────────
+ 27 │   m1() {}
+    ╰────
+
+  × TS(1029): 'abstract' modifier must precede 'override' modifier.
+    ╭─[typescript/tests/cases/conformance/override/overrideKeywordOrder.ts:32:12]
+ 31 │ abstract class Test5 extends Base {
+ 32 │   override abstract m1(): void; // error
+    ·            ────────
+ 33 │   abstract override m2(): void;
+    ╰────
+
+  × TS(1029): 'public' modifier must precede 'override' modifier.
+    ╭─[typescript/tests/cases/conformance/override/overrideParameterProperty.ts:20:24]
+ 19 │ class C3 extends Base {
+ 20 │   constructor(override public p1: "hello") {
+    ·                        ──────
+ 21 │     super();
+    ╰────
+
   × TS(1090): 'override' modifier cannot appear on a parameter.
     ╭─[typescript/tests/cases/conformance/override/overrideParameterProperty.ts:25:5]
  24 │ 
@@ -21183,36 +21518,14 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  3 │     }
    ╰────
 
-  × The keyword 'await' is reserved
-   ╭─[typescript/tests/cases/conformance/parser/ecmascript2018/asyncGenerators/parser.asyncGenerators.classMethods.es2018.ts:2:15]
- 1 │ class C4 {
- 2 │     async * f(await) {
-   ·               ─────
- 3 │     }
-   ╰────
-
   × Cannot use `await` as an identifier in an async context
-   ╭─[typescript/tests/cases/conformance/parser/ecmascript2018/asyncGenerators/parser.asyncGenerators.functionDeclarations.es2018.ts:1:18]
- 1 │ async function * await() {
-   ·                  ─────
- 2 │ }
-   ╰────
-
-  × The keyword 'await' is reserved
-   ╭─[typescript/tests/cases/conformance/parser/ecmascript2018/asyncGenerators/parser.asyncGenerators.functionDeclarations.es2018.ts:1:18]
- 1 │ async function * await() {
-   ·                  ─────
+   ╭─[typescript/tests/cases/conformance/parser/ecmascript2018/asyncGenerators/parser.asyncGenerators.functionDeclarations.es2018.ts:1:21]
+ 1 │ async function * f4(await) {
+   ·                     ─────
  2 │ }
    ╰────
 
   × Cannot use `await` as an identifier in an async context
-   ╭─[typescript/tests/cases/conformance/parser/ecmascript2018/asyncGenerators/parser.asyncGenerators.functionExpressions.es2018.ts:1:29]
- 1 │ const f2 = async function * await() {
-   ·                             ─────
- 2 │ };
-   ╰────
-
-  × The keyword 'await' is reserved
    ╭─[typescript/tests/cases/conformance/parser/ecmascript2018/asyncGenerators/parser.asyncGenerators.functionExpressions.es2018.ts:1:29]
  1 │ const f2 = async function * await() {
    ·                             ─────
@@ -21227,21 +21540,13 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  3 │     }
    ╰────
 
-  × The keyword 'await' is reserved
-   ╭─[typescript/tests/cases/conformance/parser/ecmascript2018/asyncGenerators/parser.asyncGenerators.objectLiteralMethods.es2018.ts:2:15]
- 1 │ const o4 = {
- 2 │     async * f(await) {
-   ·               ─────
- 3 │     }
-   ╰────
-
-  × await can only be used in conjunction with `for...of` statements
-   ╭─[typescript/tests/cases/conformance/parser/ecmascript2018/forAwait/parser.forAwait.es2018.ts:1:1]
- 1 │ for await (const x in y) {
-   · ────────────────────────
+  × `await` is only allowed within async functions and at the top levels of modules
+   ╭─[typescript/tests/cases/conformance/parser/ecmascript2018/forAwait/parser.forAwait.es2018.ts:1:5]
+ 1 │ for await (const x of y) {
+   ·     ─────
  2 │ }
    ╰────
-  help: Did you mean to use a for...of statement?
+  help: Either remove this `await` or add the `async` keyword to the enclosing function
 
   × Invalid Character `
   │ `
@@ -21672,6 +21977,22 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  2 │ }
    ╰────
 
+  × TS(1029): 'public' modifier must precede 'static' modifier.
+   ╭─[typescript/tests/cases/conformance/parser/ecmascript5/ErrorRecovery/AccessibilityAfterStatic/parserAccessibilityAfterStatic1.ts:3:8]
+ 2 │ {
+ 3 │ static public intI: number;
+   ·        ──────
+ 4 │ }
+   ╰────
+
+  × TS(1029): 'public' modifier must precede 'static' modifier.
+   ╭─[typescript/tests/cases/conformance/parser/ecmascript5/ErrorRecovery/AccessibilityAfterStatic/parserAccessibilityAfterStatic10.ts:3:8]
+ 2 │ {
+ 3 │ static public intI<T>() {}
+   ·        ──────
+ 4 │ }
+   ╰────
+
   × Expected `}` but found `EOF`
    ╭─[typescript/tests/cases/conformance/parser/ecmascript5/ErrorRecovery/AccessibilityAfterStatic/parserAccessibilityAfterStatic6.ts:3:14]
  1 │ class Outer
@@ -21679,6 +22000,14 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
    · ┬
    · ╰── Opened here
  3 │ static public
+   ╰────
+
+  × TS(1029): 'public' modifier must precede 'static' modifier.
+   ╭─[typescript/tests/cases/conformance/parser/ecmascript5/ErrorRecovery/AccessibilityAfterStatic/parserAccessibilityAfterStatic7.ts:3:8]
+ 2 │ {
+ 3 │ static public intI() {}
+   ·        ──────
+ 4 │ }
    ╰────
 
   × Unexpected token
@@ -22465,6 +22794,27 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
    · ─
    ╰────
 
+  × TS(1477): An instantiation expression cannot be followed by a property access.
+   ╭─[typescript/tests/cases/conformance/parser/ecmascript5/Generics/parserMemberAccessExpression1.ts:3:1]
+ 2 │ Foo.Bar<T>();
+ 3 │ Foo<T>.Bar();
+   · ───────
+ 4 │ Foo<T>.Bar<T>();
+   ╰────
+
+  × TS(1477): An instantiation expression cannot be followed by a property access.
+   ╭─[typescript/tests/cases/conformance/parser/ecmascript5/Generics/parserMemberAccessExpression1.ts:4:1]
+ 3 │ Foo<T>.Bar();
+ 4 │ Foo<T>.Bar<T>();
+   · ───────
+   ╰────
+
+  × TS(1477): An instantiation expression cannot be followed by a property access.
+   ╭─[typescript/tests/cases/conformance/parser/ecmascript5/Generics/parserMemberAccessOffOfGenericType1.ts:1:9]
+ 1 │ var v = List<number>.makeChild();
+   ·         ─────────────
+   ╰────
+
   × Expected `;` but found `[`
    ╭─[typescript/tests/cases/conformance/parser/ecmascript5/IndexMemberDeclarations/parserIndexMemberDeclaration10.ts:2:18]
  1 │ class C {
@@ -22719,6 +23069,14 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  3 │ }
    ╰────
 
+  × TS(1029): 'public' modifier must precede 'static' modifier.
+   ╭─[typescript/tests/cases/conformance/parser/ecmascript5/MemberAccessorDeclarations/parserMemberAccessorDeclaration9.ts:2:12]
+ 1 │ class C {
+ 2 │     static public get Foo() { }
+   ·            ──────
+ 3 │ }
+   ╰────
+
   × TS(1028): Accessibility modifier already seen.
    ╭─[typescript/tests/cases/conformance/parser/ecmascript5/MemberFunctionDeclarations/parserMemberFunctionDeclaration1.ts:2:12]
  1 │ class C {
@@ -22734,6 +23092,14 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  2 │     static static Foo() { }
    ·                   ─┬─
    ·                    ╰── `;` expected
+ 3 │ }
+   ╰────
+
+  × TS(1029): 'public' modifier must precede 'static' modifier.
+   ╭─[typescript/tests/cases/conformance/parser/ecmascript5/MemberFunctionDeclarations/parserMemberFunctionDeclaration3.ts:2:12]
+ 1 │ class C {
+ 2 │     static public Foo() { }
+   ·            ──────
  3 │ }
    ╰────
 
@@ -22833,6 +23199,14 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  2 │   static static Foo;
    ·                 ─┬─
    ·                  ╰── `;` expected
+ 3 │ }
+   ╰────
+
+  × TS(1029): 'public' modifier must precede 'static' modifier.
+   ╭─[typescript/tests/cases/conformance/parser/ecmascript5/MemberVariableDeclarations/parserMemberVariableDeclaration3.ts:2:10]
+ 1 │ class C {
+ 2 │   static public Foo;
+   ·          ──────
  3 │ }
    ╰────
 
@@ -23025,6 +23399,14 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
  3 │ }
    ╰────
   help: Remove the duplicate modifier.
+
+  × TS(1029): 'protected' modifier must precede 'static' modifier.
+   ╭─[typescript/tests/cases/conformance/parser/ecmascript5/Protected/Protected6.ts:2:10]
+ 1 │ class C {
+ 2 │   static protected m() { }
+   ·          ─────────
+ 3 │ }
+   ╰────
 
   × TS(1028): Accessibility modifier already seen.
    ╭─[typescript/tests/cases/conformance/parser/ecmascript5/Protected/Protected7.ts:2:13]
@@ -24514,13 +24896,6 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
    ╭─[typescript/tests/cases/conformance/scanner/ecmascript5/scannerUnicodeEscapeInKeyword1.ts:1:1]
  1 │ \u0076ar x = "hello";
    · ────────
-   ╰────
-
-  × Cannot use `await` as an identifier in an async context
-   ╭─[typescript/tests/cases/conformance/scanner/ecmascript5/scannerUnicodeEscapeInKeyword2.ts:1:5]
- 1 │ var \u0061wait = 12; // ok
-   ·     ──────────
- 2 │ async function main() {
    ╰────
 
   × Keywords cannot contain escape characters
@@ -26788,6 +27163,22 @@ Expect to Parse: tasks/coverage/typescript/tests/cases/conformance/statements/Va
     ·       ╰── It can not be redeclared here
  12 │ 
     ╰────
+
+  × TS(1477): An instantiation expression cannot be followed by a property access.
+   ╭─[typescript/tests/cases/conformance/types/typeParameters/typeArgumentLists/instantiationExpressionErrors.ts:7:12]
+ 6 │ const a2 = f.g<number>;  // () => number
+ 7 │ const a3 = f<number>.g;  // <U>() => U
+   ·            ──────────
+ 8 │ const a4 = f<number>.g<number>;  // () => number
+   ╰────
+
+  × TS(1477): An instantiation expression cannot be followed by a property access.
+   ╭─[typescript/tests/cases/conformance/types/typeParameters/typeArgumentLists/instantiationExpressionErrors.ts:8:12]
+ 7 │ const a3 = f<number>.g;  // <U>() => U
+ 8 │ const a4 = f<number>.g<number>;  // () => number
+   ·            ──────────
+ 9 │ const a5 = f['g']<number>;  // () => number
+   ╰────
 
   × Unexpected token
     ╭─[typescript/tests/cases/conformance/types/typeParameters/typeArgumentLists/instantiationExpressionErrors.ts:18:29]

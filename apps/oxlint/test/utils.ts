@@ -27,6 +27,8 @@ export interface Fixture {
     eslint: boolean;
     // Run Oxlint with fixes. Default: `false`.
     fix: boolean;
+    // Run Oxlint with fix-suggestions. Default: `false`.
+    fixSuggestions: boolean;
     // Run Oxlint single-threaded. Default: `false`.
     singleThread: boolean;
     // Run Oxlint/ESLint in a specific working directory.
@@ -40,6 +42,7 @@ const DEFAULT_OPTIONS: Fixture["options"] = {
   oxlint: true,
   eslint: false,
   fix: false,
+  fixSuggestions: false,
   singleThread: false,
   cwd: null,
 };
@@ -64,7 +67,7 @@ export function getFixtures(): Fixture[] {
     try {
       options = JSON.parse(readFileSync(pathJoin(dirPath, "options.json"), "utf8"));
     } catch (err) {
-      if (err?.code !== "ENOENT") throw err;
+      if ((err as NodeJS.ErrnoException)?.code !== "ENOENT") throw err;
       options = DEFAULT_OPTIONS;
     }
 
@@ -76,10 +79,11 @@ export function getFixtures(): Fixture[] {
       typeof options.oxlint !== "boolean" ||
       typeof options.eslint !== "boolean" ||
       typeof options.fix !== "boolean" ||
+      typeof options.fixSuggestions !== "boolean" ||
       typeof options.singleThread !== "boolean"
     ) {
       throw new TypeError(
-        "`oxlint`, `eslint`, `fix`, and `singleThread` properties in `options.json` must be booleans",
+        "`oxlint`, `eslint`, `fix`, `fixSuggestions`, and `singleThread` properties in `options.json` must be booleans",
       );
     }
     if (options.cwd !== null && typeof options.cwd !== "string") {
@@ -251,7 +255,6 @@ export function normalizeStdout(stdout: string, fixtureName: string, isESLint: b
 
       // Some stack traces can use file paths instead of file URLs on Windows.
       // Keep frames in fixtures, drop everything else.
-      // oxlint-disable-next-line oxc/bad-replace-all-arg
       const normalizedAt = at.replaceAll(PATH_REGEXP, (_, subPath) => {
         if (subPath === undefined) return "<root>";
         return convertSubPath(normalizeSlashes(subPath), fixtureName);
@@ -266,7 +269,6 @@ export function normalizeStdout(stdout: string, fixtureName: string, isESLint: b
 
     // Handle fixture file URLs anywhere else in the line.
     // e.g. `... file:///path/to/oxc/apps/oxlint/test/fixtures/foo/bar.js:1:1 ...`
-    // oxlint-disable-next-line oxc/bad-replace-all-arg
     line = line.replaceAll(
       // @ts-expect-error - `RegExp.escape` is new in NodeJS v24
       new RegExp(`${RegExp.escape(FIXTURES_URL)}([^\\s\\)'"\`]+)`, isWindows ? "gi" : "g"),
@@ -274,7 +276,6 @@ export function normalizeStdout(stdout: string, fixtureName: string, isESLint: b
     );
 
     // Handle paths anywhere else in the line
-    // oxlint-disable-next-line oxc/bad-replace-all-arg
     line = line.replaceAll(PATH_REGEXP, (_, subPath) => {
       if (subPath === undefined) return "<root>";
       return convertSubPath(normalizeSlashes(subPath), fixtureName);

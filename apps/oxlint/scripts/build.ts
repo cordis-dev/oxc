@@ -1,22 +1,17 @@
 // oxlint-disable no-console
 
 import { execSync } from "node:child_process";
-import { copyFileSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const oxlintDirPath = join(import.meta.dirname, ".."),
   srcDirPath = join(oxlintDirPath, "src-js"),
-  distDirPath = join(oxlintDirPath, "dist");
+  distDirPath = join(oxlintDirPath, "dist"),
+  distPkgPluginsDirPath = join(oxlintDirPath, "dist-pkg-plugins");
 
-// Modify `bindings.js` to use correct package names
-console.log("Modifying bindings.js...");
-const bindingsPath = join(oxlintDirPath, "src-js/bindings.js");
-let bindingsJs = readFileSync(bindingsPath, "utf8");
-bindingsJs = bindingsJs.replace(/require\('@oxlint\/binding-(.+?)'\)/g, (_, name) => {
-  name = name.replace(/-msvc(\/|$)/g, "$1");
-  return `require('@oxlint/${name}')`;
-});
-writeFileSync(bindingsPath, bindingsJs);
+// Delete `dist-pkg-plugins` directory
+console.log("Deleting `dist-pkg-plugins` directory...");
+rmSync(distPkgPluginsDirPath, { recursive: true, force: true });
 
 // Build with tsdown
 console.log("Building with tsdown...");

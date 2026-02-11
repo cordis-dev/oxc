@@ -48,6 +48,10 @@ use super::{
 ///     "foo": "readonly"
 ///   },
 ///   "settings": {
+///     "react": {
+///       "version": "18.2.0"
+///     },
+///     "custom": { "option": true }
 ///   },
 ///   "rules": {
 ///     "eqeqeq": "warn",
@@ -84,7 +88,35 @@ pub struct Oxlintrc {
     /// [the docs](https://oxc.rs/docs/guide/usage/linter/js-plugins.html).
     ///
     /// Note: JS plugins are experimental and not subject to semver.
-    /// They are not supported in the language server (and thus editor integrations) at present.
+    ///
+    /// Examples:
+    ///
+    /// Basic usage with a local plugin path.
+    ///
+    /// ```json
+    /// {
+    ///   "jsPlugins": ["./custom-plugin.js"],
+    ///   "rules": {
+    ///     "custom/rule-name": "warn"
+    ///   }
+    /// }
+    /// ```
+    ///
+    /// Using a built-in Rust plugin alongside a JS plugin with the same name
+    /// by giving the JS plugin an alias.
+    ///
+    /// ```json
+    /// {
+    ///   "plugins": ["import"],
+    ///   "jsPlugins": [
+    ///     { "name": "import-js", "specifier": "eslint-plugin-import" }
+    ///   ],
+    ///   "rules": {
+    ///     "import/no-cycle": "error",
+    ///     "import-js/no-unresolved": "warn"
+    ///   }
+    /// }
+    /// ```
     #[serde(rename = "jsPlugins", default, skip_serializing_if = "Option::is_none")]
     #[schemars(schema_with = "external_plugins_schema")]
     pub external_plugins: Option<FxHashSet<ExternalPluginEntry>>,
@@ -107,6 +139,9 @@ pub struct Oxlintrc {
     /// See [Oxlint Rules](https://oxc.rs/docs/guide/usage/linter/rules.html) for the list of
     /// rules.
     pub rules: OxlintRules,
+    /// Plugin-specific configuration for both built-in and custom plugins.
+    /// This includes settings for built-in plugins such as `react` and `jsdoc`
+    /// as well as configuring settings for JS custom plugins loaded via `jsPlugins`.
     pub settings: OxlintSettings,
     /// Environments enable and disable collections of global variables.
     pub env: OxlintEnv,
@@ -127,6 +162,14 @@ pub struct Oxlintrc {
     /// overriding the previous ones.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub extends: Vec<PathBuf>,
+    /// Extended configuration objects provided via `oxlint.config.ts`.
+    ///
+    /// This field is not deserialized from JSON config files and is not part of the public
+    /// configuration schema. It is populated by the JS config loader when `extends` contains
+    /// objects (imported configs).
+    #[serde(skip)]
+    #[schemars(skip)]
+    pub extends_configs: Vec<Oxlintrc>,
 }
 
 impl Oxlintrc {
@@ -257,6 +300,7 @@ impl Oxlintrc {
             path: self.path.clone(),
             ignore_patterns: self.ignore_patterns.clone(),
             extends: self.extends.clone(),
+            extends_configs: self.extends_configs.clone(),
         }
     }
 
@@ -285,6 +329,10 @@ impl Oxlintrc {
                     })
                     .collect();
             }
+        }
+
+        for config in &mut self.extends_configs {
+            config.set_config_dir(config_dir);
         }
     }
 }

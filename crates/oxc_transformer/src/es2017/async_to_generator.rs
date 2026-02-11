@@ -57,7 +57,7 @@ use oxc_allocator::{Box as ArenaBox, StringBuilder as ArenaStringBuilder, TakeIn
 use oxc_ast::{NONE, ast::*};
 use oxc_ast_visit::Visit;
 use oxc_semantic::{ReferenceFlags, ScopeFlags, ScopeId, SymbolFlags};
-use oxc_span::{Atom, GetSpan, SPAN};
+use oxc_span::{GetSpan, Ident, SPAN};
 use oxc_syntax::{
     identifier::{is_identifier_name, is_identifier_part, is_identifier_start},
     keyword::is_reserved_keyword,
@@ -65,23 +65,22 @@ use oxc_syntax::{
 use oxc_traverse::{Ancestor, BoundIdentifier, Traverse};
 
 use crate::{
-    common::helper_loader::Helper,
-    context::{TransformCtx, TraverseCtx},
+    common::helper_loader::{Helper, helper_call_expr},
+    context::TraverseCtx,
     state::TransformState,
 };
 
-pub struct AsyncToGenerator<'a, 'ctx> {
-    ctx: &'ctx TransformCtx<'a>,
-    executor: AsyncGeneratorExecutor<'a, 'ctx>,
+pub struct AsyncToGenerator<'a> {
+    executor: AsyncGeneratorExecutor<'a>,
 }
 
-impl<'a, 'ctx> AsyncToGenerator<'a, 'ctx> {
-    pub fn new(ctx: &'ctx TransformCtx<'a>) -> Self {
-        Self { ctx, executor: AsyncGeneratorExecutor::new(Helper::AsyncToGenerator, ctx) }
+impl AsyncToGenerator<'_> {
+    pub fn new() -> Self {
+        Self { executor: AsyncGeneratorExecutor::new(Helper::AsyncToGenerator) }
     }
 }
 
-impl<'a> Traverse<'a, TransformState<'a>> for AsyncToGenerator<'a, '_> {
+impl<'a> Traverse<'a, TransformState<'a>> for AsyncToGenerator<'a> {
     fn exit_expression(&mut self, expr: &mut Expression<'a>, ctx: &mut TraverseCtx<'a>) {
         let new_expr = match expr {
             Expression::AwaitExpression(await_expr) => {
@@ -137,7 +136,7 @@ impl<'a> Traverse<'a, TransformState<'a>> for AsyncToGenerator<'a, '_> {
             && !function.is_typescript_syntax()
         {
             let new_statement = self.executor.transform_function_declaration(function, ctx);
-            self.ctx.statement_injector.insert_after(stmt, new_statement);
+            ctx.state.statement_injector.insert_after(stmt, new_statement);
         }
     }
 
@@ -151,7 +150,7 @@ impl<'a> Traverse<'a, TransformState<'a>> for AsyncToGenerator<'a, '_> {
     }
 }
 
-impl<'a> AsyncToGenerator<'a, '_> {
+impl<'a> AsyncToGenerator<'a> {
     /// Check whether the current node is inside an async function.
     fn is_inside_async_function(ctx: &TraverseCtx<'a>) -> bool {
         // Early return if current scope is top because we don't need to transform top-level await expression.
@@ -186,14 +185,14 @@ impl<'a> AsyncToGenerator<'a, '_> {
     }
 }
 
-pub struct AsyncGeneratorExecutor<'a, 'ctx> {
+pub struct AsyncGeneratorExecutor<'a> {
     helper: Helper,
-    ctx: &'ctx TransformCtx<'a>,
+    _marker: std::marker::PhantomData<&'a ()>,
 }
 
-impl<'a, 'ctx> AsyncGeneratorExecutor<'a, 'ctx> {
-    pub fn new(helper: Helper, ctx: &'ctx TransformCtx<'a>) -> Self {
-        Self { helper, ctx }
+impl<'a> AsyncGeneratorExecutor<'a> {
+    pub fn new(helper: Helper) -> Self {
+        Self { helper, _marker: std::marker::PhantomData }
     }
 
     /// Transforms async method definitions to generator functions wrapped in asyncToGenerator.
@@ -277,7 +276,7 @@ impl<'a, 'ctx> AsyncGeneratorExecutor<'a, 'ctx> {
             let this_argument = Argument::from(ctx.ast.expression_this(SPAN));
             let arguments_argument = Argument::from(ctx.create_unbound_ident_expr(
                 SPAN,
-                Atom::new_const("arguments"),
+                ctx.ast.ident("arguments"),
                 ReferenceFlags::Read,
             ));
             (callee, ctx.ast.vec_from_array([this_argument, arguments_argument]))
@@ -365,7 +364,7 @@ impl<'a, 'ctx> AsyncGeneratorExecutor<'a, 'ctx> {
                 // `function foo() { ... }` -> `function foo() {} return foo;`
                 let reference = ctx.create_bound_ident_expr(
                     SPAN,
-                    id.name.into(),
+                    id.name,
                     id.symbol_id(),
                     ReferenceFlags::Read,
                 );
@@ -546,11 +545,11 @@ impl<'a, 'ctx> AsyncGeneratorExecutor<'a, 'ctx> {
     }
 
     /// Infers the function name from the [`TraverseCtx::parent`].
-    fn infer_function_name_from_parent_node(ctx: &TraverseCtx<'a>) -> Option<Atom<'a>> {
+    fn infer_function_name_from_parent_node(ctx: &TraverseCtx<'a>) -> Option<Ident<'a>> {
         match ctx.parent() {
             // infer `foo` from `const foo = async function() {}`
             Ancestor::VariableDeclaratorInit(declarator) => {
-                declarator.id().get_binding_identifier().map(|id| id.name.into())
+                declarator.id().get_binding_identifier().map(|id| id.name)
             }
             // infer `foo` from `({ foo: async function() {} })`
             Ancestor::ObjectPropertyValue(property) if !*property.method() => {
@@ -571,10 +570,10 @@ impl<'a, 'ctx> AsyncGeneratorExecutor<'a, 'ctx> {
     ///   // Reserved keyword
     /// * `this` -> `_this`
     /// * `arguments` -> `_arguments`
-    fn normalize_function_name(input: &Cow<'a, str>, ctx: &TraverseCtx<'a>) -> Atom<'a> {
+    fn normalize_function_name(input: &Cow<'a, str>, ctx: &TraverseCtx<'a>) -> Ident<'a> {
         let input_str = input.as_ref();
         if !is_reserved_keyword(input_str) && is_identifier_name(input_str) {
-            return ctx.ast.atom_from_cow(input);
+            return ctx.ast.ident_from_cow(input);
         }
 
         let mut name = ArenaStringBuilder::with_capacity_in(input_str.len() + 1, ctx.ast.allocator);
@@ -601,14 +600,14 @@ impl<'a, 'ctx> AsyncGeneratorExecutor<'a, 'ctx> {
         }
 
         if name.is_empty() {
-            return Atom::from("_");
+            return ctx.ast.ident("_");
         }
 
         if is_reserved_keyword(name.as_str()) {
             name.push_ascii_byte_start(b'_');
         }
 
-        Atom::from(name)
+        Ident::from(name)
     }
 
     /// Creates a [`Function`] with the specified params, body and scope_id.
@@ -651,13 +650,10 @@ impl<'a, 'ctx> AsyncGeneratorExecutor<'a, 'ctx> {
         bound_ident: &BoundIdentifier<'a>,
         ctx: &mut TraverseCtx<'a>,
     ) -> Statement<'a> {
-        let symbol_id = ctx.scoping().find_binding(ctx.current_scope_id(), "arguments");
-        let arguments_ident = Argument::from(ctx.create_ident_expr(
-            SPAN,
-            Atom::from("arguments"),
-            symbol_id,
-            ReferenceFlags::Read,
-        ));
+        let arguments = ctx.ast.ident("arguments");
+        let symbol_id = ctx.scoping().find_binding(ctx.current_scope_id(), arguments);
+        let arguments_ident =
+            Argument::from(ctx.create_ident_expr(SPAN, arguments, symbol_id, ReferenceFlags::Read));
 
         // (this, arguments)
         let this = Argument::from(ctx.ast.expression_this(SPAN));
@@ -694,7 +690,7 @@ impl<'a, 'ctx> AsyncGeneratorExecutor<'a, 'ctx> {
         let mut function = Self::create_function(None, params, body, scope_id, ctx);
         function.generator = true;
         let arguments = ctx.ast.vec1(Argument::FunctionExpression(function));
-        self.ctx.helper_call_expr(self.helper, SPAN, arguments, ctx)
+        helper_call_expr(self.helper, SPAN, arguments, ctx)
     }
 
     /// Creates a helper declaration statement for async-to-generator transformation.
@@ -889,7 +885,7 @@ impl<'a> Visit<'a> for BindingMover<'a, '_> {
         let symbol_id = ident.symbol_id();
         let current_scope_id = symbols.symbol_scope_id(symbol_id);
         let scopes = self.ctx.scoping_mut();
-        scopes.move_binding(current_scope_id, self.target_scope_id, ident.name.as_str());
+        scopes.move_binding(current_scope_id, self.target_scope_id, ident.name);
         let symbols = self.ctx.scoping_mut();
         symbols.set_symbol_scope_id(symbol_id, self.target_scope_id);
     }

@@ -17,6 +17,7 @@ const CONFORMANCE = isEnabled(env.CONFORMANCE);
 // This is the build used in tests.
 const DEBUG = CONFORMANCE || isEnabled(env.DEBUG);
 
+// Base config
 const commonConfig = defineConfig({
   platform: "node",
   target: "node20",
@@ -30,39 +31,66 @@ const commonConfig = defineConfig({
   inlineOnly: false,
 });
 
+// Minification options.
+// At present only compress syntax.
+// Don't mangle identifiers or remove whitespace, so `dist` code remains somewhat readable.
+const minifyConfig = {
+  compress: { keepNames: { function: true, class: true } },
+  mangle: false,
+  codegen: { removeWhitespace: false },
+};
+
+// Defined globals.
+// `DEBUG: false` allows minifier to remove debug assertions and debug-only code in release build.
+const definedGlobals = {
+  DEBUG: DEBUG ? "true" : "false",
+  CONFORMANCE: CONFORMANCE ? "true" : "false",
+};
+
+// Base config for `@oxlint/plugins` package.
+// "node12" target to match `engines` field of last ESLint 8 release (8.57.1).
+const pluginsPkgConfig = defineConfig({
+  ...commonConfig,
+  entry: {
+    index: "src-js/plugins.ts",
+  },
+  outDir: "dist-pkg-plugins",
+  // `build.ts` deletes the directory before TSDown runs.
+  // This allows generating the ESM and CommonJS builds in the same directory.
+  clean: false,
+  target: "node12",
+  minify: minifyConfig,
+  define: definedGlobals,
+});
+
+// Plugins.
+// Only remove debug assertions in release build.
 const plugins = [createReplaceGlobalsPlugin()];
 if (!DEBUG) plugins.push(createReplaceAssertsPlugin());
 
+// All build configs
 export default defineConfig([
   // Main build
   {
     ...commonConfig,
-    entry: ["src-js/cli.ts", "src-js/index.ts", "src-js/plugins.ts", "src-js/plugins-dev.ts"],
+    entry: ["src-js/cli.ts", "src-js/index.ts", "src-js/plugins-dev.ts"],
     format: "esm",
     external: [
       // External native bindings
       "./oxlint.*.node",
       "@oxlint/*",
     ],
-    // At present only compress syntax.
-    // Don't mangle identifiers or remove whitespace, so `dist` code remains somewhat readable.
-    minify: {
-      compress: { keepNames: { function: true, class: true } },
-      mangle: false,
-      codegen: { removeWhitespace: false },
-    },
+    minify: minifyConfig,
     dts: true,
     attw: { profile: "esm-only" },
-    define: {
-      DEBUG: DEBUG ? "true" : "false",
-      CONFORMANCE: CONFORMANCE ? "true" : "false",
-    },
+    define: definedGlobals,
     plugins,
     inputOptions: {
       // For `replaceAssertsPlugin` and `replaceGlobalsPlugin`
       experimental: { nativeMagicString: true },
     },
   },
+
   // TypeScript.
   // Bundled separately and lazy-loaded, as it's a lot of code.
   // Only used for tokens APIs.
@@ -73,6 +101,19 @@ export default defineConfig([
     // Minify as this bundle is just dependencies. We don't need to be able to debug it.
     // Minification halves the size of the bundle.
     minify: true,
+  },
+
+  // `@oxlint/plugins` package.
+  // Dual package - both ESM and CommonJS.
+  {
+    ...pluginsPkgConfig,
+    format: "esm",
+    dts: true,
+  },
+  {
+    ...pluginsPkgConfig,
+    format: "commonjs",
+    dts: false,
   },
 ]);
 

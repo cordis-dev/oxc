@@ -3,7 +3,7 @@ use oxc_allocator::{Box, TakeIn, Vec};
 use oxc_ast::ast::*;
 #[cfg(feature = "regular_expression")]
 use oxc_regular_expression::ast::Pattern;
-use oxc_span::{Atom, GetSpan, Span};
+use oxc_span::{Atom, GetSpan, Ident, Span};
 use oxc_syntax::{
     number::{BigintBase, NumberBase},
     precedence::Precedence,
@@ -117,11 +117,11 @@ impl<'a> ParserImpl<'a> {
     }
 
     #[inline]
-    pub(crate) fn parse_identifier_kind(&mut self, kind: Kind) -> (Span, Atom<'a>) {
+    pub(crate) fn parse_identifier_kind(&mut self, kind: Kind) -> (Span, Ident<'a>) {
         let span = self.cur_token().span();
         let name = self.cur_string();
-        self.bump_remap(kind);
-        (span, Atom::from(name))
+        self.advance(kind);
+        (span, Ident::from(name))
     }
 
     pub(crate) fn check_identifier(&mut self, kind: Kind, ctx: Context) {
@@ -830,11 +830,25 @@ impl<'a> ParserImpl<'a> {
             };
 
             if is_property_access {
+                if matches!(lhs, Expression::TSInstantiationExpression(_)) {
+                    self.error(
+                        diagnostics::ts_instantiation_expression_cannot_be_followed_by_property_access(
+                            self.end_span(lhs_span),
+                        ),
+                    );
+                }
                 lhs = self.parse_static_member_expression(lhs_span, lhs, question_dot);
                 continue;
             }
 
             if (question_dot || !self.ctx.has_decorator()) && self.at(Kind::LBrack) {
+                if matches!(lhs, Expression::TSInstantiationExpression(_)) {
+                    self.error(
+                        diagnostics::ts_instantiation_expression_cannot_be_followed_by_property_access(
+                            self.end_span(lhs_span),
+                        ),
+                    );
+                }
                 lhs = self.parse_computed_member_expression(lhs_span, lhs, question_dot);
                 continue;
             }

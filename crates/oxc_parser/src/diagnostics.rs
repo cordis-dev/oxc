@@ -49,6 +49,11 @@ pub fn overlong_source() -> OxcDiagnostic {
 }
 
 #[cold]
+pub fn file_appears_to_be_binary() -> OxcDiagnostic {
+    ts_error("1490", "File appears to be binary.")
+}
+
+#[cold]
 pub fn flow(span: Span) -> OxcDiagnostic {
     OxcDiagnostic::error("Flow is not supported").with_label(span)
 }
@@ -647,6 +652,14 @@ pub fn ts_empty_type_argument_list(span: Span) -> OxcDiagnostic {
 }
 
 #[cold]
+pub fn ts_instantiation_expression_cannot_be_followed_by_property_access(
+    span: Span,
+) -> OxcDiagnostic {
+    ts_error("1477", "An instantiation expression cannot be followed by a property access.")
+        .with_label(span)
+}
+
+#[cold]
 pub fn ts_string_literal_expected(span: Span) -> OxcDiagnostic {
     ts_error("1141", "String literal expected.").with_label(span)
 }
@@ -740,6 +753,14 @@ pub fn jsx_element_no_match(span: Span, span1: Span, name: &str) -> OxcDiagnosti
             span1.primary_label(format!("Expected `</{name}>`")),
             span.label("Opened here"),
         ])
+}
+
+#[cold]
+pub fn jsx_fragment_no_match(opening_span: Span, closing_span: Span) -> OxcDiagnostic {
+    OxcDiagnostic::error("Expected corresponding closing tag for JSX fragment.").with_labels([
+        closing_span.primary_label("Expected `</>`"),
+        opening_span.label("Opened here"),
+    ])
 }
 
 #[cold]
@@ -1259,4 +1280,40 @@ pub fn named_import_not_allowed_in_defer(span: Span) -> OxcDiagnostic {
 pub fn only_default_import_allowed_in_source_phase(span: Span) -> OxcDiagnostic {
     OxcDiagnostic::error("Only a single default import is allowed in a source phase import.")
         .with_label(span)
+}
+
+#[cold]
+pub fn ts_import_type_options_expected_with(span: Span) -> OxcDiagnostic {
+    OxcDiagnostic::error("Expected 'with' in import type options").with_label(span)
+}
+
+#[cold]
+pub fn ts_import_type_options_invalid_key(span: Span) -> OxcDiagnostic {
+    OxcDiagnostic::error("Import attributes keys must be identifier or string literal.")
+        .with_label(span)
+}
+
+#[cold]
+pub fn ts_import_type_options_no_spread(span: Span) -> OxcDiagnostic {
+    OxcDiagnostic::error("Spread elements are not allowed in import type options.").with_label(span)
+}
+
+// This syntax is reserved in files with the .mts or .cts extension. Use an `as` expression instead. ts(7059)
+#[cold]
+pub fn jsx_type_assertion_in_mts_cts(span: Span) -> OxcDiagnostic {
+    ts_error(
+        "7059",
+        "This syntax is reserved in files with the .mts or .cts extension. Use an `as` expression instead.",
+    )
+    .with_label(span)
+}
+
+// This syntax is reserved in files with the .mts or .cts extension. Add a trailing comma or explicit constraint. ts(7060)
+#[cold]
+pub fn jsx_type_parameter_in_mts_cts(span: Span) -> OxcDiagnostic {
+    ts_error(
+        "7060",
+        "This syntax is reserved in files with the .mts or .cts extension. Add a trailing comma or explicit constraint.",
+    )
+    .with_label(span)
 }

@@ -41,28 +41,25 @@ use oxc_allocator::{Address, Box as ArenaBox, GetAddress, TakeIn, Vec as ArenaVe
 use oxc_ast::{NONE, ast::*};
 use oxc_ecmascript::BoundNames;
 use oxc_semantic::{ScopeFlags, ScopeId, SymbolFlags};
-use oxc_span::{Atom, SPAN};
+use oxc_span::SPAN;
 use oxc_traverse::{BoundIdentifier, Traverse};
 
 use crate::{
-    Helper,
-    context::{TransformCtx, TraverseCtx},
-    state::TransformState,
+    Helper, common::helper_loader::helper_load, context::TraverseCtx, state::TransformState,
 };
 
-pub struct ExplicitResourceManagement<'a, 'ctx> {
-    ctx: &'ctx TransformCtx<'a>,
-
+pub struct ExplicitResourceManagement<'a> {
     top_level_using: FxHashMap<Address, /* is await-using */ bool>,
+    _marker: std::marker::PhantomData<&'a ()>,
 }
 
-impl<'a, 'ctx> ExplicitResourceManagement<'a, 'ctx> {
-    pub fn new(ctx: &'ctx TransformCtx<'a>) -> Self {
-        Self { ctx, top_level_using: FxHashMap::default() }
+impl ExplicitResourceManagement<'_> {
+    pub fn new() -> Self {
+        Self { top_level_using: FxHashMap::default(), _marker: std::marker::PhantomData }
     }
 }
 
-impl<'a> Traverse<'a, TransformState<'a>> for ExplicitResourceManagement<'a, '_> {
+impl<'a> Traverse<'a, TransformState<'a>> for ExplicitResourceManagement<'a> {
     /// Transform `for (using ... of ...)`, ready for `enter_statement` to do the rest.
     ///
     /// * `for (using x of y) {}` -> `for (const _x of y) { using x = _x; }`
@@ -127,7 +124,7 @@ impl<'a> Traverse<'a, TransformState<'a>> for ExplicitResourceManagement<'a, '_>
             ),
         };
         ctx.scoping_mut().set_symbol_scope_id(for_of_init_symbol_id, scope_id);
-        ctx.scoping_mut().move_binding(for_of_stmt_scope_id, scope_id, &for_of_init_name);
+        ctx.scoping_mut().move_binding(for_of_stmt_scope_id, scope_id, for_of_init_name);
 
         if let Statement::BlockStatement(body) = &mut for_of_stmt.body {
             // `for (const _x of y) { x(); }` -> `for (const _x of y) { using x = _x; x(); }`
@@ -173,7 +170,7 @@ impl<'a> Traverse<'a, TransformState<'a>> for ExplicitResourceManagement<'a, '_>
             );
 
             ctx.scoping_mut().set_symbol_scope_id(using_ctx.symbol_id, static_block_new_scope_id);
-            ctx.scoping_mut().move_binding(scope_id, static_block_new_scope_id, &using_ctx.name);
+            ctx.scoping_mut().move_binding(scope_id, static_block_new_scope_id, using_ctx.name);
             *ctx.scoping_mut().scope_flags_mut(scope_id) = ScopeFlags::StrictMode;
 
             block.set_scope_id(static_block_new_scope_id);
@@ -288,7 +285,7 @@ impl<'a> Traverse<'a, TransformState<'a>> for ExplicitResourceManagement<'a, '_>
             let current_hoist_scope_id = ctx.current_hoist_scope_id();
             node.block.set_scope_id(block_stmt_scope_id);
             ctx.scoping_mut().set_symbol_scope_id(using_ctx.symbol_id, current_hoist_scope_id);
-            ctx.scoping_mut().move_binding(scope_id, current_hoist_scope_id, &using_ctx.name);
+            ctx.scoping_mut().move_binding(scope_id, current_hoist_scope_id, using_ctx.name);
 
             ctx.scoping_mut().change_scope_parent_id(scope_id, Some(block_stmt_scope_id));
         }
@@ -341,7 +338,7 @@ impl<'a> Traverse<'a, TransformState<'a>> for ExplicitResourceManagement<'a, '_>
                             }
                             _ => (
                                 ctx.generate_binding_in_current_scope(
-                                    Atom::from("_default"),
+                                    ctx.ast.ident("_default"),
                                     SymbolFlags::FunctionScopedVariable,
                                 ),
                                 SPAN,
@@ -519,7 +516,7 @@ impl<'a> Traverse<'a, TransformState<'a>> for ExplicitResourceManagement<'a, '_>
     }
 }
 
-impl<'a> ExplicitResourceManagement<'a, '_> {
+impl<'a> ExplicitResourceManagement<'a> {
     /// Transform block statement.
     ///
     /// Input:
@@ -586,6 +583,7 @@ impl<'a> ExplicitResourceManagement<'a, '_> {
     ///   _usingCtx.d();
     /// }
     /// ```
+    #[expect(clippy::unused_self)]
     fn transform_switch_statement(&self, stmt: &mut Statement<'a>, ctx: &mut TraverseCtx<'a>) {
         let mut using_ctx = None;
         let mut needs_await = false;
@@ -651,7 +649,7 @@ impl<'a> ExplicitResourceManagement<'a, '_> {
 
         ctx.scoping_mut().change_scope_parent_id(switch_stmt_scope_id, Some(block_stmt_sid));
 
-        let callee = self.ctx.helper_load(Helper::UsingCtx, ctx);
+        let callee = helper_load(Helper::UsingCtx, ctx);
 
         let block = {
             let vec = ctx.ast.vec_from_array([
@@ -766,7 +764,7 @@ impl<'a> ExplicitResourceManagement<'a, '_> {
         let mut stmts = stmts.take_in(ctx.ast);
 
         // `var _usingCtx = babelHelpers.usingCtx();`
-        let callee = self.ctx.helper_load(Helper::UsingCtx, ctx);
+        let callee = helper_load(Helper::UsingCtx, ctx);
         let helper = ctx.ast.declaration_variable(
             SPAN,
             VariableDeclarationKind::Var,
@@ -812,7 +810,7 @@ impl<'a> ExplicitResourceManagement<'a, '_> {
         // We can skip using `generate_uid` here as no code within the `catch` block which can use a
         // binding called `_`. `using_ctx` is a UID with prefix `_usingCtx`.
         let ident = ctx.generate_binding(
-            Atom::from("_"),
+            ctx.ast.ident("_"),
             block_scope_id,
             SymbolFlags::CatchVariable | SymbolFlags::FunctionScopedVariable,
         );

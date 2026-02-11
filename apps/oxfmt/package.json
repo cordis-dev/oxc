@@ -1,6 +1,6 @@
 {
   "name": "oxfmt-app",
-  "version": "0.28.0",
+  "version": "0.31.0",
   "private": true,
   "description": "Internal development package for oxfmt. For the published package.json template, see `npm/oxfmt/package.json`.",
   "license": "MIT",
@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "prettier": "3.8.1",
-    "prettier-plugin-tailwindcss": "0.7.2",
+    "prettier-plugin-tailwindcss": "0.0.0-insiders.2ac6e70",
     "tinypool": "2.1.0"
   },
   "devDependencies": {
@@ -35,14 +35,22 @@
     "binaryName": "oxfmt",
     "packageName": "@oxfmt/binding",
     "targets": [
-      "win32-x64",
-      "win32-arm64",
-      "linux-x64-gnu",
-      "linux-arm64-gnu",
-      "linux-x64-musl",
-      "linux-arm64-musl",
-      "darwin-x64",
-      "darwin-arm64"
+      "aarch64-apple-darwin",
+      "aarch64-linux-android",
+      "aarch64-pc-windows-msvc",
+      "aarch64-unknown-linux-gnu",
+      "aarch64-unknown-linux-musl",
+      "aarch64-unknown-linux-ohos",
+      "armv7-linux-androideabi",
+      "armv7-unknown-linux-gnueabihf",
+      "armv7-unknown-linux-musleabihf",
+      "i686-pc-windows-msvc",
+      "powerpc64le-unknown-linux-gnu",
+      "x86_64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-freebsd",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl"
     ]
   },
   "engines": {

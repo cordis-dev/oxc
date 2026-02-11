@@ -1,6 +1,6 @@
 //! Tool runner functions for coverage testing
 
-use std::path::Path;
+use std::{borrow::Cow, path::Path, sync::Arc};
 
 use oxc::{
     allocator::Allocator,
@@ -8,7 +8,7 @@ use oxc::{
     diagnostics::{GraphicalReportHandler, GraphicalTheme, NamedSource, OxcDiagnostic},
     minifier::CompressOptions,
     parser::{ParseOptions, Parser, ParserReturn},
-    span::{SourceType, Span},
+    span::{ModuleKind, SourceType, Span},
     transformer::{JsxOptions, JsxRuntime, TransformOptions},
 };
 use oxc_formatter::{
@@ -34,8 +34,11 @@ fn run_parser(
     always_strict: bool,
     allow_return_outside_function: bool,
 ) -> TestResult {
-    let source_text =
-        if always_strict { format!("'use strict';\n{code}") } else { code.to_string() };
+    let source_text: Cow<str> = if always_strict {
+        Cow::Owned(format!("'use strict';\n{code}"))
+    } else {
+        Cow::Borrowed(code)
+    };
 
     let mut driver = Driver { allow_return_outside_function, ..Driver::default() };
     driver.run(&source_text, source_type);
@@ -46,10 +49,14 @@ fn run_parser(
     } else {
         let handler = GraphicalReportHandler::new().with_theme(GraphicalTheme::unicode_nocolor());
         let mut output = String::new();
+        // Create Arc once and share across all errors to avoid cloning source for each error
+        let source_arc: Arc<String> = Arc::new(source_text.into_owned());
+        // Extract path string before loop to avoid repeated conversions
+        let path_str = path.to_string_lossy();
         for error in &errors {
             let error = error
                 .clone()
-                .with_source_code(NamedSource::new(path.to_string_lossy(), source_text.clone()));
+                .with_source_code(NamedSource::new(path_str.clone(), Arc::clone(&source_arc)));
             handler.render_report(&mut output, error.as_ref()).unwrap();
         }
         TestResult::ParseError(output, driver.panicked)
@@ -57,13 +64,10 @@ fn run_parser(
 }
 
 fn evaluate_result(result: TestResult, should_fail: bool) -> TestResult {
-    match (&result, should_fail) {
-        (TestResult::ParseError(err, panicked), true) => {
-            TestResult::CorrectError(err.clone(), *panicked)
-        }
+    match (result, should_fail) {
+        (TestResult::ParseError(err, panicked), true) => TestResult::CorrectError(err, panicked),
         (TestResult::Passed, true) => TestResult::IncorrectlyPassed,
-        (TestResult::Passed, false) => TestResult::Passed,
-        _ => result,
+        (result, _) => result,
     }
 }
 
@@ -175,8 +179,11 @@ fn run_parser_typescript_unit(
     always_strict: bool,
     ts_ignore_spans: &[Span],
 ) -> TestResult {
-    let source_text =
-        if always_strict { format!("'use strict';\n{code}") } else { code.to_string() };
+    let source_text: Cow<str> = if always_strict {
+        Cow::Owned(format!("'use strict';\n{code}"))
+    } else {
+        Cow::Borrowed(code)
+    };
 
     let mut driver = Driver { allow_return_outside_function: false, ..Driver::default() };
     driver.run(&source_text, source_type);
@@ -198,10 +205,14 @@ fn run_parser_typescript_unit(
     // Format errors for output
     let handler = GraphicalReportHandler::new().with_theme(GraphicalTheme::unicode_nocolor());
     let mut output = String::new();
+    // Create Arc once and share across all errors to avoid cloning source for each error
+    let source_arc: Arc<String> = Arc::new(source_text.into_owned());
+    // Extract path string before loop to avoid repeated conversions
+    let path_str = path.to_string_lossy();
     for error in &errors {
         let error = error
             .clone()
-            .with_source_code(NamedSource::new(path.to_string_lossy(), source_text.clone()));
+            .with_source_code(NamedSource::new(path_str.clone(), Arc::clone(&source_arc)));
         handler.render_report(&mut output, error.as_ref()).unwrap();
     }
     TestResult::ParseError(output, driver.panicked)
@@ -292,7 +303,7 @@ pub fn run_semantic_test262(files: &[Test262File]) -> Vec<CoverageResult> {
         })
         .map(|f| {
             let is_module = f.meta.flags.contains(&TestFlag::Module);
-            let source_type = SourceType::default().with_module(is_module);
+            let source_type = SourceType::script().with_module(is_module);
             let result = run_semantic(&f.code, source_type, &f.path, None);
             CoverageResult { path: f.path.clone(), should_fail: false, result }
         })
@@ -375,7 +386,7 @@ pub fn run_codegen_test262(files: &[Test262File]) -> Vec<CoverageResult> {
         })
         .map(|f| {
             let is_module = f.meta.flags.contains(&TestFlag::Module);
-            let source_type = SourceType::default().with_module(is_module);
+            let source_type = SourceType::script().with_module(is_module);
             let result = run_codegen(&f.code, source_type);
             CoverageResult { path: f.path.clone(), should_fail: false, result }
         })
@@ -500,7 +511,7 @@ pub fn run_formatter_test262(files: &[Test262File]) -> Vec<CoverageResult> {
         })
         .map(|f| {
             let is_module = f.meta.flags.contains(&TestFlag::Module);
-            let source_type = SourceType::default().with_module(is_module);
+            let source_type = SourceType::script().with_module(is_module);
             let result = run_formatter(&f.code, source_type);
             CoverageResult { path: f.path.clone(), should_fail: false, result }
         })
@@ -565,16 +576,21 @@ fn run_transformer(
     };
 
     driver.run(code, source_type);
-    let transformed1 = driver.printed.clone();
+    let transformed1 = std::mem::take(&mut driver.printed);
 
     // Second pass with only JavaScript syntax
-    driver.run(&transformed1, SourceType::default().with_module(source_type.is_module()));
-    let transformed2 = driver.printed.clone();
+    let second_pass_source_type = match source_type.module_kind() {
+        ModuleKind::Module => SourceType::mjs(),
+        ModuleKind::Script => SourceType::script(),
+        ModuleKind::Unambiguous => SourceType::unambiguous(),
+        ModuleKind::CommonJS => SourceType::cjs(),
+    };
+    driver.run(&transformed1, second_pass_source_type);
 
-    if transformed1 == transformed2 {
+    if transformed1 == driver.printed {
         TestResult::Passed
     } else {
-        TestResult::Mismatch("Mismatch", transformed1, transformed2)
+        TestResult::Mismatch("Mismatch", transformed1, std::mem::take(&mut driver.printed))
     }
 }
 
@@ -588,7 +604,7 @@ pub fn run_transformer_test262(files: &[Test262File]) -> Vec<CoverageResult> {
         })
         .map(|f| {
             let is_module = f.meta.flags.contains(&TestFlag::Module);
-            let source_type = SourceType::default().with_module(is_module);
+            let source_type = SourceType::script().with_module(is_module);
             let result = run_transformer(&f.code, source_type, &f.path, None);
             CoverageResult { path: f.path.clone(), should_fail: false, result }
         })
@@ -661,7 +677,7 @@ pub fn run_minifier_test262(files: &[Test262File]) -> Vec<CoverageResult> {
         })
         .map(|f| {
             let is_module = f.meta.flags.contains(&TestFlag::Module);
-            let source_type = SourceType::default().with_module(is_module);
+            let source_type = SourceType::script().with_module(is_module);
             let result = run_minifier(&f.code, source_type);
             CoverageResult { path: f.path.clone(), should_fail: false, result }
         })
@@ -707,15 +723,13 @@ pub fn run_estree_test262(files: &[Test262File]) -> Vec<CoverageResult> {
         })
         .map(|f| {
             let is_module = f.meta.flags.contains(&TestFlag::Module);
-            let source_type = SourceType::default().with_module(is_module);
+            let source_type = SourceType::script().with_module(is_module);
             let allocator = Allocator::new();
             let ret = Parser::new(&allocator, &f.code, source_type).parse();
 
             if ret.panicked || !ret.errors.is_empty() {
-                let error = ret
-                    .errors
-                    .first()
-                    .map_or("Panicked".to_string(), std::string::ToString::to_string);
+                let error =
+                    ret.errors.first().map_or_else(|| "Panicked".to_string(), ToString::to_string);
                 return CoverageResult {
                     path: f.path.clone(),
                     should_fail: false,
@@ -821,7 +835,7 @@ pub fn run_estree_typescript(files: &[TypeScriptFile]) -> Vec<CoverageResult> {
                     let error = ret
                         .errors
                         .first()
-                        .map_or("Panicked".to_string(), std::string::ToString::to_string);
+                        .map_or_else(|| "Panicked".to_string(), ToString::to_string);
                     return CoverageResult {
                         path: f.path.clone(),
                         should_fail: false,

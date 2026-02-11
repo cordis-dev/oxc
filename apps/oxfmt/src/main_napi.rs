@@ -1,5 +1,4 @@
-use std::ffi::OsString;
-use std::path::PathBuf;
+use std::{env, ffi::OsString, path::PathBuf};
 
 use napi_derive::napi;
 
@@ -37,17 +36,11 @@ pub async fn run_cli(
     args: Vec<String>,
     #[napi(ts_arg_type = "(numThreads: number) => Promise<string[]>")]
     init_external_formatter_cb: JsInitExternalFormatterCb,
-    #[napi(
-        ts_arg_type = "(options: Record<string, any>, parserName: string, code: string) => Promise<string>"
-    )]
+    #[napi(ts_arg_type = "(options: Record<string, any>, code: string) => Promise<string>")]
     format_embedded_cb: JsFormatEmbeddedCb,
-    #[napi(
-        ts_arg_type = "(options: Record<string, any>, parserName: string, fileName: string, code: string) => Promise<string>"
-    )]
+    #[napi(ts_arg_type = "(options: Record<string, any>, code: string) => Promise<string>")]
     format_file_cb: JsFormatFileCb,
-    #[napi(
-        ts_arg_type = "(filepath: string, options: Record<string, any>, classes: string[]) => Promise<string[]>"
-    )]
+    #[napi(ts_arg_type = "(options: Record<string, any>, classes: string[]) => Promise<string[]>")]
     sort_tailwindcss_classes_cb: JsSortTailwindClassesCb,
 ) -> (String, Option<u8>) {
     // Convert `String` args to `OsString` for compatibility with `bpaf`
@@ -135,6 +128,9 @@ pub struct FormatResult {
 /// NAPI based format API entry point.
 ///
 /// Since it internally uses `await prettier.format()` in JS side, `formatSync()` cannot be provided.
+///
+/// # Panics
+/// Panics if the current working directory cannot be determined.
 #[expect(clippy::allow_attributes)]
 #[allow(clippy::trailing_empty_array, clippy::unused_async)] // https://github.com/napi-rs/napi-rs/issues/2758
 #[napi]
@@ -144,19 +140,17 @@ pub async fn format(
     options: Option<Value>,
     #[napi(ts_arg_type = "(numThreads: number) => Promise<string[]>")]
     init_external_formatter_cb: JsInitExternalFormatterCb,
-    #[napi(
-        ts_arg_type = "(options: Record<string, any>, parserName: string, code: string) => Promise<string>"
-    )]
+    #[napi(ts_arg_type = "(options: Record<string, any>, code: string) => Promise<string>")]
     format_embedded_cb: JsFormatEmbeddedCb,
-    #[napi(
-        ts_arg_type = "(options: Record<string, any>, parserName: string, fileName: string, code: string) => Promise<string>"
-    )]
+    #[napi(ts_arg_type = "(options: Record<string, any>, code: string) => Promise<string>")]
     format_file_cb: JsFormatFileCb,
-    #[napi(
-        ts_arg_type = "(filepath: string, options: Record<string, any>, classes: string[]) => Promise<string[]>"
-    )]
+    #[napi(ts_arg_type = "(options: Record<string, any>, classes: string[]) => Promise<string[]>")]
     sort_tailwind_classes_cb: JsSortTailwindClassesCb,
 ) -> FormatResult {
+    // NOTE: In NAPI context, we don't have a config file path, since options are passed directly as a JSON.
+    // However, relative -> absolute path conversion is needed for Tailwind plugin to work correctly,
+    // use current working directory as the base.
+    let cwd = env::current_dir().expect("Failed to get current working directory");
     let num_of_threads = 1;
 
     let external_formatter = ExternalFormatter::new(
@@ -180,7 +174,9 @@ pub async fn format(
     }
 
     // Determine format strategy from file path
-    let Ok(strategy) = FormatFileStrategy::try_from(PathBuf::from(&filename)) else {
+    let Ok(strategy) = FormatFileStrategy::try_from(PathBuf::from(&filename))
+        .map(|s| s.resolve_relative_path(&cwd))
+    else {
         external_formatter.cleanup();
         return FormatResult {
             code: source_text,
@@ -189,17 +185,17 @@ pub async fn format(
     };
 
     // Resolve format options directly from the provided options
-    let resolved_options = match resolve_options_from_value(options.unwrap_or_default(), &strategy)
-    {
-        Ok(options) => options,
-        Err(err) => {
-            external_formatter.cleanup();
-            return FormatResult {
-                code: source_text,
-                errors: vec![OxcError::new(format!("Failed to parse configuration: {err}"))],
-            };
-        }
-    };
+    let resolved_options =
+        match resolve_options_from_value(&cwd, options.unwrap_or_default(), &strategy) {
+            Ok(options) => options,
+            Err(err) => {
+                external_formatter.cleanup();
+                return FormatResult {
+                    code: source_text,
+                    errors: vec![OxcError::new(format!("Failed to parse configuration: {err}"))],
+                };
+            }
+        };
 
     // Create formatter and format
     let formatter = SourceFormatter::new(num_of_threads)
