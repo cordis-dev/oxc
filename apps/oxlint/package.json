@@ -1,6 +1,6 @@
 {
   "name": "oxlint-app",
-  "version": "1.46.0",
+  "version": "1.47.0",
   "private": true,
   "description": "Internal development package for oxlint. For the published package.json template, see `npm/oxlint/package.json`.",
   "license": "MIT",
@@ -62,7 +62,8 @@
     "type-fest": "^5.2.0",
     "typescript": "catalog:",
     "vitest": "catalog:",
-    "vscode-languageserver-protocol": "^3.17.5"
+    "vscode-languageserver-protocol": "^3.17.5",
+    "vscode-languageserver-textdocument": "^1.0.12"
   },
   "napi": {
     "binaryName": "oxlint",

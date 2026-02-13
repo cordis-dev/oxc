@@ -1371,6 +1371,14 @@ impl RuleRunner for crate::rules::typescript::ban_types::BanTypes {
 }
 
 impl RuleRunner
+    for crate::rules::typescript::class_literal_property_style::ClassLiteralPropertyStyle
+{
+    const NODE_TYPES: Option<&AstTypesBitset> =
+        Some(&AstTypesBitset::from_types(&[AstType::ClassBody]));
+    const RUN_FUNCTIONS: RuleRunFunctionsImplemented = RuleRunFunctionsImplemented::Unknown;
+}
+
+impl RuleRunner
     for crate::rules::typescript::consistent_generic_constructors::ConsistentGenericConstructors
 {
     const NODE_TYPES: Option<&AstTypesBitset> = Some(&AstTypesBitset::from_types(&[
@@ -1548,6 +1556,12 @@ impl RuleRunner for crate::rules::typescript::no_inferrable_types::NoInferrableT
     const RUN_FUNCTIONS: RuleRunFunctionsImplemented = RuleRunFunctionsImplemented::Run;
 }
 
+impl RuleRunner for crate::rules::typescript::no_invalid_void_type::NoInvalidVoidType {
+    const NODE_TYPES: Option<&AstTypesBitset> =
+        Some(&AstTypesBitset::from_types(&[AstType::TSVoidKeyword]));
+    const RUN_FUNCTIONS: RuleRunFunctionsImplemented = RuleRunFunctionsImplemented::Unknown;
+}
+
 impl RuleRunner
     for crate::rules::typescript::no_meaningless_void_operator::NoMeaninglessVoidOperator
 {
@@ -1648,6 +1662,11 @@ impl RuleRunner for crate::rules::typescript::no_this_alias::NoThisAlias {
 }
 
 impl RuleRunner for crate::rules::typescript::no_unnecessary_boolean_literal_compare::NoUnnecessaryBooleanLiteralCompare {
+    const NODE_TYPES: Option<&AstTypesBitset> = None;
+    const RUN_FUNCTIONS: RuleRunFunctionsImplemented = RuleRunFunctionsImplemented::Unknown;
+}
+
+impl RuleRunner for crate::rules::typescript::no_unnecessary_condition::NoUnnecessaryCondition {
     const NODE_TYPES: Option<&AstTypesBitset> = None;
     const RUN_FUNCTIONS: RuleRunFunctionsImplemented = RuleRunFunctionsImplemented::Unknown;
 }

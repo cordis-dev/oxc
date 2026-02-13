@@ -216,6 +216,7 @@ pub(crate) mod typescript {
     pub mod ban_ts_comment;
     pub mod ban_tslint_comment;
     pub mod ban_types;
+    pub mod class_literal_property_style;
     pub mod consistent_generic_constructors;
     pub mod consistent_indexed_object_style;
     pub mod consistent_type_assertions;
@@ -241,6 +242,7 @@ pub(crate) mod typescript {
     pub mod no_implied_eval;
     pub mod no_import_type_side_effects;
     pub mod no_inferrable_types;
+    pub mod no_invalid_void_type;
     pub mod no_meaningless_void_operator;
     pub mod no_misused_new;
     pub mod no_misused_promises;
@@ -255,6 +257,7 @@ pub(crate) mod typescript {
     pub mod no_restricted_types;
     pub mod no_this_alias;
     pub mod no_unnecessary_boolean_literal_compare;
+    pub mod no_unnecessary_condition;
     pub mod no_unnecessary_parameter_property_assignment;
     pub mod no_unnecessary_template_expression;
     pub mod no_unnecessary_type_arguments;

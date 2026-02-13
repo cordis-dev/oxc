@@ -1,7 +1,6 @@
 use oxc_ast::{
     AstKind,
-    ast::{TSSignature, TSTupleElement, TSType, TSTypeName},
-    match_ts_type,
+    ast::{TSMappedType, TSSignature, TSType, TSTypeName},
 };
 use oxc_diagnostics::OxcDiagnostic;
 use oxc_macros::declare_oxc_lint;
@@ -294,7 +293,6 @@ impl Rule for ConsistentIndexedObjectStyle {
                     }
                 }
                 AstKind::TSMappedType(mapped) => {
-                    let key_name = &mapped.key;
                     let constraint = &mapped.constraint;
 
                     // Bare `keyof` mapped types preserve structure and can't be converted
@@ -302,9 +300,14 @@ impl Rule for ConsistentIndexedObjectStyle {
                         return;
                     }
 
+                    // Key remapping (`as`) cannot be represented with `Record`.
+                    if mapped.name_type.is_some() {
+                        return;
+                    }
+
                     // Can't convert if value type references the key parameter
                     if let Some(type_annotation) = &mapped.type_annotation
-                        && references_identifier(type_annotation, key_name.name.as_str())
+                        && mapped_type_value_references_key(mapped, type_annotation, ctx)
                     {
                         return;
                     }
@@ -421,60 +424,16 @@ fn is_bare_keyof(r#type: &TSType) -> bool {
         if matches!(op.operator, oxc_ast::ast::TSTypeOperatorOperator::Keyof))
 }
 
-fn references_identifier(type_: &TSType, name: &str) -> bool {
-    match type_ {
-        TSType::TSTypeReference(r) => {
-            if let TSTypeName::IdentifierReference(ide) = &r.type_name
-                && ide.name.as_str() == name
-            {
-                return true;
-            }
-            if let Some(type_args) = &r.type_arguments
-                && type_args.params.iter().any(|t| references_identifier(t, name))
-            {
-                return true;
-            }
-            false
-        }
-        TSType::TSUnionType(u) => u.types.iter().any(|t| references_identifier(t, name)),
-        TSType::TSIntersectionType(i) => i.types.iter().any(|t| references_identifier(t, name)),
-        TSType::TSConditionalType(c) => {
-            references_identifier(&c.check_type, name)
-                || references_identifier(&c.extends_type, name)
-                || references_identifier(&c.true_type, name)
-                || references_identifier(&c.false_type, name)
-        }
-        TSType::TSIndexedAccessType(i) => {
-            references_identifier(&i.object_type, name)
-                || references_identifier(&i.index_type, name)
-        }
-        TSType::TSArrayType(a) => references_identifier(&a.element_type, name),
-        TSType::TSTupleType(t) => t.element_types.iter().any(|e| match e {
-            TSTupleElement::TSOptionalType(opt) => {
-                references_identifier(&opt.type_annotation, name)
-            }
-            TSTupleElement::TSRestType(rest) => references_identifier(&rest.type_annotation, name),
-            match_ts_type!(TSTupleElement) => references_identifier(e.to_ts_type(), name),
-        }),
-        TSType::TSTypeLiteral(lit) => lit.members.iter().any(|m| {
-            if let TSSignature::TSIndexSignature(sig) = m {
-                references_identifier(&sig.type_annotation.type_annotation, name)
-            } else {
-                false
-            }
-        }),
-        TSType::TSFunctionType(f) => references_identifier(&f.return_type.type_annotation, name),
-        TSType::TSTypeOperatorType(op) => references_identifier(&op.type_annotation, name),
-        TSType::TSParenthesizedType(p) => references_identifier(&p.type_annotation, name),
-        TSType::TSNamedTupleMember(m) => match &m.element_type {
-            TSTupleElement::TSOptionalType(opt) => {
-                references_identifier(&opt.type_annotation, name)
-            }
-            TSTupleElement::TSRestType(rest) => references_identifier(&rest.type_annotation, name),
-            e @ match_ts_type!(TSTupleElement) => references_identifier(e.to_ts_type(), name),
-        },
-        _ => false,
-    }
+fn mapped_type_value_references_key(
+    mapped: &TSMappedType,
+    type_annotation: &TSType,
+    ctx: &LintContext,
+) -> bool {
+    let type_annotation_span = type_annotation.span();
+    ctx.symbol_references(mapped.key.symbol_id()).any(|reference| {
+        let reference_span = ctx.nodes().get_node(reference.node_id()).kind().span();
+        type_annotation_span.contains_inclusive(reference_span)
+    })
 }
 
 fn is_circular_reference(type_: &TSType, parent_name: &str, ctx: &LintContext) -> bool {
@@ -896,6 +855,17 @@ fn test() {
             ",
             None,
         ),
+        ("type Keys = 'A' | 'B'; type Foo = { [K in Keys]: { x: K } };", None),
+        ("type Keys = 'A' | 'B'; type Foo = { [K in Keys]?: { x: K } };", None),
+        (
+            "type Keys = 'A' | 'B'; interface Gen<T> { a: T } type Foo = { [K in Keys]: { x: Gen<K> } };",
+            None,
+        ),
+        (
+            "type Keys = 'A' | 'B'; interface Gen<T> { a: T } type Foo = Partial<{ [K in Keys]: { x: Gen<K> } }>;",
+            None,
+        ),
+        ("type Foo<K extends string> = { [P in K as `x_${P}`]: number };", None),
     ];
 
     let fail = vec![
