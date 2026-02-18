@@ -13,6 +13,21 @@ working directory: fixtures/tsgolint
  2 | 
    `----
 
+  x typescript-eslint(consistent-return): Function 'maybe' expected a return value.
+   ,-[consistent-return.ts:5:3]
+ 4 |   }
+ 5 |   return;
+   :   ^^^^^^^
+ 6 | }
+   `----
+
+  x typescript-eslint(consistent-type-exports): Type export LocalType is not a value and should be exported using `export type`.
+   ,-[consistent-type-exports.ts:7:1]
+ 6 | 
+ 7 | export { LocalType, localValue };
+   : ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   `----
+
   x typescript-eslint(no-array-delete): Using the `delete` operator with an array expression is unsafe.
    ,-[no-array-delete.ts:2:1]
  1 | declare const arr: number[];
@@ -151,6 +166,14 @@ working directory: fixtures/tsgolint
    :                   ^^
    `----
 
+  x typescript-eslint(no-unnecessary-qualifier): Qualifier is unnecessary since 'B' is in scope.
+   ,-[no-unnecessary-qualifier.ts:5:12]
+ 4 |   export type B = number;
+ 5 |   const x: A.B = 3;
+   :            ^
+ 6 | }
+   `----
+
   x typescript-eslint(no-unnecessary-template-expression): Template literal expression is unnecessary and can be simplified.
    ,-[no-unnecessary-template-expression.ts:2:18]
  1 | const text = 'hello';
@@ -172,6 +195,31 @@ working directory: fixtures/tsgolint
  2 | const redundant = str as string;
    :                   ^^^^^^^^^^^^^
  3 | 
+   `----
+
+  x typescript-eslint(no-unnecessary-type-parameters): Type parameter T is used only once in the function signature.
+   ,-[no-unnecessary-type-parameters.ts:3:20]
+ 2 | 
+ 3 | function parseYAML<T>(input: string): T {
+   :                    ^                  |
+   :                    |                  `-- This is the only usage of type parameter T in the signature.
+ 4 |   return input as any as T;
+   `----
+
+  x typescript-eslint(no-unsafe-type-assertion): Unsafe assertion to `any` detected: consider using a more specific type to ensure safety.
+   ,-[no-unnecessary-type-parameters.ts:4:10]
+ 3 | function parseYAML<T>(input: string): T {
+ 4 |   return input as any as T;
+   :          ^^^^^^^^^^^^
+ 5 | }
+   `----
+
+  x typescript-eslint(no-unsafe-type-assertion): Unsafe assertion from `any` detected: consider using type guards or a safer assertion.
+   ,-[no-unnecessary-type-parameters.ts:4:10]
+ 3 | function parseYAML<T>(input: string): T {
+ 4 |   return input as any as T;
+   :          ^^^^^^^^^^^^^^^^^
+ 5 | }
    `----
 
   x typescript-eslint(no-unsafe-argument): Unsafe argument of type any assigned to a parameter of type string.
@@ -246,6 +294,16 @@ working directory: fixtures/tsgolint
  3 | 
    `----
 
+  x typescript-eslint(no-useless-default-assignment): Default value is useless because the parameter has type `number` (not nullish). This default assignment will never be used.
+   ,-[no-useless-default-assignment.ts:1:20]
+ 1 | [1, 2, 3].map((a = 42) => a + 1);
+   :                |   ^|^
+   :                |    `-- Default value
+   :                `-- parameter type `number` is not nullish
+ 2 | 
+   `----
+  help: Remove the default assignment
+
   x typescript-eslint(no-unsafe-type-assertion): Unsafe type assertion: type 'string' is more narrow than the original type.
    ,-[non-nullable-type-assertion-style.ts:2:17]
  1 | declare const value: string | null;
@@ -275,6 +333,13 @@ working directory: fixtures/tsgolint
  1 | throw 'error';
    :       ^^^^^^^
  2 | 
+   `----
+
+  x typescript-eslint(prefer-find): Prefer .find(...) instead of .filter(...)[0].
+   ,-[prefer-find.ts:1:13]
+ 1 | const two = [1, 2, 3].filter(item => item === 2)[0];
+   :             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 2 | console.log(two);
    `----
 
   x typescript-eslint(prefer-includes): Use 'includes()' method instead.
@@ -337,6 +402,22 @@ working directory: fixtures/tsgolint
    `----
   help: The promise must end with a call to .catch, or end with a call to .then with a rejection handler, or be explicitly marked as ignored with the `void` operator.
 
+  x typescript-eslint(prefer-readonly-parameter-types): Parameter should be a readonly type.
+   ,-[prefer-readonly-parameter-types.ts:5:18]
+ 4 | 
+ 5 | function consume(input: MutableInput): void {
+   :                  ^^^^^^^^^^^^^^^^^^^
+ 6 |   input.value = input.value.trim();
+   `----
+
+  x typescript-eslint(prefer-readonly): Member 'value' is never reassigned; mark it as `readonly`.
+   ,-[prefer-readonly.ts:2:3]
+ 1 | class Example {
+ 2 |   private value = 1;
+   :   ^^^^^^^^^^^^^
+ 3 |   private readonly ok = 2;
+   `----
+
   x typescript-eslint(no-unnecessary-type-assertion): This assertion is unnecessary since it does not change the type of the expression.
    ,-[prefer-reduce-type-parameter.ts:2:13]
  1 | const numbers = [1, 2, 3];
@@ -344,6 +425,30 @@ working directory: fixtures/tsgolint
    :             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
  3 | 
    `----
+
+  x typescript-eslint(prefer-regexp-exec): Use the `RegExp#exec()` method instead.
+   ,-[prefer-regexp-exec.ts:4:6]
+ 3 | const text = 'something';
+ 4 | text.match(/thing/); // should prefer RegExp#exec
+   :      ^^^^^
+ 5 | 
+   `----
+
+  x typescript-eslint(prefer-regexp-exec): Use the `RegExp#exec()` method instead.
+   ,-[prefer-regexp-exec.ts:7:6]
+ 6 | const search = 'thing';
+ 7 | text.match(search); // should prefer RegExp#exec
+   :      ^^^^^
+ 8 | 
+   `----
+
+  x typescript-eslint(prefer-readonly-parameter-types): Parameter should be a readonly type.
+    ,-[prefer-regexp-exec.ts:9:36]
+  8 | 
+  9 | function countMatches(str: string, re: RegExp): number {
+    :                                    ^^^^^^^^^^
+ 10 |   return str.match(re)?.length ?? 0; // valid: unknown global flag
+    `----
 
   x typescript-eslint(prefer-return-this-type): Use `this` type instead.
    ,-[prefer-return-this-type.ts:3:28]
@@ -353,6 +458,22 @@ working directory: fixtures/tsgolint
  4 |     this.value = value;
    `----
 
+  x typescript-eslint(prefer-string-starts-ends-with): Use 'String#startsWith' method instead.
+   ,-[prefer-string-starts-ends-with.ts:4:10]
+ 3 | function startsCase(s: string): boolean {
+ 4 |   return s[0] === 'a';
+   :          ^^^^^^^^^^^^
+ 5 | }
+   `----
+
+  x typescript-eslint(prefer-string-starts-ends-with): Use 'String#endsWith' method instead.
+   ,-[prefer-string-starts-ends-with.ts:8:10]
+ 7 | function endsCase(s: string): boolean {
+ 8 |   return s.slice(-3) === 'bar';
+   :          ^^^^^^^^^^^^^^^^^^^^^
+ 9 | }
+   `----
+
   x typescript-eslint(promise-function-async): Functions that return promises must be async.
    ,-[promise-function-async.ts:2:1]
  1 |     declare function fetch(url: string): Promise<Response>;
@@ -360,6 +481,14 @@ working directory: fixtures/tsgolint
  3 | |     return fetch('/api/data').then(res => res.text());
  4 | `-> }
  5 |     
+   `----
+
+  x typescript-eslint(prefer-readonly-parameter-types): Parameter should be a readonly type.
+   ,-[promise-function-async.ts:3:34]
+ 2 | function fetchData(): Promise<string> {
+ 3 |   return fetch('/api/data').then(res => res.text());
+   :                                  ^^^
+ 4 | }
    `----
 
   x typescript-eslint(promise-function-async): Functions that return promises must be async.
@@ -423,6 +552,28 @@ working directory: fixtures/tsgolint
  3 | }
    `----
 
+  x typescript-eslint(strict-void-return): Value returned in a context where a void return is expected.
+   ,-[strict-void-return.ts:2:11]
+ 1 | declare function foo(cb: () => void): void;
+ 2 | foo(() => null);
+   :           ^^^^
+ 3 | 
+   `----
+
+  x typescript-eslint(consistent-return): Function 'handleStatus' expected a return value.
+    ,-[switch-exhaustiveness-check.ts:2:1]
+  1 |     type Status = 'pending' | 'approved' | 'rejected';
+  2 | ,-> function handleStatus(status: Status) {
+  3 | |     switch (status) {
+  4 | |       case 'pending':
+  5 | |         return 'Waiting for approval';
+  6 | |       case 'approved':
+  7 | |         return 'Request approved';
+  8 | |     }
+  9 | `-> }
+ 10 |     
+    `----
+
   x typescript-eslint(switch-exhaustiveness-check): Switch is not exhaustive
    ,-[switch-exhaustiveness-check.ts:3:11]
  2 | function handleStatus(status: Status) {
@@ -448,8 +599,8 @@ working directory: fixtures/tsgolint
    `----
   help: If your function does not access `this`, you can annotate it with `this: void`, or consider using an arrow function instead.
 
-Found 0 warnings and 57 errors.
-Finished in <variable>ms on 47 files with 46 rules using 1 threads.
+Found 0 warnings and 75 errors.
+Finished in <variable>ms on 58 files with 57 rules using 1 threads.
 ----------
 CLI result: LintFoundErrors
 ----------

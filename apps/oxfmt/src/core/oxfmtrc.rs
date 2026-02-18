@@ -1,13 +1,14 @@
 use std::path::Path;
 
+use rustc_hash::FxHashSet;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use oxc_formatter::{
     ArrowParentheses, AttributePosition, BracketSameLine, BracketSpacing, CustomGroupDefinition,
-    EmbeddedLanguageFormatting, Expand, FormatOptions, ImportModifier, ImportSelector, IndentStyle,
-    IndentWidth, LineEnding, LineWidth, QuoteProperties, QuoteStyle, Semicolons,
+    EmbeddedLanguageFormatting, Expand, FormatOptions, GroupEntry, ImportModifier, ImportSelector,
+    IndentStyle, IndentWidth, LineEnding, LineWidth, QuoteProperties, QuoteStyle, Semicolons,
     SortImportsOptions, SortOrder, TailwindcssOptions, TrailingCommas,
 };
 use oxc_toml::Options as TomlFormatterOptions;
@@ -419,36 +420,99 @@ impl FormatConfig {
             if let Some(v) = config.internal_pattern {
                 sort_imports.internal_pattern = v;
             }
-            if let Some(v) = config.groups {
-                sort_imports.groups = v.into_iter().map(SortGroupItemConfig::into_vec).collect();
-            }
+            // Validate and parse `customGroups` first, since `groups` may refer to custom group names.
             if let Some(v) = config.custom_groups {
-                sort_imports.custom_groups = v
-                    .into_iter()
-                    .map(|c| CustomGroupDefinition {
-                        group_name: c.group_name,
-                        element_name_pattern: c.element_name_pattern,
-                        selector: c.selector.as_deref().and_then(ImportSelector::parse),
-                        modifiers: c
-                            .modifiers
-                            .unwrap_or_default()
-                            .iter()
-                            .filter_map(|s| ImportModifier::parse(s))
-                            .collect(),
-                    })
-                    .collect();
+                let mut custom_groups = Vec::with_capacity(v.len());
+                for cg in v {
+                    let CustomGroupItemConfig { group_name, element_name_pattern, .. } = cg;
+                    let selector = match cg.selector.as_deref() {
+                        Some(s) => match ImportSelector::parse(s) {
+                            Some(parsed) => Some(parsed),
+                            None => {
+                                return Err(format!(
+                                    "Invalid `sortImports` configuration: unknown selector: `{s}` in customGroups: `{group_name}`"
+                                ));
+                            }
+                        },
+                        None => None,
+                    };
+                    let raw_modifiers = cg.modifiers.unwrap_or_default();
+                    let mut modifiers = Vec::with_capacity(raw_modifiers.len());
+                    for m in &raw_modifiers {
+                        match ImportModifier::parse(m) {
+                            Some(parsed) => modifiers.push(parsed),
+                            None => {
+                                return Err(format!(
+                                    "Invalid `sortImports` configuration: unknown modifier: `{m}` in customGroups: `{group_name}`"
+                                ));
+                            }
+                        }
+                    }
+                    custom_groups.push(CustomGroupDefinition {
+                        group_name,
+                        element_name_pattern,
+                        selector,
+                        modifiers,
+                    });
+                }
+                sort_imports.custom_groups = custom_groups;
+            }
+            if let Some(v) = config.groups {
+                let custom_group_names: FxHashSet<&str> =
+                    sort_imports.custom_groups.iter().map(|g| g.group_name.as_str()).collect();
+                let mut groups = Vec::new();
+                let mut newline_boundary_overrides: Vec<Option<bool>> = Vec::new();
+                let mut pending_override: Option<bool> = None;
+
+                for item in v {
+                    match item {
+                        SortGroupItemConfig::NewlinesBetween(marker) => {
+                            if groups.is_empty() {
+                                return Err("Invalid `sortImports` configuration: `{ \"newlinesBetween\" }` marker cannot appear at the start of `groups`".to_string());
+                            }
+                            if pending_override.is_some() {
+                                return Err("Invalid `sortImports` configuration: consecutive `{ \"newlinesBetween\" }` markers are not allowed in `groups`".to_string());
+                            }
+                            pending_override = Some(marker.newlines_between);
+                        }
+                        other => {
+                            if !groups.is_empty() {
+                                newline_boundary_overrides.push(pending_override.take());
+                            }
+                            let mut entries = Vec::new();
+                            for name in other.into_vec() {
+                                let entry = GroupEntry::parse(&name);
+                                if let GroupEntry::Custom(ref n) = entry
+                                    && !custom_group_names.contains(n.as_str())
+                                {
+                                    return Err(format!(
+                                        "Invalid `sortImports` configuration: unknown group name `{name}` in `groups`"
+                                    ));
+                                }
+                                entries.push(entry);
+                            }
+                            groups.push(entries);
+                        }
+                    }
+                }
+
+                if pending_override.is_some() {
+                    return Err("Invalid `sortImports` configuration: `{ \"newlinesBetween\" }` marker cannot appear at the end of `groups`".to_string());
+                }
+
+                sort_imports.groups = groups;
+                sort_imports.newline_boundary_overrides = newline_boundary_overrides;
             }
 
-            // `partition_by_newline: true` and `newlines_between: true` cannot be used together
-            if sort_imports.partition_by_newline && sort_imports.newlines_between {
-                return Err("Invalid `sortImports` configuration: `partitionByNewline: true` and `newlinesBetween: true` cannot be used together".to_string());
-            }
+            sort_imports
+                .validate()
+                .map_err(|e| format!("Invalid `sortImports` configuration: {e}"))?;
 
-            format_options.experimental_sort_imports = Some(sort_imports);
+            format_options.sort_imports = Some(sort_imports);
         }
 
         if let Some(config) = self.experimental_tailwindcss {
-            format_options.experimental_tailwindcss = Some(TailwindcssOptions {
+            format_options.sort_tailwindcss = Some(TailwindcssOptions {
                 config: config.config,
                 stylesheet: config.stylesheet,
                 functions: config.functions.unwrap_or_default(),
@@ -638,8 +702,8 @@ pub struct SortImportsConfig {
     ///
     /// The list of selectors is sorted from most to least important:
     /// - `type` — TypeScript type imports.
-    /// - `side-effect-style` — Side effect style imports.
-    /// - `side-effect` — Side effect imports.
+    /// - `side_effect_style` — Side effect style imports.
+    /// - `side_effect` — Side effect imports.
     /// - `style` — Style imports.
     /// - `index` — Main file from the current directory.
     /// - `sibling` — Modules from the same directory.
@@ -651,7 +715,7 @@ pub struct SortImportsConfig {
     /// - `import` — Any import.
     ///
     /// The list of modifiers is sorted from most to least important:
-    /// - `side-effect` — Side effect imports.
+    /// - `side_effect` — Side effect imports.
     /// - `type` — TypeScript type imports.
     /// - `value` — Value imports.
     /// - `default` — Imports containing the default specifier.
@@ -661,15 +725,17 @@ pub struct SortImportsConfig {
     /// - Default: See below
     /// ```json
     /// [
-    ///   "type-import",
-    ///   ["value-builtin", "value-external"],
-    ///   "type-internal",
-    ///   "value-internal",
-    ///   ["type-parent", "type-sibling", "type-index"],
-    ///   ["value-parent", "value-sibling", "value-index"],
-    ///   "unknown",
+    ///   "builtin",
+    ///   "external",
+    ///   ["internal", "subpath"],
+    ///   ["parent", "sibling", "index"],
+    ///   "style",
+    ///   "unknown"
     /// ]
     /// ```
+    ///
+    /// Also, you can override the global `newlinesBetween` setting for specific group boundaries
+    /// by including a `{ "newlinesBetween": boolean }` marker object in the `groups` list at the desired position.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub groups: Option<Vec<SortGroupItemConfig>>,
     /// Define your own groups for matching very specific imports.
@@ -698,8 +764,20 @@ pub enum SortOrderConfig {
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 #[serde(untagged)]
 pub enum SortGroupItemConfig {
+    /// A `{ "newlinesBetween": bool }` marker object that overrides the global `newlinesBetween`
+    /// setting for the boundary between the previous and next groups.
+    NewlinesBetween(NewlinesBetweenMarker),
+    /// A single group name string (e.g. `"value-builtin"`).
     Single(String),
+    /// Multiple group names treated as one group (e.g. `["value-builtin", "value-external"]`).
     Multiple(Vec<String>),
+}
+
+/// A marker object for overriding `newlinesBetween` at a specific group boundary.
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct NewlinesBetweenMarker {
+    pub newlines_between: bool,
 }
 
 impl SortGroupItemConfig {
@@ -707,6 +785,9 @@ impl SortGroupItemConfig {
         match self {
             Self::Single(s) => vec![s],
             Self::Multiple(v) => v,
+            Self::NewlinesBetween(_) => {
+                unreachable!("NewlinesBetween markers should be handled before calling into_vec")
+            }
         }
     }
 }
@@ -720,14 +801,14 @@ pub struct CustomGroupItemConfig {
     pub element_name_pattern: Vec<String>,
     /// Selector to match the import kind.
     ///
-    /// Possible values: `"type"`, `"side-effect-style"`, `"side-effect"`, `"style"`, `"index"`,
+    /// Possible values: `"type"`, `"side_effect_style"`, `"side_effect"`, `"style"`, `"index"`,
     /// `"sibling"`, `"parent"`, `"subpath"`, `"internal"`, `"builtin"`, `"external"`, `"import"`
     #[serde(skip_serializing_if = "Option::is_none")]
     pub selector: Option<String>,
     /// Modifiers to match the import characteristics.
     /// All specified modifiers must be present (AND logic).
     ///
-    /// Possible values: `"side-effect"`, `"type"`, `"value"`, `"default"`, `"wildcard"`, `"named"`
+    /// Possible values: `"side_effect"`, `"type"`, `"value"`, `"default"`, `"wildcard"`, `"named"`
     #[serde(skip_serializing_if = "Option::is_none")]
     pub modifiers: Option<Vec<String>>,
 }
@@ -1034,6 +1115,8 @@ fn json_deep_merge(base: Value, overlay: Value) -> Value {
 
 #[cfg(test)]
 mod tests {
+    use oxc_formatter::GroupName;
+
     use super::*;
 
     #[test]
@@ -1061,7 +1144,7 @@ mod tests {
         assert!(!oxfmt_options.format_options.quote_style.is_double());
         assert!(oxfmt_options.format_options.semicolons.is_as_needed());
 
-        let sort_imports = oxfmt_options.format_options.experimental_sort_imports.unwrap();
+        let sort_imports = oxfmt_options.format_options.sort_imports.unwrap();
         assert!(sort_imports.partition_by_newline);
         assert!(sort_imports.order.is_desc());
         assert!(!sort_imports.ignore_case);
@@ -1083,7 +1166,7 @@ mod tests {
         assert!(oxfmt_options.format_options.indent_style.is_space());
         assert_eq!(oxfmt_options.format_options.indent_width.value(), 2);
         assert_eq!(oxfmt_options.format_options.line_width.value(), 100);
-        assert_eq!(oxfmt_options.format_options.experimental_sort_imports, None);
+        assert_eq!(oxfmt_options.format_options.sort_imports, None);
     }
 
     #[test]
@@ -1095,7 +1178,7 @@ mod tests {
         assert!(oxfmt_options.format_options.indent_style.is_space());
         assert_eq!(oxfmt_options.format_options.indent_width.value(), 2);
         assert_eq!(oxfmt_options.format_options.line_width.value(), 100);
-        assert_eq!(oxfmt_options.format_options.experimental_sort_imports, None);
+        assert_eq!(oxfmt_options.format_options.sort_imports, None);
     }
 
     #[test]
@@ -1133,7 +1216,7 @@ mod tests {
         )
         .unwrap();
         let oxfmt_options = config.into_oxfmt_options().unwrap();
-        let sort_imports = oxfmt_options.format_options.experimental_sort_imports.unwrap();
+        let sort_imports = oxfmt_options.format_options.sort_imports.unwrap();
         assert!(sort_imports.newlines_between);
         assert!(!sort_imports.partition_by_newline);
 
@@ -1147,7 +1230,7 @@ mod tests {
         )
         .unwrap();
         let oxfmt_options = config.into_oxfmt_options().unwrap();
-        let sort_imports = oxfmt_options.format_options.experimental_sort_imports.unwrap();
+        let sort_imports = oxfmt_options.format_options.sort_imports.unwrap();
         assert!(!sort_imports.newlines_between);
         assert!(!sort_imports.partition_by_newline);
 
@@ -1161,7 +1244,7 @@ mod tests {
         )
         .unwrap();
         let oxfmt_options = config.into_oxfmt_options().unwrap();
-        let sort_imports = oxfmt_options.format_options.experimental_sort_imports.unwrap();
+        let sort_imports = oxfmt_options.format_options.sort_imports.unwrap();
         assert!(sort_imports.newlines_between);
         assert!(!sort_imports.partition_by_newline);
 
@@ -1201,11 +1284,118 @@ mod tests {
         )
         .unwrap();
         let oxfmt_options = config.into_oxfmt_options().unwrap();
-        let sort_imports = oxfmt_options.format_options.experimental_sort_imports.unwrap();
+        let sort_imports = oxfmt_options.format_options.sort_imports.unwrap();
         assert_eq!(sort_imports.groups.len(), 5);
-        assert_eq!(sort_imports.groups[0], vec!["builtin".to_string()]);
-        assert_eq!(sort_imports.groups[1], vec!["external".to_string(), "internal".to_string()]);
-        assert_eq!(sort_imports.groups[4], vec!["index".to_string()]);
+        assert_eq!(
+            sort_imports.groups[0],
+            vec![GroupEntry::Predefined(GroupName::parse("builtin").unwrap())]
+        );
+        assert_eq!(
+            sort_imports.groups[1],
+            vec![
+                GroupEntry::Predefined(GroupName::parse("external").unwrap()),
+                GroupEntry::Predefined(GroupName::parse("internal").unwrap())
+            ]
+        );
+        assert_eq!(
+            sort_imports.groups[4],
+            vec![GroupEntry::Predefined(GroupName::parse("index").unwrap())]
+        );
+
+        // Test groups with newlinesBetween overrides
+        let config: FormatConfig = serde_json::from_str(
+            r#"{
+                "experimentalSortImports": {
+                    "groups": [
+                        "builtin",
+                        { "newlinesBetween": false },
+                        "external",
+                        "parent"
+                    ]
+                }
+            }"#,
+        )
+        .unwrap();
+        let oxfmt_options = config.into_oxfmt_options().unwrap();
+        let sort_imports = oxfmt_options.format_options.sort_imports.unwrap();
+        assert_eq!(sort_imports.groups.len(), 3);
+        assert_eq!(
+            sort_imports.groups[0],
+            vec![GroupEntry::Predefined(GroupName::parse("builtin").unwrap())]
+        );
+        assert_eq!(
+            sort_imports.groups[1],
+            vec![GroupEntry::Predefined(GroupName::parse("external").unwrap())]
+        );
+        assert_eq!(
+            sort_imports.groups[2],
+            vec![GroupEntry::Predefined(GroupName::parse("parent").unwrap())]
+        );
+        assert_eq!(sort_imports.newline_boundary_overrides.len(), 2);
+        assert_eq!(sort_imports.newline_boundary_overrides[0], Some(false));
+        assert_eq!(sort_imports.newline_boundary_overrides[1], None);
+
+        // Test error: newlinesBetween at start of groups
+        let config: FormatConfig = serde_json::from_str(
+            r#"{
+                "experimentalSortImports": {
+                    "groups": [
+                        { "newlinesBetween": false },
+                        "builtin",
+                        "external"
+                    ]
+                }
+            }"#,
+        )
+        .unwrap();
+        assert!(config.into_oxfmt_options().is_err_and(|e| e.contains("start")));
+
+        // Test error: newlinesBetween at end of groups
+        let config: FormatConfig = serde_json::from_str(
+            r#"{
+                "experimentalSortImports": {
+                    "groups": [
+                        "builtin",
+                        "external",
+                        { "newlinesBetween": true }
+                    ]
+                }
+            }"#,
+        )
+        .unwrap();
+        assert!(config.into_oxfmt_options().is_err_and(|e| e.contains("end")));
+
+        // Test error: consecutive newlinesBetween markers
+        let config: FormatConfig = serde_json::from_str(
+            r#"{
+                "experimentalSortImports": {
+                    "groups": [
+                        "builtin",
+                        { "newlinesBetween": false },
+                        { "newlinesBetween": true },
+                        "external"
+                    ]
+                }
+            }"#,
+        )
+        .unwrap();
+        assert!(config.into_oxfmt_options().is_err_and(|e| e.contains("consecutive")));
+
+        // Test error: partitionByNewline with per-group newlinesBetween markers
+        let config: FormatConfig = serde_json::from_str(
+            r#"{
+                "experimentalSortImports": {
+                    "partitionByNewline": true,
+                    "groups": [
+                        "builtin",
+                        { "newlinesBetween": false },
+                        "external"
+                    ]
+                }
+            }"#,
+        )
+        .unwrap();
+        assert!(config.into_oxfmt_options().is_err_and(|e| e.contains("partitionByNewline")));
     }
 }
 

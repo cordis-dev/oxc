@@ -119,6 +119,7 @@ pub use crate::rules::eslint::no_self_assign::NoSelfAssign as EslintNoSelfAssign
 pub use crate::rules::eslint::no_self_compare::NoSelfCompare as EslintNoSelfCompare;
 pub use crate::rules::eslint::no_sequences::NoSequences as EslintNoSequences;
 pub use crate::rules::eslint::no_setter_return::NoSetterReturn as EslintNoSetterReturn;
+pub use crate::rules::eslint::no_shadow::NoShadow as EslintNoShadow;
 pub use crate::rules::eslint::no_shadow_restricted_names::NoShadowRestrictedNames as EslintNoShadowRestrictedNames;
 pub use crate::rules::eslint::no_sparse_arrays::NoSparseArrays as EslintNoSparseArrays;
 pub use crate::rules::eslint::no_template_curly_in_string::NoTemplateCurlyInString as EslintNoTemplateCurlyInString;
@@ -129,6 +130,7 @@ pub use crate::rules::eslint::no_unassigned_vars::NoUnassignedVars as EslintNoUn
 pub use crate::rules::eslint::no_undef::NoUndef as EslintNoUndef;
 pub use crate::rules::eslint::no_undefined::NoUndefined as EslintNoUndefined;
 pub use crate::rules::eslint::no_unexpected_multiline::NoUnexpectedMultiline as EslintNoUnexpectedMultiline;
+pub use crate::rules::eslint::no_unmodified_loop_condition::NoUnmodifiedLoopCondition as EslintNoUnmodifiedLoopCondition;
 pub use crate::rules::eslint::no_unneeded_ternary::NoUnneededTernary as EslintNoUnneededTernary;
 pub use crate::rules::eslint::no_unreachable::NoUnreachable as EslintNoUnreachable;
 pub use crate::rules::eslint::no_unsafe_finally::NoUnsafeFinally as EslintNoUnsafeFinally;
@@ -392,6 +394,7 @@ pub use crate::rules::react::jsx_handler_names::JsxHandlerNames as ReactJsxHandl
 pub use crate::rules::react::jsx_key::JsxKey as ReactJsxKey;
 pub use crate::rules::react::jsx_max_depth::JsxMaxDepth as ReactJsxMaxDepth;
 pub use crate::rules::react::jsx_no_comment_textnodes::JsxNoCommentTextnodes as ReactJsxNoCommentTextnodes;
+pub use crate::rules::react::jsx_no_constructed_context_values::JsxNoConstructedContextValues as ReactJsxNoConstructedContextValues;
 pub use crate::rules::react::jsx_no_duplicate_props::JsxNoDuplicateProps as ReactJsxNoDuplicateProps;
 pub use crate::rules::react::jsx_no_script_url::JsxNoScriptUrl as ReactJsxNoScriptUrl;
 pub use crate::rules::react::jsx_no_target_blank::JsxNoTargetBlank as ReactJsxNoTargetBlank;
@@ -441,8 +444,10 @@ pub use crate::rules::typescript::ban_types::BanTypes as TypescriptBanTypes;
 pub use crate::rules::typescript::class_literal_property_style::ClassLiteralPropertyStyle as TypescriptClassLiteralPropertyStyle;
 pub use crate::rules::typescript::consistent_generic_constructors::ConsistentGenericConstructors as TypescriptConsistentGenericConstructors;
 pub use crate::rules::typescript::consistent_indexed_object_style::ConsistentIndexedObjectStyle as TypescriptConsistentIndexedObjectStyle;
+pub use crate::rules::typescript::consistent_return::ConsistentReturn as TypescriptConsistentReturn;
 pub use crate::rules::typescript::consistent_type_assertions::ConsistentTypeAssertions as TypescriptConsistentTypeAssertions;
 pub use crate::rules::typescript::consistent_type_definitions::ConsistentTypeDefinitions as TypescriptConsistentTypeDefinitions;
+pub use crate::rules::typescript::consistent_type_exports::ConsistentTypeExports as TypescriptConsistentTypeExports;
 pub use crate::rules::typescript::consistent_type_imports::ConsistentTypeImports as TypescriptConsistentTypeImports;
 pub use crate::rules::typescript::explicit_function_return_type::ExplicitFunctionReturnType as TypescriptExplicitFunctionReturnType;
 pub use crate::rules::typescript::explicit_module_boundary_types::ExplicitModuleBoundaryTypes as TypescriptExplicitModuleBoundaryTypes;
@@ -481,10 +486,12 @@ pub use crate::rules::typescript::no_this_alias::NoThisAlias as TypescriptNoThis
 pub use crate::rules::typescript::no_unnecessary_boolean_literal_compare::NoUnnecessaryBooleanLiteralCompare as TypescriptNoUnnecessaryBooleanLiteralCompare;
 pub use crate::rules::typescript::no_unnecessary_condition::NoUnnecessaryCondition as TypescriptNoUnnecessaryCondition;
 pub use crate::rules::typescript::no_unnecessary_parameter_property_assignment::NoUnnecessaryParameterPropertyAssignment as TypescriptNoUnnecessaryParameterPropertyAssignment;
+pub use crate::rules::typescript::no_unnecessary_qualifier::NoUnnecessaryQualifier as TypescriptNoUnnecessaryQualifier;
 pub use crate::rules::typescript::no_unnecessary_template_expression::NoUnnecessaryTemplateExpression as TypescriptNoUnnecessaryTemplateExpression;
 pub use crate::rules::typescript::no_unnecessary_type_arguments::NoUnnecessaryTypeArguments as TypescriptNoUnnecessaryTypeArguments;
 pub use crate::rules::typescript::no_unnecessary_type_assertion::NoUnnecessaryTypeAssertion as TypescriptNoUnnecessaryTypeAssertion;
 pub use crate::rules::typescript::no_unnecessary_type_constraint::NoUnnecessaryTypeConstraint as TypescriptNoUnnecessaryTypeConstraint;
+pub use crate::rules::typescript::no_unnecessary_type_parameters::NoUnnecessaryTypeParameters as TypescriptNoUnnecessaryTypeParameters;
 pub use crate::rules::typescript::no_unsafe_argument::NoUnsafeArgument as TypescriptNoUnsafeArgument;
 pub use crate::rules::typescript::no_unsafe_assignment::NoUnsafeAssignment as TypescriptNoUnsafeAssignment;
 pub use crate::rules::typescript::no_unsafe_call::NoUnsafeCall as TypescriptNoUnsafeCall;
@@ -495,13 +502,17 @@ pub use crate::rules::typescript::no_unsafe_member_access::NoUnsafeMemberAccess 
 pub use crate::rules::typescript::no_unsafe_return::NoUnsafeReturn as TypescriptNoUnsafeReturn;
 pub use crate::rules::typescript::no_unsafe_type_assertion::NoUnsafeTypeAssertion as TypescriptNoUnsafeTypeAssertion;
 pub use crate::rules::typescript::no_unsafe_unary_minus::NoUnsafeUnaryMinus as TypescriptNoUnsafeUnaryMinus;
+pub use crate::rules::typescript::no_use_before_define::NoUseBeforeDefine as TypescriptNoUseBeforeDefine;
+pub use crate::rules::typescript::no_useless_default_assignment::NoUselessDefaultAssignment as TypescriptNoUselessDefaultAssignment;
 pub use crate::rules::typescript::no_useless_empty_export::NoUselessEmptyExport as TypescriptNoUselessEmptyExport;
 pub use crate::rules::typescript::no_var_requires::NoVarRequires as TypescriptNoVarRequires;
 pub use crate::rules::typescript::no_wrapper_object_types::NoWrapperObjectTypes as TypescriptNoWrapperObjectTypes;
 pub use crate::rules::typescript::non_nullable_type_assertion_style::NonNullableTypeAssertionStyle as TypescriptNonNullableTypeAssertionStyle;
 pub use crate::rules::typescript::only_throw_error::OnlyThrowError as TypescriptOnlyThrowError;
+pub use crate::rules::typescript::parameter_properties::ParameterProperties as TypescriptParameterProperties;
 pub use crate::rules::typescript::prefer_as_const::PreferAsConst as TypescriptPreferAsConst;
 pub use crate::rules::typescript::prefer_enum_initializers::PreferEnumInitializers as TypescriptPreferEnumInitializers;
+pub use crate::rules::typescript::prefer_find::PreferFind as TypescriptPreferFind;
 pub use crate::rules::typescript::prefer_for_of::PreferForOf as TypescriptPreferForOf;
 pub use crate::rules::typescript::prefer_function_type::PreferFunctionType as TypescriptPreferFunctionType;
 pub use crate::rules::typescript::prefer_includes::PreferIncludes as TypescriptPreferIncludes;
@@ -510,8 +521,12 @@ pub use crate::rules::typescript::prefer_namespace_keyword::PreferNamespaceKeywo
 pub use crate::rules::typescript::prefer_nullish_coalescing::PreferNullishCoalescing as TypescriptPreferNullishCoalescing;
 pub use crate::rules::typescript::prefer_optional_chain::PreferOptionalChain as TypescriptPreferOptionalChain;
 pub use crate::rules::typescript::prefer_promise_reject_errors::PreferPromiseRejectErrors as TypescriptPreferPromiseRejectErrors;
+pub use crate::rules::typescript::prefer_readonly::PreferReadonly as TypescriptPreferReadonly;
+pub use crate::rules::typescript::prefer_readonly_parameter_types::PreferReadonlyParameterTypes as TypescriptPreferReadonlyParameterTypes;
 pub use crate::rules::typescript::prefer_reduce_type_parameter::PreferReduceTypeParameter as TypescriptPreferReduceTypeParameter;
+pub use crate::rules::typescript::prefer_regexp_exec::PreferRegexpExec as TypescriptPreferRegexpExec;
 pub use crate::rules::typescript::prefer_return_this_type::PreferReturnThisType as TypescriptPreferReturnThisType;
+pub use crate::rules::typescript::prefer_string_starts_ends_with::PreferStringStartsEndsWith as TypescriptPreferStringStartsEndsWith;
 pub use crate::rules::typescript::prefer_ts_expect_error::PreferTsExpectError as TypescriptPreferTsExpectError;
 pub use crate::rules::typescript::promise_function_async::PromiseFunctionAsync as TypescriptPromiseFunctionAsync;
 pub use crate::rules::typescript::related_getter_setter_pairs::RelatedGetterSetterPairs as TypescriptRelatedGetterSetterPairs;
@@ -521,9 +536,11 @@ pub use crate::rules::typescript::restrict_plus_operands::RestrictPlusOperands a
 pub use crate::rules::typescript::restrict_template_expressions::RestrictTemplateExpressions as TypescriptRestrictTemplateExpressions;
 pub use crate::rules::typescript::return_await::ReturnAwait as TypescriptReturnAwait;
 pub use crate::rules::typescript::strict_boolean_expressions::StrictBooleanExpressions as TypescriptStrictBooleanExpressions;
+pub use crate::rules::typescript::strict_void_return::StrictVoidReturn as TypescriptStrictVoidReturn;
 pub use crate::rules::typescript::switch_exhaustiveness_check::SwitchExhaustivenessCheck as TypescriptSwitchExhaustivenessCheck;
 pub use crate::rules::typescript::triple_slash_reference::TripleSlashReference as TypescriptTripleSlashReference;
 pub use crate::rules::typescript::unbound_method::UnboundMethod as TypescriptUnboundMethod;
+pub use crate::rules::typescript::unified_signatures::UnifiedSignatures as TypescriptUnifiedSignatures;
 pub use crate::rules::typescript::use_unknown_in_catch_callback_variable::UseUnknownInCatchCallbackVariable as TypescriptUseUnknownInCatchCallbackVariable;
 pub use crate::rules::unicorn::catch_error_name::CatchErrorName as UnicornCatchErrorName;
 pub use crate::rules::unicorn::consistent_assert::ConsistentAssert as UnicornConsistentAssert;
@@ -831,6 +848,7 @@ pub enum RuleEnum {
     EslintNoSelfCompare(EslintNoSelfCompare),
     EslintNoSequences(EslintNoSequences),
     EslintNoSetterReturn(EslintNoSetterReturn),
+    EslintNoShadow(EslintNoShadow),
     EslintNoShadowRestrictedNames(EslintNoShadowRestrictedNames),
     EslintNoSparseArrays(EslintNoSparseArrays),
     EslintNoTemplateCurlyInString(EslintNoTemplateCurlyInString),
@@ -841,6 +859,7 @@ pub enum RuleEnum {
     EslintNoUndef(EslintNoUndef),
     EslintNoUndefined(EslintNoUndefined),
     EslintNoUnexpectedMultiline(EslintNoUnexpectedMultiline),
+    EslintNoUnmodifiedLoopCondition(EslintNoUnmodifiedLoopCondition),
     EslintNoUnneededTernary(EslintNoUnneededTernary),
     EslintNoUnreachable(EslintNoUnreachable),
     EslintNoUnsafeFinally(EslintNoUnsafeFinally),
@@ -896,8 +915,10 @@ pub enum RuleEnum {
     TypescriptClassLiteralPropertyStyle(TypescriptClassLiteralPropertyStyle),
     TypescriptConsistentGenericConstructors(TypescriptConsistentGenericConstructors),
     TypescriptConsistentIndexedObjectStyle(TypescriptConsistentIndexedObjectStyle),
+    TypescriptConsistentReturn(TypescriptConsistentReturn),
     TypescriptConsistentTypeAssertions(TypescriptConsistentTypeAssertions),
     TypescriptConsistentTypeDefinitions(TypescriptConsistentTypeDefinitions),
+    TypescriptConsistentTypeExports(TypescriptConsistentTypeExports),
     TypescriptConsistentTypeImports(TypescriptConsistentTypeImports),
     TypescriptExplicitFunctionReturnType(TypescriptExplicitFunctionReturnType),
     TypescriptExplicitModuleBoundaryTypes(TypescriptExplicitModuleBoundaryTypes),
@@ -938,10 +959,12 @@ pub enum RuleEnum {
     TypescriptNoUnnecessaryParameterPropertyAssignment(
         TypescriptNoUnnecessaryParameterPropertyAssignment,
     ),
+    TypescriptNoUnnecessaryQualifier(TypescriptNoUnnecessaryQualifier),
     TypescriptNoUnnecessaryTemplateExpression(TypescriptNoUnnecessaryTemplateExpression),
     TypescriptNoUnnecessaryTypeArguments(TypescriptNoUnnecessaryTypeArguments),
     TypescriptNoUnnecessaryTypeAssertion(TypescriptNoUnnecessaryTypeAssertion),
     TypescriptNoUnnecessaryTypeConstraint(TypescriptNoUnnecessaryTypeConstraint),
+    TypescriptNoUnnecessaryTypeParameters(TypescriptNoUnnecessaryTypeParameters),
     TypescriptNoUnsafeArgument(TypescriptNoUnsafeArgument),
     TypescriptNoUnsafeAssignment(TypescriptNoUnsafeAssignment),
     TypescriptNoUnsafeCall(TypescriptNoUnsafeCall),
@@ -952,13 +975,17 @@ pub enum RuleEnum {
     TypescriptNoUnsafeReturn(TypescriptNoUnsafeReturn),
     TypescriptNoUnsafeTypeAssertion(TypescriptNoUnsafeTypeAssertion),
     TypescriptNoUnsafeUnaryMinus(TypescriptNoUnsafeUnaryMinus),
+    TypescriptNoUseBeforeDefine(TypescriptNoUseBeforeDefine),
+    TypescriptNoUselessDefaultAssignment(TypescriptNoUselessDefaultAssignment),
     TypescriptNoUselessEmptyExport(TypescriptNoUselessEmptyExport),
     TypescriptNoVarRequires(TypescriptNoVarRequires),
     TypescriptNoWrapperObjectTypes(TypescriptNoWrapperObjectTypes),
     TypescriptNonNullableTypeAssertionStyle(TypescriptNonNullableTypeAssertionStyle),
     TypescriptOnlyThrowError(TypescriptOnlyThrowError),
+    TypescriptParameterProperties(TypescriptParameterProperties),
     TypescriptPreferAsConst(TypescriptPreferAsConst),
     TypescriptPreferEnumInitializers(TypescriptPreferEnumInitializers),
+    TypescriptPreferFind(TypescriptPreferFind),
     TypescriptPreferForOf(TypescriptPreferForOf),
     TypescriptPreferFunctionType(TypescriptPreferFunctionType),
     TypescriptPreferIncludes(TypescriptPreferIncludes),
@@ -967,8 +994,12 @@ pub enum RuleEnum {
     TypescriptPreferNullishCoalescing(TypescriptPreferNullishCoalescing),
     TypescriptPreferOptionalChain(TypescriptPreferOptionalChain),
     TypescriptPreferPromiseRejectErrors(TypescriptPreferPromiseRejectErrors),
+    TypescriptPreferReadonly(TypescriptPreferReadonly),
+    TypescriptPreferReadonlyParameterTypes(TypescriptPreferReadonlyParameterTypes),
     TypescriptPreferReduceTypeParameter(TypescriptPreferReduceTypeParameter),
+    TypescriptPreferRegexpExec(TypescriptPreferRegexpExec),
     TypescriptPreferReturnThisType(TypescriptPreferReturnThisType),
+    TypescriptPreferStringStartsEndsWith(TypescriptPreferStringStartsEndsWith),
     TypescriptPreferTsExpectError(TypescriptPreferTsExpectError),
     TypescriptPromiseFunctionAsync(TypescriptPromiseFunctionAsync),
     TypescriptRelatedGetterSetterPairs(TypescriptRelatedGetterSetterPairs),
@@ -978,9 +1009,11 @@ pub enum RuleEnum {
     TypescriptRestrictTemplateExpressions(TypescriptRestrictTemplateExpressions),
     TypescriptReturnAwait(TypescriptReturnAwait),
     TypescriptStrictBooleanExpressions(TypescriptStrictBooleanExpressions),
+    TypescriptStrictVoidReturn(TypescriptStrictVoidReturn),
     TypescriptSwitchExhaustivenessCheck(TypescriptSwitchExhaustivenessCheck),
     TypescriptTripleSlashReference(TypescriptTripleSlashReference),
     TypescriptUnboundMethod(TypescriptUnboundMethod),
+    TypescriptUnifiedSignatures(TypescriptUnifiedSignatures),
     TypescriptUseUnknownInCatchCallbackVariable(TypescriptUseUnknownInCatchCallbackVariable),
     JestConsistentTestIt(JestConsistentTestIt),
     JestExpectExpect(JestExpectExpect),
@@ -1051,6 +1084,7 @@ pub enum RuleEnum {
     ReactJsxKey(ReactJsxKey),
     ReactJsxMaxDepth(ReactJsxMaxDepth),
     ReactJsxNoCommentTextnodes(ReactJsxNoCommentTextnodes),
+    ReactJsxNoConstructedContextValues(ReactJsxNoConstructedContextValues),
     ReactJsxNoDuplicateProps(ReactJsxNoDuplicateProps),
     ReactJsxNoScriptUrl(ReactJsxNoScriptUrl),
     ReactJsxNoTargetBlank(ReactJsxNoTargetBlank),
@@ -1507,7 +1541,8 @@ const ESLINT_NO_SELF_ASSIGN_ID: usize = ESLINT_NO_SCRIPT_URL_ID + 1usize;
 const ESLINT_NO_SELF_COMPARE_ID: usize = ESLINT_NO_SELF_ASSIGN_ID + 1usize;
 const ESLINT_NO_SEQUENCES_ID: usize = ESLINT_NO_SELF_COMPARE_ID + 1usize;
 const ESLINT_NO_SETTER_RETURN_ID: usize = ESLINT_NO_SEQUENCES_ID + 1usize;
-const ESLINT_NO_SHADOW_RESTRICTED_NAMES_ID: usize = ESLINT_NO_SETTER_RETURN_ID + 1usize;
+const ESLINT_NO_SHADOW_ID: usize = ESLINT_NO_SETTER_RETURN_ID + 1usize;
+const ESLINT_NO_SHADOW_RESTRICTED_NAMES_ID: usize = ESLINT_NO_SHADOW_ID + 1usize;
 const ESLINT_NO_SPARSE_ARRAYS_ID: usize = ESLINT_NO_SHADOW_RESTRICTED_NAMES_ID + 1usize;
 const ESLINT_NO_TEMPLATE_CURLY_IN_STRING_ID: usize = ESLINT_NO_SPARSE_ARRAYS_ID + 1usize;
 const ESLINT_NO_TERNARY_ID: usize = ESLINT_NO_TEMPLATE_CURLY_IN_STRING_ID + 1usize;
@@ -1517,7 +1552,8 @@ const ESLINT_NO_UNASSIGNED_VARS_ID: usize = ESLINT_NO_THROW_LITERAL_ID + 1usize;
 const ESLINT_NO_UNDEF_ID: usize = ESLINT_NO_UNASSIGNED_VARS_ID + 1usize;
 const ESLINT_NO_UNDEFINED_ID: usize = ESLINT_NO_UNDEF_ID + 1usize;
 const ESLINT_NO_UNEXPECTED_MULTILINE_ID: usize = ESLINT_NO_UNDEFINED_ID + 1usize;
-const ESLINT_NO_UNNEEDED_TERNARY_ID: usize = ESLINT_NO_UNEXPECTED_MULTILINE_ID + 1usize;
+const ESLINT_NO_UNMODIFIED_LOOP_CONDITION_ID: usize = ESLINT_NO_UNEXPECTED_MULTILINE_ID + 1usize;
+const ESLINT_NO_UNNEEDED_TERNARY_ID: usize = ESLINT_NO_UNMODIFIED_LOOP_CONDITION_ID + 1usize;
 const ESLINT_NO_UNREACHABLE_ID: usize = ESLINT_NO_UNNEEDED_TERNARY_ID + 1usize;
 const ESLINT_NO_UNSAFE_FINALLY_ID: usize = ESLINT_NO_UNREACHABLE_ID + 1usize;
 const ESLINT_NO_UNSAFE_NEGATION_ID: usize = ESLINT_NO_UNSAFE_FINALLY_ID + 1usize;
@@ -1574,12 +1610,14 @@ const TYPESCRIPT_CONSISTENT_GENERIC_CONSTRUCTORS_ID: usize =
     TYPESCRIPT_CLASS_LITERAL_PROPERTY_STYLE_ID + 1usize;
 const TYPESCRIPT_CONSISTENT_INDEXED_OBJECT_STYLE_ID: usize =
     TYPESCRIPT_CONSISTENT_GENERIC_CONSTRUCTORS_ID + 1usize;
-const TYPESCRIPT_CONSISTENT_TYPE_ASSERTIONS_ID: usize =
+const TYPESCRIPT_CONSISTENT_RETURN_ID: usize =
     TYPESCRIPT_CONSISTENT_INDEXED_OBJECT_STYLE_ID + 1usize;
+const TYPESCRIPT_CONSISTENT_TYPE_ASSERTIONS_ID: usize = TYPESCRIPT_CONSISTENT_RETURN_ID + 1usize;
 const TYPESCRIPT_CONSISTENT_TYPE_DEFINITIONS_ID: usize =
     TYPESCRIPT_CONSISTENT_TYPE_ASSERTIONS_ID + 1usize;
-const TYPESCRIPT_CONSISTENT_TYPE_IMPORTS_ID: usize =
+const TYPESCRIPT_CONSISTENT_TYPE_EXPORTS_ID: usize =
     TYPESCRIPT_CONSISTENT_TYPE_DEFINITIONS_ID + 1usize;
+const TYPESCRIPT_CONSISTENT_TYPE_IMPORTS_ID: usize = TYPESCRIPT_CONSISTENT_TYPE_EXPORTS_ID + 1usize;
 const TYPESCRIPT_EXPLICIT_FUNCTION_RETURN_TYPE_ID: usize =
     TYPESCRIPT_CONSISTENT_TYPE_IMPORTS_ID + 1usize;
 const TYPESCRIPT_EXPLICIT_MODULE_BOUNDARY_TYPES_ID: usize =
@@ -1632,16 +1670,20 @@ const TYPESCRIPT_NO_UNNECESSARY_CONDITION_ID: usize =
     TYPESCRIPT_NO_UNNECESSARY_BOOLEAN_LITERAL_COMPARE_ID + 1usize;
 const TYPESCRIPT_NO_UNNECESSARY_PARAMETER_PROPERTY_ASSIGNMENT_ID: usize =
     TYPESCRIPT_NO_UNNECESSARY_CONDITION_ID + 1usize;
-const TYPESCRIPT_NO_UNNECESSARY_TEMPLATE_EXPRESSION_ID: usize =
+const TYPESCRIPT_NO_UNNECESSARY_QUALIFIER_ID: usize =
     TYPESCRIPT_NO_UNNECESSARY_PARAMETER_PROPERTY_ASSIGNMENT_ID + 1usize;
+const TYPESCRIPT_NO_UNNECESSARY_TEMPLATE_EXPRESSION_ID: usize =
+    TYPESCRIPT_NO_UNNECESSARY_QUALIFIER_ID + 1usize;
 const TYPESCRIPT_NO_UNNECESSARY_TYPE_ARGUMENTS_ID: usize =
     TYPESCRIPT_NO_UNNECESSARY_TEMPLATE_EXPRESSION_ID + 1usize;
 const TYPESCRIPT_NO_UNNECESSARY_TYPE_ASSERTION_ID: usize =
     TYPESCRIPT_NO_UNNECESSARY_TYPE_ARGUMENTS_ID + 1usize;
 const TYPESCRIPT_NO_UNNECESSARY_TYPE_CONSTRAINT_ID: usize =
     TYPESCRIPT_NO_UNNECESSARY_TYPE_ASSERTION_ID + 1usize;
-const TYPESCRIPT_NO_UNSAFE_ARGUMENT_ID: usize =
+const TYPESCRIPT_NO_UNNECESSARY_TYPE_PARAMETERS_ID: usize =
     TYPESCRIPT_NO_UNNECESSARY_TYPE_CONSTRAINT_ID + 1usize;
+const TYPESCRIPT_NO_UNSAFE_ARGUMENT_ID: usize =
+    TYPESCRIPT_NO_UNNECESSARY_TYPE_PARAMETERS_ID + 1usize;
 const TYPESCRIPT_NO_UNSAFE_ASSIGNMENT_ID: usize = TYPESCRIPT_NO_UNSAFE_ARGUMENT_ID + 1usize;
 const TYPESCRIPT_NO_UNSAFE_CALL_ID: usize = TYPESCRIPT_NO_UNSAFE_ASSIGNMENT_ID + 1usize;
 const TYPESCRIPT_NO_UNSAFE_DECLARATION_MERGING_ID: usize = TYPESCRIPT_NO_UNSAFE_CALL_ID + 1usize;
@@ -1653,16 +1695,22 @@ const TYPESCRIPT_NO_UNSAFE_MEMBER_ACCESS_ID: usize = TYPESCRIPT_NO_UNSAFE_FUNCTI
 const TYPESCRIPT_NO_UNSAFE_RETURN_ID: usize = TYPESCRIPT_NO_UNSAFE_MEMBER_ACCESS_ID + 1usize;
 const TYPESCRIPT_NO_UNSAFE_TYPE_ASSERTION_ID: usize = TYPESCRIPT_NO_UNSAFE_RETURN_ID + 1usize;
 const TYPESCRIPT_NO_UNSAFE_UNARY_MINUS_ID: usize = TYPESCRIPT_NO_UNSAFE_TYPE_ASSERTION_ID + 1usize;
-const TYPESCRIPT_NO_USELESS_EMPTY_EXPORT_ID: usize = TYPESCRIPT_NO_UNSAFE_UNARY_MINUS_ID + 1usize;
+const TYPESCRIPT_NO_USE_BEFORE_DEFINE_ID: usize = TYPESCRIPT_NO_UNSAFE_UNARY_MINUS_ID + 1usize;
+const TYPESCRIPT_NO_USELESS_DEFAULT_ASSIGNMENT_ID: usize =
+    TYPESCRIPT_NO_USE_BEFORE_DEFINE_ID + 1usize;
+const TYPESCRIPT_NO_USELESS_EMPTY_EXPORT_ID: usize =
+    TYPESCRIPT_NO_USELESS_DEFAULT_ASSIGNMENT_ID + 1usize;
 const TYPESCRIPT_NO_VAR_REQUIRES_ID: usize = TYPESCRIPT_NO_USELESS_EMPTY_EXPORT_ID + 1usize;
 const TYPESCRIPT_NO_WRAPPER_OBJECT_TYPES_ID: usize = TYPESCRIPT_NO_VAR_REQUIRES_ID + 1usize;
 const TYPESCRIPT_NON_NULLABLE_TYPE_ASSERTION_STYLE_ID: usize =
     TYPESCRIPT_NO_WRAPPER_OBJECT_TYPES_ID + 1usize;
 const TYPESCRIPT_ONLY_THROW_ERROR_ID: usize =
     TYPESCRIPT_NON_NULLABLE_TYPE_ASSERTION_STYLE_ID + 1usize;
-const TYPESCRIPT_PREFER_AS_CONST_ID: usize = TYPESCRIPT_ONLY_THROW_ERROR_ID + 1usize;
+const TYPESCRIPT_PARAMETER_PROPERTIES_ID: usize = TYPESCRIPT_ONLY_THROW_ERROR_ID + 1usize;
+const TYPESCRIPT_PREFER_AS_CONST_ID: usize = TYPESCRIPT_PARAMETER_PROPERTIES_ID + 1usize;
 const TYPESCRIPT_PREFER_ENUM_INITIALIZERS_ID: usize = TYPESCRIPT_PREFER_AS_CONST_ID + 1usize;
-const TYPESCRIPT_PREFER_FOR_OF_ID: usize = TYPESCRIPT_PREFER_ENUM_INITIALIZERS_ID + 1usize;
+const TYPESCRIPT_PREFER_FIND_ID: usize = TYPESCRIPT_PREFER_ENUM_INITIALIZERS_ID + 1usize;
+const TYPESCRIPT_PREFER_FOR_OF_ID: usize = TYPESCRIPT_PREFER_FIND_ID + 1usize;
 const TYPESCRIPT_PREFER_FUNCTION_TYPE_ID: usize = TYPESCRIPT_PREFER_FOR_OF_ID + 1usize;
 const TYPESCRIPT_PREFER_INCLUDES_ID: usize = TYPESCRIPT_PREFER_FUNCTION_TYPE_ID + 1usize;
 const TYPESCRIPT_PREFER_LITERAL_ENUM_MEMBER_ID: usize = TYPESCRIPT_PREFER_INCLUDES_ID + 1usize;
@@ -1673,11 +1721,16 @@ const TYPESCRIPT_PREFER_NULLISH_COALESCING_ID: usize =
 const TYPESCRIPT_PREFER_OPTIONAL_CHAIN_ID: usize = TYPESCRIPT_PREFER_NULLISH_COALESCING_ID + 1usize;
 const TYPESCRIPT_PREFER_PROMISE_REJECT_ERRORS_ID: usize =
     TYPESCRIPT_PREFER_OPTIONAL_CHAIN_ID + 1usize;
+const TYPESCRIPT_PREFER_READONLY_ID: usize = TYPESCRIPT_PREFER_PROMISE_REJECT_ERRORS_ID + 1usize;
+const TYPESCRIPT_PREFER_READONLY_PARAMETER_TYPES_ID: usize = TYPESCRIPT_PREFER_READONLY_ID + 1usize;
 const TYPESCRIPT_PREFER_REDUCE_TYPE_PARAMETER_ID: usize =
-    TYPESCRIPT_PREFER_PROMISE_REJECT_ERRORS_ID + 1usize;
-const TYPESCRIPT_PREFER_RETURN_THIS_TYPE_ID: usize =
-    TYPESCRIPT_PREFER_REDUCE_TYPE_PARAMETER_ID + 1usize;
-const TYPESCRIPT_PREFER_TS_EXPECT_ERROR_ID: usize = TYPESCRIPT_PREFER_RETURN_THIS_TYPE_ID + 1usize;
+    TYPESCRIPT_PREFER_READONLY_PARAMETER_TYPES_ID + 1usize;
+const TYPESCRIPT_PREFER_REGEXP_EXEC_ID: usize = TYPESCRIPT_PREFER_REDUCE_TYPE_PARAMETER_ID + 1usize;
+const TYPESCRIPT_PREFER_RETURN_THIS_TYPE_ID: usize = TYPESCRIPT_PREFER_REGEXP_EXEC_ID + 1usize;
+const TYPESCRIPT_PREFER_STRING_STARTS_ENDS_WITH_ID: usize =
+    TYPESCRIPT_PREFER_RETURN_THIS_TYPE_ID + 1usize;
+const TYPESCRIPT_PREFER_TS_EXPECT_ERROR_ID: usize =
+    TYPESCRIPT_PREFER_STRING_STARTS_ENDS_WITH_ID + 1usize;
 const TYPESCRIPT_PROMISE_FUNCTION_ASYNC_ID: usize = TYPESCRIPT_PREFER_TS_EXPECT_ERROR_ID + 1usize;
 const TYPESCRIPT_RELATED_GETTER_SETTER_PAIRS_ID: usize =
     TYPESCRIPT_PROMISE_FUNCTION_ASYNC_ID + 1usize;
@@ -1689,13 +1742,14 @@ const TYPESCRIPT_RESTRICT_TEMPLATE_EXPRESSIONS_ID: usize =
     TYPESCRIPT_RESTRICT_PLUS_OPERANDS_ID + 1usize;
 const TYPESCRIPT_RETURN_AWAIT_ID: usize = TYPESCRIPT_RESTRICT_TEMPLATE_EXPRESSIONS_ID + 1usize;
 const TYPESCRIPT_STRICT_BOOLEAN_EXPRESSIONS_ID: usize = TYPESCRIPT_RETURN_AWAIT_ID + 1usize;
-const TYPESCRIPT_SWITCH_EXHAUSTIVENESS_CHECK_ID: usize =
-    TYPESCRIPT_STRICT_BOOLEAN_EXPRESSIONS_ID + 1usize;
+const TYPESCRIPT_STRICT_VOID_RETURN_ID: usize = TYPESCRIPT_STRICT_BOOLEAN_EXPRESSIONS_ID + 1usize;
+const TYPESCRIPT_SWITCH_EXHAUSTIVENESS_CHECK_ID: usize = TYPESCRIPT_STRICT_VOID_RETURN_ID + 1usize;
 const TYPESCRIPT_TRIPLE_SLASH_REFERENCE_ID: usize =
     TYPESCRIPT_SWITCH_EXHAUSTIVENESS_CHECK_ID + 1usize;
 const TYPESCRIPT_UNBOUND_METHOD_ID: usize = TYPESCRIPT_TRIPLE_SLASH_REFERENCE_ID + 1usize;
+const TYPESCRIPT_UNIFIED_SIGNATURES_ID: usize = TYPESCRIPT_UNBOUND_METHOD_ID + 1usize;
 const TYPESCRIPT_USE_UNKNOWN_IN_CATCH_CALLBACK_VARIABLE_ID: usize =
-    TYPESCRIPT_UNBOUND_METHOD_ID + 1usize;
+    TYPESCRIPT_UNIFIED_SIGNATURES_ID + 1usize;
 const JEST_CONSISTENT_TEST_IT_ID: usize =
     TYPESCRIPT_USE_UNKNOWN_IN_CATCH_CALLBACK_VARIABLE_ID + 1usize;
 const JEST_EXPECT_EXPECT_ID: usize = JEST_CONSISTENT_TEST_IT_ID + 1usize;
@@ -1766,7 +1820,9 @@ const REACT_JSX_HANDLER_NAMES_ID: usize = REACT_JSX_FRAGMENTS_ID + 1usize;
 const REACT_JSX_KEY_ID: usize = REACT_JSX_HANDLER_NAMES_ID + 1usize;
 const REACT_JSX_MAX_DEPTH_ID: usize = REACT_JSX_KEY_ID + 1usize;
 const REACT_JSX_NO_COMMENT_TEXTNODES_ID: usize = REACT_JSX_MAX_DEPTH_ID + 1usize;
-const REACT_JSX_NO_DUPLICATE_PROPS_ID: usize = REACT_JSX_NO_COMMENT_TEXTNODES_ID + 1usize;
+const REACT_JSX_NO_CONSTRUCTED_CONTEXT_VALUES_ID: usize =
+    REACT_JSX_NO_COMMENT_TEXTNODES_ID + 1usize;
+const REACT_JSX_NO_DUPLICATE_PROPS_ID: usize = REACT_JSX_NO_CONSTRUCTED_CONTEXT_VALUES_ID + 1usize;
 const REACT_JSX_NO_SCRIPT_URL_ID: usize = REACT_JSX_NO_DUPLICATE_PROPS_ID + 1usize;
 const REACT_JSX_NO_TARGET_BLANK_ID: usize = REACT_JSX_NO_SCRIPT_URL_ID + 1usize;
 const REACT_JSX_NO_UNDEF_ID: usize = REACT_JSX_NO_TARGET_BLANK_ID + 1usize;
@@ -2262,6 +2318,7 @@ impl RuleEnum {
             Self::EslintNoSelfCompare(_) => ESLINT_NO_SELF_COMPARE_ID,
             Self::EslintNoSequences(_) => ESLINT_NO_SEQUENCES_ID,
             Self::EslintNoSetterReturn(_) => ESLINT_NO_SETTER_RETURN_ID,
+            Self::EslintNoShadow(_) => ESLINT_NO_SHADOW_ID,
             Self::EslintNoShadowRestrictedNames(_) => ESLINT_NO_SHADOW_RESTRICTED_NAMES_ID,
             Self::EslintNoSparseArrays(_) => ESLINT_NO_SPARSE_ARRAYS_ID,
             Self::EslintNoTemplateCurlyInString(_) => ESLINT_NO_TEMPLATE_CURLY_IN_STRING_ID,
@@ -2272,6 +2329,7 @@ impl RuleEnum {
             Self::EslintNoUndef(_) => ESLINT_NO_UNDEF_ID,
             Self::EslintNoUndefined(_) => ESLINT_NO_UNDEFINED_ID,
             Self::EslintNoUnexpectedMultiline(_) => ESLINT_NO_UNEXPECTED_MULTILINE_ID,
+            Self::EslintNoUnmodifiedLoopCondition(_) => ESLINT_NO_UNMODIFIED_LOOP_CONDITION_ID,
             Self::EslintNoUnneededTernary(_) => ESLINT_NO_UNNEEDED_TERNARY_ID,
             Self::EslintNoUnreachable(_) => ESLINT_NO_UNREACHABLE_ID,
             Self::EslintNoUnsafeFinally(_) => ESLINT_NO_UNSAFE_FINALLY_ID,
@@ -2335,10 +2393,12 @@ impl RuleEnum {
             Self::TypescriptConsistentIndexedObjectStyle(_) => {
                 TYPESCRIPT_CONSISTENT_INDEXED_OBJECT_STYLE_ID
             }
+            Self::TypescriptConsistentReturn(_) => TYPESCRIPT_CONSISTENT_RETURN_ID,
             Self::TypescriptConsistentTypeAssertions(_) => TYPESCRIPT_CONSISTENT_TYPE_ASSERTIONS_ID,
             Self::TypescriptConsistentTypeDefinitions(_) => {
                 TYPESCRIPT_CONSISTENT_TYPE_DEFINITIONS_ID
             }
+            Self::TypescriptConsistentTypeExports(_) => TYPESCRIPT_CONSISTENT_TYPE_EXPORTS_ID,
             Self::TypescriptConsistentTypeImports(_) => TYPESCRIPT_CONSISTENT_TYPE_IMPORTS_ID,
             Self::TypescriptExplicitFunctionReturnType(_) => {
                 TYPESCRIPT_EXPLICIT_FUNCTION_RETURN_TYPE_ID
@@ -2399,6 +2459,7 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryParameterPropertyAssignment(_) => {
                 TYPESCRIPT_NO_UNNECESSARY_PARAMETER_PROPERTY_ASSIGNMENT_ID
             }
+            Self::TypescriptNoUnnecessaryQualifier(_) => TYPESCRIPT_NO_UNNECESSARY_QUALIFIER_ID,
             Self::TypescriptNoUnnecessaryTemplateExpression(_) => {
                 TYPESCRIPT_NO_UNNECESSARY_TEMPLATE_EXPRESSION_ID
             }
@@ -2410,6 +2471,9 @@ impl RuleEnum {
             }
             Self::TypescriptNoUnnecessaryTypeConstraint(_) => {
                 TYPESCRIPT_NO_UNNECESSARY_TYPE_CONSTRAINT_ID
+            }
+            Self::TypescriptNoUnnecessaryTypeParameters(_) => {
+                TYPESCRIPT_NO_UNNECESSARY_TYPE_PARAMETERS_ID
             }
             Self::TypescriptNoUnsafeArgument(_) => TYPESCRIPT_NO_UNSAFE_ARGUMENT_ID,
             Self::TypescriptNoUnsafeAssignment(_) => TYPESCRIPT_NO_UNSAFE_ASSIGNMENT_ID,
@@ -2423,6 +2487,10 @@ impl RuleEnum {
             Self::TypescriptNoUnsafeReturn(_) => TYPESCRIPT_NO_UNSAFE_RETURN_ID,
             Self::TypescriptNoUnsafeTypeAssertion(_) => TYPESCRIPT_NO_UNSAFE_TYPE_ASSERTION_ID,
             Self::TypescriptNoUnsafeUnaryMinus(_) => TYPESCRIPT_NO_UNSAFE_UNARY_MINUS_ID,
+            Self::TypescriptNoUseBeforeDefine(_) => TYPESCRIPT_NO_USE_BEFORE_DEFINE_ID,
+            Self::TypescriptNoUselessDefaultAssignment(_) => {
+                TYPESCRIPT_NO_USELESS_DEFAULT_ASSIGNMENT_ID
+            }
             Self::TypescriptNoUselessEmptyExport(_) => TYPESCRIPT_NO_USELESS_EMPTY_EXPORT_ID,
             Self::TypescriptNoVarRequires(_) => TYPESCRIPT_NO_VAR_REQUIRES_ID,
             Self::TypescriptNoWrapperObjectTypes(_) => TYPESCRIPT_NO_WRAPPER_OBJECT_TYPES_ID,
@@ -2430,8 +2498,10 @@ impl RuleEnum {
                 TYPESCRIPT_NON_NULLABLE_TYPE_ASSERTION_STYLE_ID
             }
             Self::TypescriptOnlyThrowError(_) => TYPESCRIPT_ONLY_THROW_ERROR_ID,
+            Self::TypescriptParameterProperties(_) => TYPESCRIPT_PARAMETER_PROPERTIES_ID,
             Self::TypescriptPreferAsConst(_) => TYPESCRIPT_PREFER_AS_CONST_ID,
             Self::TypescriptPreferEnumInitializers(_) => TYPESCRIPT_PREFER_ENUM_INITIALIZERS_ID,
+            Self::TypescriptPreferFind(_) => TYPESCRIPT_PREFER_FIND_ID,
             Self::TypescriptPreferForOf(_) => TYPESCRIPT_PREFER_FOR_OF_ID,
             Self::TypescriptPreferFunctionType(_) => TYPESCRIPT_PREFER_FUNCTION_TYPE_ID,
             Self::TypescriptPreferIncludes(_) => TYPESCRIPT_PREFER_INCLUDES_ID,
@@ -2442,10 +2512,18 @@ impl RuleEnum {
             Self::TypescriptPreferPromiseRejectErrors(_) => {
                 TYPESCRIPT_PREFER_PROMISE_REJECT_ERRORS_ID
             }
+            Self::TypescriptPreferReadonly(_) => TYPESCRIPT_PREFER_READONLY_ID,
+            Self::TypescriptPreferReadonlyParameterTypes(_) => {
+                TYPESCRIPT_PREFER_READONLY_PARAMETER_TYPES_ID
+            }
             Self::TypescriptPreferReduceTypeParameter(_) => {
                 TYPESCRIPT_PREFER_REDUCE_TYPE_PARAMETER_ID
             }
+            Self::TypescriptPreferRegexpExec(_) => TYPESCRIPT_PREFER_REGEXP_EXEC_ID,
             Self::TypescriptPreferReturnThisType(_) => TYPESCRIPT_PREFER_RETURN_THIS_TYPE_ID,
+            Self::TypescriptPreferStringStartsEndsWith(_) => {
+                TYPESCRIPT_PREFER_STRING_STARTS_ENDS_WITH_ID
+            }
             Self::TypescriptPreferTsExpectError(_) => TYPESCRIPT_PREFER_TS_EXPECT_ERROR_ID,
             Self::TypescriptPromiseFunctionAsync(_) => TYPESCRIPT_PROMISE_FUNCTION_ASYNC_ID,
             Self::TypescriptRelatedGetterSetterPairs(_) => {
@@ -2459,11 +2537,13 @@ impl RuleEnum {
             }
             Self::TypescriptReturnAwait(_) => TYPESCRIPT_RETURN_AWAIT_ID,
             Self::TypescriptStrictBooleanExpressions(_) => TYPESCRIPT_STRICT_BOOLEAN_EXPRESSIONS_ID,
+            Self::TypescriptStrictVoidReturn(_) => TYPESCRIPT_STRICT_VOID_RETURN_ID,
             Self::TypescriptSwitchExhaustivenessCheck(_) => {
                 TYPESCRIPT_SWITCH_EXHAUSTIVENESS_CHECK_ID
             }
             Self::TypescriptTripleSlashReference(_) => TYPESCRIPT_TRIPLE_SLASH_REFERENCE_ID,
             Self::TypescriptUnboundMethod(_) => TYPESCRIPT_UNBOUND_METHOD_ID,
+            Self::TypescriptUnifiedSignatures(_) => TYPESCRIPT_UNIFIED_SIGNATURES_ID,
             Self::TypescriptUseUnknownInCatchCallbackVariable(_) => {
                 TYPESCRIPT_USE_UNKNOWN_IN_CATCH_CALLBACK_VARIABLE_ID
             }
@@ -2538,6 +2618,9 @@ impl RuleEnum {
             Self::ReactJsxKey(_) => REACT_JSX_KEY_ID,
             Self::ReactJsxMaxDepth(_) => REACT_JSX_MAX_DEPTH_ID,
             Self::ReactJsxNoCommentTextnodes(_) => REACT_JSX_NO_COMMENT_TEXTNODES_ID,
+            Self::ReactJsxNoConstructedContextValues(_) => {
+                REACT_JSX_NO_CONSTRUCTED_CONTEXT_VALUES_ID
+            }
             Self::ReactJsxNoDuplicateProps(_) => REACT_JSX_NO_DUPLICATE_PROPS_ID,
             Self::ReactJsxNoScriptUrl(_) => REACT_JSX_NO_SCRIPT_URL_ID,
             Self::ReactJsxNoTargetBlank(_) => REACT_JSX_NO_TARGET_BLANK_ID,
@@ -3031,6 +3114,7 @@ impl RuleEnum {
             Self::EslintNoSelfCompare(_) => EslintNoSelfCompare::NAME,
             Self::EslintNoSequences(_) => EslintNoSequences::NAME,
             Self::EslintNoSetterReturn(_) => EslintNoSetterReturn::NAME,
+            Self::EslintNoShadow(_) => EslintNoShadow::NAME,
             Self::EslintNoShadowRestrictedNames(_) => EslintNoShadowRestrictedNames::NAME,
             Self::EslintNoSparseArrays(_) => EslintNoSparseArrays::NAME,
             Self::EslintNoTemplateCurlyInString(_) => EslintNoTemplateCurlyInString::NAME,
@@ -3041,6 +3125,7 @@ impl RuleEnum {
             Self::EslintNoUndef(_) => EslintNoUndef::NAME,
             Self::EslintNoUndefined(_) => EslintNoUndefined::NAME,
             Self::EslintNoUnexpectedMultiline(_) => EslintNoUnexpectedMultiline::NAME,
+            Self::EslintNoUnmodifiedLoopCondition(_) => EslintNoUnmodifiedLoopCondition::NAME,
             Self::EslintNoUnneededTernary(_) => EslintNoUnneededTernary::NAME,
             Self::EslintNoUnreachable(_) => EslintNoUnreachable::NAME,
             Self::EslintNoUnsafeFinally(_) => EslintNoUnsafeFinally::NAME,
@@ -3104,10 +3189,12 @@ impl RuleEnum {
             Self::TypescriptConsistentIndexedObjectStyle(_) => {
                 TypescriptConsistentIndexedObjectStyle::NAME
             }
+            Self::TypescriptConsistentReturn(_) => TypescriptConsistentReturn::NAME,
             Self::TypescriptConsistentTypeAssertions(_) => TypescriptConsistentTypeAssertions::NAME,
             Self::TypescriptConsistentTypeDefinitions(_) => {
                 TypescriptConsistentTypeDefinitions::NAME
             }
+            Self::TypescriptConsistentTypeExports(_) => TypescriptConsistentTypeExports::NAME,
             Self::TypescriptConsistentTypeImports(_) => TypescriptConsistentTypeImports::NAME,
             Self::TypescriptExplicitFunctionReturnType(_) => {
                 TypescriptExplicitFunctionReturnType::NAME
@@ -3168,6 +3255,7 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryParameterPropertyAssignment(_) => {
                 TypescriptNoUnnecessaryParameterPropertyAssignment::NAME
             }
+            Self::TypescriptNoUnnecessaryQualifier(_) => TypescriptNoUnnecessaryQualifier::NAME,
             Self::TypescriptNoUnnecessaryTemplateExpression(_) => {
                 TypescriptNoUnnecessaryTemplateExpression::NAME
             }
@@ -3179,6 +3267,9 @@ impl RuleEnum {
             }
             Self::TypescriptNoUnnecessaryTypeConstraint(_) => {
                 TypescriptNoUnnecessaryTypeConstraint::NAME
+            }
+            Self::TypescriptNoUnnecessaryTypeParameters(_) => {
+                TypescriptNoUnnecessaryTypeParameters::NAME
             }
             Self::TypescriptNoUnsafeArgument(_) => TypescriptNoUnsafeArgument::NAME,
             Self::TypescriptNoUnsafeAssignment(_) => TypescriptNoUnsafeAssignment::NAME,
@@ -3192,6 +3283,10 @@ impl RuleEnum {
             Self::TypescriptNoUnsafeReturn(_) => TypescriptNoUnsafeReturn::NAME,
             Self::TypescriptNoUnsafeTypeAssertion(_) => TypescriptNoUnsafeTypeAssertion::NAME,
             Self::TypescriptNoUnsafeUnaryMinus(_) => TypescriptNoUnsafeUnaryMinus::NAME,
+            Self::TypescriptNoUseBeforeDefine(_) => TypescriptNoUseBeforeDefine::NAME,
+            Self::TypescriptNoUselessDefaultAssignment(_) => {
+                TypescriptNoUselessDefaultAssignment::NAME
+            }
             Self::TypescriptNoUselessEmptyExport(_) => TypescriptNoUselessEmptyExport::NAME,
             Self::TypescriptNoVarRequires(_) => TypescriptNoVarRequires::NAME,
             Self::TypescriptNoWrapperObjectTypes(_) => TypescriptNoWrapperObjectTypes::NAME,
@@ -3199,8 +3294,10 @@ impl RuleEnum {
                 TypescriptNonNullableTypeAssertionStyle::NAME
             }
             Self::TypescriptOnlyThrowError(_) => TypescriptOnlyThrowError::NAME,
+            Self::TypescriptParameterProperties(_) => TypescriptParameterProperties::NAME,
             Self::TypescriptPreferAsConst(_) => TypescriptPreferAsConst::NAME,
             Self::TypescriptPreferEnumInitializers(_) => TypescriptPreferEnumInitializers::NAME,
+            Self::TypescriptPreferFind(_) => TypescriptPreferFind::NAME,
             Self::TypescriptPreferForOf(_) => TypescriptPreferForOf::NAME,
             Self::TypescriptPreferFunctionType(_) => TypescriptPreferFunctionType::NAME,
             Self::TypescriptPreferIncludes(_) => TypescriptPreferIncludes::NAME,
@@ -3211,10 +3308,18 @@ impl RuleEnum {
             Self::TypescriptPreferPromiseRejectErrors(_) => {
                 TypescriptPreferPromiseRejectErrors::NAME
             }
+            Self::TypescriptPreferReadonly(_) => TypescriptPreferReadonly::NAME,
+            Self::TypescriptPreferReadonlyParameterTypes(_) => {
+                TypescriptPreferReadonlyParameterTypes::NAME
+            }
             Self::TypescriptPreferReduceTypeParameter(_) => {
                 TypescriptPreferReduceTypeParameter::NAME
             }
+            Self::TypescriptPreferRegexpExec(_) => TypescriptPreferRegexpExec::NAME,
             Self::TypescriptPreferReturnThisType(_) => TypescriptPreferReturnThisType::NAME,
+            Self::TypescriptPreferStringStartsEndsWith(_) => {
+                TypescriptPreferStringStartsEndsWith::NAME
+            }
             Self::TypescriptPreferTsExpectError(_) => TypescriptPreferTsExpectError::NAME,
             Self::TypescriptPromiseFunctionAsync(_) => TypescriptPromiseFunctionAsync::NAME,
             Self::TypescriptRelatedGetterSetterPairs(_) => TypescriptRelatedGetterSetterPairs::NAME,
@@ -3226,11 +3331,13 @@ impl RuleEnum {
             }
             Self::TypescriptReturnAwait(_) => TypescriptReturnAwait::NAME,
             Self::TypescriptStrictBooleanExpressions(_) => TypescriptStrictBooleanExpressions::NAME,
+            Self::TypescriptStrictVoidReturn(_) => TypescriptStrictVoidReturn::NAME,
             Self::TypescriptSwitchExhaustivenessCheck(_) => {
                 TypescriptSwitchExhaustivenessCheck::NAME
             }
             Self::TypescriptTripleSlashReference(_) => TypescriptTripleSlashReference::NAME,
             Self::TypescriptUnboundMethod(_) => TypescriptUnboundMethod::NAME,
+            Self::TypescriptUnifiedSignatures(_) => TypescriptUnifiedSignatures::NAME,
             Self::TypescriptUseUnknownInCatchCallbackVariable(_) => {
                 TypescriptUseUnknownInCatchCallbackVariable::NAME
             }
@@ -3305,6 +3412,7 @@ impl RuleEnum {
             Self::ReactJsxKey(_) => ReactJsxKey::NAME,
             Self::ReactJsxMaxDepth(_) => ReactJsxMaxDepth::NAME,
             Self::ReactJsxNoCommentTextnodes(_) => ReactJsxNoCommentTextnodes::NAME,
+            Self::ReactJsxNoConstructedContextValues(_) => ReactJsxNoConstructedContextValues::NAME,
             Self::ReactJsxNoDuplicateProps(_) => ReactJsxNoDuplicateProps::NAME,
             Self::ReactJsxNoScriptUrl(_) => ReactJsxNoScriptUrl::NAME,
             Self::ReactJsxNoTargetBlank(_) => ReactJsxNoTargetBlank::NAME,
@@ -3794,6 +3902,7 @@ impl RuleEnum {
             Self::EslintNoSelfCompare(_) => EslintNoSelfCompare::CATEGORY,
             Self::EslintNoSequences(_) => EslintNoSequences::CATEGORY,
             Self::EslintNoSetterReturn(_) => EslintNoSetterReturn::CATEGORY,
+            Self::EslintNoShadow(_) => EslintNoShadow::CATEGORY,
             Self::EslintNoShadowRestrictedNames(_) => EslintNoShadowRestrictedNames::CATEGORY,
             Self::EslintNoSparseArrays(_) => EslintNoSparseArrays::CATEGORY,
             Self::EslintNoTemplateCurlyInString(_) => EslintNoTemplateCurlyInString::CATEGORY,
@@ -3804,6 +3913,7 @@ impl RuleEnum {
             Self::EslintNoUndef(_) => EslintNoUndef::CATEGORY,
             Self::EslintNoUndefined(_) => EslintNoUndefined::CATEGORY,
             Self::EslintNoUnexpectedMultiline(_) => EslintNoUnexpectedMultiline::CATEGORY,
+            Self::EslintNoUnmodifiedLoopCondition(_) => EslintNoUnmodifiedLoopCondition::CATEGORY,
             Self::EslintNoUnneededTernary(_) => EslintNoUnneededTernary::CATEGORY,
             Self::EslintNoUnreachable(_) => EslintNoUnreachable::CATEGORY,
             Self::EslintNoUnsafeFinally(_) => EslintNoUnsafeFinally::CATEGORY,
@@ -3871,12 +3981,14 @@ impl RuleEnum {
             Self::TypescriptConsistentIndexedObjectStyle(_) => {
                 TypescriptConsistentIndexedObjectStyle::CATEGORY
             }
+            Self::TypescriptConsistentReturn(_) => TypescriptConsistentReturn::CATEGORY,
             Self::TypescriptConsistentTypeAssertions(_) => {
                 TypescriptConsistentTypeAssertions::CATEGORY
             }
             Self::TypescriptConsistentTypeDefinitions(_) => {
                 TypescriptConsistentTypeDefinitions::CATEGORY
             }
+            Self::TypescriptConsistentTypeExports(_) => TypescriptConsistentTypeExports::CATEGORY,
             Self::TypescriptConsistentTypeImports(_) => TypescriptConsistentTypeImports::CATEGORY,
             Self::TypescriptExplicitFunctionReturnType(_) => {
                 TypescriptExplicitFunctionReturnType::CATEGORY
@@ -3941,6 +4053,7 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryParameterPropertyAssignment(_) => {
                 TypescriptNoUnnecessaryParameterPropertyAssignment::CATEGORY
             }
+            Self::TypescriptNoUnnecessaryQualifier(_) => TypescriptNoUnnecessaryQualifier::CATEGORY,
             Self::TypescriptNoUnnecessaryTemplateExpression(_) => {
                 TypescriptNoUnnecessaryTemplateExpression::CATEGORY
             }
@@ -3952,6 +4065,9 @@ impl RuleEnum {
             }
             Self::TypescriptNoUnnecessaryTypeConstraint(_) => {
                 TypescriptNoUnnecessaryTypeConstraint::CATEGORY
+            }
+            Self::TypescriptNoUnnecessaryTypeParameters(_) => {
+                TypescriptNoUnnecessaryTypeParameters::CATEGORY
             }
             Self::TypescriptNoUnsafeArgument(_) => TypescriptNoUnsafeArgument::CATEGORY,
             Self::TypescriptNoUnsafeAssignment(_) => TypescriptNoUnsafeAssignment::CATEGORY,
@@ -3965,6 +4081,10 @@ impl RuleEnum {
             Self::TypescriptNoUnsafeReturn(_) => TypescriptNoUnsafeReturn::CATEGORY,
             Self::TypescriptNoUnsafeTypeAssertion(_) => TypescriptNoUnsafeTypeAssertion::CATEGORY,
             Self::TypescriptNoUnsafeUnaryMinus(_) => TypescriptNoUnsafeUnaryMinus::CATEGORY,
+            Self::TypescriptNoUseBeforeDefine(_) => TypescriptNoUseBeforeDefine::CATEGORY,
+            Self::TypescriptNoUselessDefaultAssignment(_) => {
+                TypescriptNoUselessDefaultAssignment::CATEGORY
+            }
             Self::TypescriptNoUselessEmptyExport(_) => TypescriptNoUselessEmptyExport::CATEGORY,
             Self::TypescriptNoVarRequires(_) => TypescriptNoVarRequires::CATEGORY,
             Self::TypescriptNoWrapperObjectTypes(_) => TypescriptNoWrapperObjectTypes::CATEGORY,
@@ -3972,8 +4092,10 @@ impl RuleEnum {
                 TypescriptNonNullableTypeAssertionStyle::CATEGORY
             }
             Self::TypescriptOnlyThrowError(_) => TypescriptOnlyThrowError::CATEGORY,
+            Self::TypescriptParameterProperties(_) => TypescriptParameterProperties::CATEGORY,
             Self::TypescriptPreferAsConst(_) => TypescriptPreferAsConst::CATEGORY,
             Self::TypescriptPreferEnumInitializers(_) => TypescriptPreferEnumInitializers::CATEGORY,
+            Self::TypescriptPreferFind(_) => TypescriptPreferFind::CATEGORY,
             Self::TypescriptPreferForOf(_) => TypescriptPreferForOf::CATEGORY,
             Self::TypescriptPreferFunctionType(_) => TypescriptPreferFunctionType::CATEGORY,
             Self::TypescriptPreferIncludes(_) => TypescriptPreferIncludes::CATEGORY,
@@ -3988,10 +4110,18 @@ impl RuleEnum {
             Self::TypescriptPreferPromiseRejectErrors(_) => {
                 TypescriptPreferPromiseRejectErrors::CATEGORY
             }
+            Self::TypescriptPreferReadonly(_) => TypescriptPreferReadonly::CATEGORY,
+            Self::TypescriptPreferReadonlyParameterTypes(_) => {
+                TypescriptPreferReadonlyParameterTypes::CATEGORY
+            }
             Self::TypescriptPreferReduceTypeParameter(_) => {
                 TypescriptPreferReduceTypeParameter::CATEGORY
             }
+            Self::TypescriptPreferRegexpExec(_) => TypescriptPreferRegexpExec::CATEGORY,
             Self::TypescriptPreferReturnThisType(_) => TypescriptPreferReturnThisType::CATEGORY,
+            Self::TypescriptPreferStringStartsEndsWith(_) => {
+                TypescriptPreferStringStartsEndsWith::CATEGORY
+            }
             Self::TypescriptPreferTsExpectError(_) => TypescriptPreferTsExpectError::CATEGORY,
             Self::TypescriptPromiseFunctionAsync(_) => TypescriptPromiseFunctionAsync::CATEGORY,
             Self::TypescriptRelatedGetterSetterPairs(_) => {
@@ -4009,11 +4139,13 @@ impl RuleEnum {
             Self::TypescriptStrictBooleanExpressions(_) => {
                 TypescriptStrictBooleanExpressions::CATEGORY
             }
+            Self::TypescriptStrictVoidReturn(_) => TypescriptStrictVoidReturn::CATEGORY,
             Self::TypescriptSwitchExhaustivenessCheck(_) => {
                 TypescriptSwitchExhaustivenessCheck::CATEGORY
             }
             Self::TypescriptTripleSlashReference(_) => TypescriptTripleSlashReference::CATEGORY,
             Self::TypescriptUnboundMethod(_) => TypescriptUnboundMethod::CATEGORY,
+            Self::TypescriptUnifiedSignatures(_) => TypescriptUnifiedSignatures::CATEGORY,
             Self::TypescriptUseUnknownInCatchCallbackVariable(_) => {
                 TypescriptUseUnknownInCatchCallbackVariable::CATEGORY
             }
@@ -4090,6 +4222,9 @@ impl RuleEnum {
             Self::ReactJsxKey(_) => ReactJsxKey::CATEGORY,
             Self::ReactJsxMaxDepth(_) => ReactJsxMaxDepth::CATEGORY,
             Self::ReactJsxNoCommentTextnodes(_) => ReactJsxNoCommentTextnodes::CATEGORY,
+            Self::ReactJsxNoConstructedContextValues(_) => {
+                ReactJsxNoConstructedContextValues::CATEGORY
+            }
             Self::ReactJsxNoDuplicateProps(_) => ReactJsxNoDuplicateProps::CATEGORY,
             Self::ReactJsxNoScriptUrl(_) => ReactJsxNoScriptUrl::CATEGORY,
             Self::ReactJsxNoTargetBlank(_) => ReactJsxNoTargetBlank::CATEGORY,
@@ -4598,6 +4733,7 @@ impl RuleEnum {
             Self::EslintNoSelfCompare(_) => EslintNoSelfCompare::FIX,
             Self::EslintNoSequences(_) => EslintNoSequences::FIX,
             Self::EslintNoSetterReturn(_) => EslintNoSetterReturn::FIX,
+            Self::EslintNoShadow(_) => EslintNoShadow::FIX,
             Self::EslintNoShadowRestrictedNames(_) => EslintNoShadowRestrictedNames::FIX,
             Self::EslintNoSparseArrays(_) => EslintNoSparseArrays::FIX,
             Self::EslintNoTemplateCurlyInString(_) => EslintNoTemplateCurlyInString::FIX,
@@ -4608,6 +4744,7 @@ impl RuleEnum {
             Self::EslintNoUndef(_) => EslintNoUndef::FIX,
             Self::EslintNoUndefined(_) => EslintNoUndefined::FIX,
             Self::EslintNoUnexpectedMultiline(_) => EslintNoUnexpectedMultiline::FIX,
+            Self::EslintNoUnmodifiedLoopCondition(_) => EslintNoUnmodifiedLoopCondition::FIX,
             Self::EslintNoUnneededTernary(_) => EslintNoUnneededTernary::FIX,
             Self::EslintNoUnreachable(_) => EslintNoUnreachable::FIX,
             Self::EslintNoUnsafeFinally(_) => EslintNoUnsafeFinally::FIX,
@@ -4671,10 +4808,12 @@ impl RuleEnum {
             Self::TypescriptConsistentIndexedObjectStyle(_) => {
                 TypescriptConsistentIndexedObjectStyle::FIX
             }
+            Self::TypescriptConsistentReturn(_) => TypescriptConsistentReturn::FIX,
             Self::TypescriptConsistentTypeAssertions(_) => TypescriptConsistentTypeAssertions::FIX,
             Self::TypescriptConsistentTypeDefinitions(_) => {
                 TypescriptConsistentTypeDefinitions::FIX
             }
+            Self::TypescriptConsistentTypeExports(_) => TypescriptConsistentTypeExports::FIX,
             Self::TypescriptConsistentTypeImports(_) => TypescriptConsistentTypeImports::FIX,
             Self::TypescriptExplicitFunctionReturnType(_) => {
                 TypescriptExplicitFunctionReturnType::FIX
@@ -4735,6 +4874,7 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryParameterPropertyAssignment(_) => {
                 TypescriptNoUnnecessaryParameterPropertyAssignment::FIX
             }
+            Self::TypescriptNoUnnecessaryQualifier(_) => TypescriptNoUnnecessaryQualifier::FIX,
             Self::TypescriptNoUnnecessaryTemplateExpression(_) => {
                 TypescriptNoUnnecessaryTemplateExpression::FIX
             }
@@ -4746,6 +4886,9 @@ impl RuleEnum {
             }
             Self::TypescriptNoUnnecessaryTypeConstraint(_) => {
                 TypescriptNoUnnecessaryTypeConstraint::FIX
+            }
+            Self::TypescriptNoUnnecessaryTypeParameters(_) => {
+                TypescriptNoUnnecessaryTypeParameters::FIX
             }
             Self::TypescriptNoUnsafeArgument(_) => TypescriptNoUnsafeArgument::FIX,
             Self::TypescriptNoUnsafeAssignment(_) => TypescriptNoUnsafeAssignment::FIX,
@@ -4759,6 +4902,10 @@ impl RuleEnum {
             Self::TypescriptNoUnsafeReturn(_) => TypescriptNoUnsafeReturn::FIX,
             Self::TypescriptNoUnsafeTypeAssertion(_) => TypescriptNoUnsafeTypeAssertion::FIX,
             Self::TypescriptNoUnsafeUnaryMinus(_) => TypescriptNoUnsafeUnaryMinus::FIX,
+            Self::TypescriptNoUseBeforeDefine(_) => TypescriptNoUseBeforeDefine::FIX,
+            Self::TypescriptNoUselessDefaultAssignment(_) => {
+                TypescriptNoUselessDefaultAssignment::FIX
+            }
             Self::TypescriptNoUselessEmptyExport(_) => TypescriptNoUselessEmptyExport::FIX,
             Self::TypescriptNoVarRequires(_) => TypescriptNoVarRequires::FIX,
             Self::TypescriptNoWrapperObjectTypes(_) => TypescriptNoWrapperObjectTypes::FIX,
@@ -4766,8 +4913,10 @@ impl RuleEnum {
                 TypescriptNonNullableTypeAssertionStyle::FIX
             }
             Self::TypescriptOnlyThrowError(_) => TypescriptOnlyThrowError::FIX,
+            Self::TypescriptParameterProperties(_) => TypescriptParameterProperties::FIX,
             Self::TypescriptPreferAsConst(_) => TypescriptPreferAsConst::FIX,
             Self::TypescriptPreferEnumInitializers(_) => TypescriptPreferEnumInitializers::FIX,
+            Self::TypescriptPreferFind(_) => TypescriptPreferFind::FIX,
             Self::TypescriptPreferForOf(_) => TypescriptPreferForOf::FIX,
             Self::TypescriptPreferFunctionType(_) => TypescriptPreferFunctionType::FIX,
             Self::TypescriptPreferIncludes(_) => TypescriptPreferIncludes::FIX,
@@ -4778,10 +4927,18 @@ impl RuleEnum {
             Self::TypescriptPreferPromiseRejectErrors(_) => {
                 TypescriptPreferPromiseRejectErrors::FIX
             }
+            Self::TypescriptPreferReadonly(_) => TypescriptPreferReadonly::FIX,
+            Self::TypescriptPreferReadonlyParameterTypes(_) => {
+                TypescriptPreferReadonlyParameterTypes::FIX
+            }
             Self::TypescriptPreferReduceTypeParameter(_) => {
                 TypescriptPreferReduceTypeParameter::FIX
             }
+            Self::TypescriptPreferRegexpExec(_) => TypescriptPreferRegexpExec::FIX,
             Self::TypescriptPreferReturnThisType(_) => TypescriptPreferReturnThisType::FIX,
+            Self::TypescriptPreferStringStartsEndsWith(_) => {
+                TypescriptPreferStringStartsEndsWith::FIX
+            }
             Self::TypescriptPreferTsExpectError(_) => TypescriptPreferTsExpectError::FIX,
             Self::TypescriptPromiseFunctionAsync(_) => TypescriptPromiseFunctionAsync::FIX,
             Self::TypescriptRelatedGetterSetterPairs(_) => TypescriptRelatedGetterSetterPairs::FIX,
@@ -4793,11 +4950,13 @@ impl RuleEnum {
             }
             Self::TypescriptReturnAwait(_) => TypescriptReturnAwait::FIX,
             Self::TypescriptStrictBooleanExpressions(_) => TypescriptStrictBooleanExpressions::FIX,
+            Self::TypescriptStrictVoidReturn(_) => TypescriptStrictVoidReturn::FIX,
             Self::TypescriptSwitchExhaustivenessCheck(_) => {
                 TypescriptSwitchExhaustivenessCheck::FIX
             }
             Self::TypescriptTripleSlashReference(_) => TypescriptTripleSlashReference::FIX,
             Self::TypescriptUnboundMethod(_) => TypescriptUnboundMethod::FIX,
+            Self::TypescriptUnifiedSignatures(_) => TypescriptUnifiedSignatures::FIX,
             Self::TypescriptUseUnknownInCatchCallbackVariable(_) => {
                 TypescriptUseUnknownInCatchCallbackVariable::FIX
             }
@@ -4872,6 +5031,7 @@ impl RuleEnum {
             Self::ReactJsxKey(_) => ReactJsxKey::FIX,
             Self::ReactJsxMaxDepth(_) => ReactJsxMaxDepth::FIX,
             Self::ReactJsxNoCommentTextnodes(_) => ReactJsxNoCommentTextnodes::FIX,
+            Self::ReactJsxNoConstructedContextValues(_) => ReactJsxNoConstructedContextValues::FIX,
             Self::ReactJsxNoDuplicateProps(_) => ReactJsxNoDuplicateProps::FIX,
             Self::ReactJsxNoScriptUrl(_) => ReactJsxNoScriptUrl::FIX,
             Self::ReactJsxNoTargetBlank(_) => ReactJsxNoTargetBlank::FIX,
@@ -5376,6 +5536,7 @@ impl RuleEnum {
             Self::EslintNoSelfCompare(_) => EslintNoSelfCompare::documentation(),
             Self::EslintNoSequences(_) => EslintNoSequences::documentation(),
             Self::EslintNoSetterReturn(_) => EslintNoSetterReturn::documentation(),
+            Self::EslintNoShadow(_) => EslintNoShadow::documentation(),
             Self::EslintNoShadowRestrictedNames(_) => {
                 EslintNoShadowRestrictedNames::documentation()
             }
@@ -5390,6 +5551,9 @@ impl RuleEnum {
             Self::EslintNoUndef(_) => EslintNoUndef::documentation(),
             Self::EslintNoUndefined(_) => EslintNoUndefined::documentation(),
             Self::EslintNoUnexpectedMultiline(_) => EslintNoUnexpectedMultiline::documentation(),
+            Self::EslintNoUnmodifiedLoopCondition(_) => {
+                EslintNoUnmodifiedLoopCondition::documentation()
+            }
             Self::EslintNoUnneededTernary(_) => EslintNoUnneededTernary::documentation(),
             Self::EslintNoUnreachable(_) => EslintNoUnreachable::documentation(),
             Self::EslintNoUnsafeFinally(_) => EslintNoUnsafeFinally::documentation(),
@@ -5461,11 +5625,15 @@ impl RuleEnum {
             Self::TypescriptConsistentIndexedObjectStyle(_) => {
                 TypescriptConsistentIndexedObjectStyle::documentation()
             }
+            Self::TypescriptConsistentReturn(_) => TypescriptConsistentReturn::documentation(),
             Self::TypescriptConsistentTypeAssertions(_) => {
                 TypescriptConsistentTypeAssertions::documentation()
             }
             Self::TypescriptConsistentTypeDefinitions(_) => {
                 TypescriptConsistentTypeDefinitions::documentation()
+            }
+            Self::TypescriptConsistentTypeExports(_) => {
+                TypescriptConsistentTypeExports::documentation()
             }
             Self::TypescriptConsistentTypeImports(_) => {
                 TypescriptConsistentTypeImports::documentation()
@@ -5537,6 +5705,9 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryParameterPropertyAssignment(_) => {
                 TypescriptNoUnnecessaryParameterPropertyAssignment::documentation()
             }
+            Self::TypescriptNoUnnecessaryQualifier(_) => {
+                TypescriptNoUnnecessaryQualifier::documentation()
+            }
             Self::TypescriptNoUnnecessaryTemplateExpression(_) => {
                 TypescriptNoUnnecessaryTemplateExpression::documentation()
             }
@@ -5548,6 +5719,9 @@ impl RuleEnum {
             }
             Self::TypescriptNoUnnecessaryTypeConstraint(_) => {
                 TypescriptNoUnnecessaryTypeConstraint::documentation()
+            }
+            Self::TypescriptNoUnnecessaryTypeParameters(_) => {
+                TypescriptNoUnnecessaryTypeParameters::documentation()
             }
             Self::TypescriptNoUnsafeArgument(_) => TypescriptNoUnsafeArgument::documentation(),
             Self::TypescriptNoUnsafeAssignment(_) => TypescriptNoUnsafeAssignment::documentation(),
@@ -5569,6 +5743,10 @@ impl RuleEnum {
                 TypescriptNoUnsafeTypeAssertion::documentation()
             }
             Self::TypescriptNoUnsafeUnaryMinus(_) => TypescriptNoUnsafeUnaryMinus::documentation(),
+            Self::TypescriptNoUseBeforeDefine(_) => TypescriptNoUseBeforeDefine::documentation(),
+            Self::TypescriptNoUselessDefaultAssignment(_) => {
+                TypescriptNoUselessDefaultAssignment::documentation()
+            }
             Self::TypescriptNoUselessEmptyExport(_) => {
                 TypescriptNoUselessEmptyExport::documentation()
             }
@@ -5580,10 +5758,14 @@ impl RuleEnum {
                 TypescriptNonNullableTypeAssertionStyle::documentation()
             }
             Self::TypescriptOnlyThrowError(_) => TypescriptOnlyThrowError::documentation(),
+            Self::TypescriptParameterProperties(_) => {
+                TypescriptParameterProperties::documentation()
+            }
             Self::TypescriptPreferAsConst(_) => TypescriptPreferAsConst::documentation(),
             Self::TypescriptPreferEnumInitializers(_) => {
                 TypescriptPreferEnumInitializers::documentation()
             }
+            Self::TypescriptPreferFind(_) => TypescriptPreferFind::documentation(),
             Self::TypescriptPreferForOf(_) => TypescriptPreferForOf::documentation(),
             Self::TypescriptPreferFunctionType(_) => TypescriptPreferFunctionType::documentation(),
             Self::TypescriptPreferIncludes(_) => TypescriptPreferIncludes::documentation(),
@@ -5602,11 +5784,19 @@ impl RuleEnum {
             Self::TypescriptPreferPromiseRejectErrors(_) => {
                 TypescriptPreferPromiseRejectErrors::documentation()
             }
+            Self::TypescriptPreferReadonly(_) => TypescriptPreferReadonly::documentation(),
+            Self::TypescriptPreferReadonlyParameterTypes(_) => {
+                TypescriptPreferReadonlyParameterTypes::documentation()
+            }
             Self::TypescriptPreferReduceTypeParameter(_) => {
                 TypescriptPreferReduceTypeParameter::documentation()
             }
+            Self::TypescriptPreferRegexpExec(_) => TypescriptPreferRegexpExec::documentation(),
             Self::TypescriptPreferReturnThisType(_) => {
                 TypescriptPreferReturnThisType::documentation()
+            }
+            Self::TypescriptPreferStringStartsEndsWith(_) => {
+                TypescriptPreferStringStartsEndsWith::documentation()
             }
             Self::TypescriptPreferTsExpectError(_) => {
                 TypescriptPreferTsExpectError::documentation()
@@ -5631,6 +5821,7 @@ impl RuleEnum {
             Self::TypescriptStrictBooleanExpressions(_) => {
                 TypescriptStrictBooleanExpressions::documentation()
             }
+            Self::TypescriptStrictVoidReturn(_) => TypescriptStrictVoidReturn::documentation(),
             Self::TypescriptSwitchExhaustivenessCheck(_) => {
                 TypescriptSwitchExhaustivenessCheck::documentation()
             }
@@ -5638,6 +5829,7 @@ impl RuleEnum {
                 TypescriptTripleSlashReference::documentation()
             }
             Self::TypescriptUnboundMethod(_) => TypescriptUnboundMethod::documentation(),
+            Self::TypescriptUnifiedSignatures(_) => TypescriptUnifiedSignatures::documentation(),
             Self::TypescriptUseUnknownInCatchCallbackVariable(_) => {
                 TypescriptUseUnknownInCatchCallbackVariable::documentation()
             }
@@ -5720,6 +5912,9 @@ impl RuleEnum {
             Self::ReactJsxKey(_) => ReactJsxKey::documentation(),
             Self::ReactJsxMaxDepth(_) => ReactJsxMaxDepth::documentation(),
             Self::ReactJsxNoCommentTextnodes(_) => ReactJsxNoCommentTextnodes::documentation(),
+            Self::ReactJsxNoConstructedContextValues(_) => {
+                ReactJsxNoConstructedContextValues::documentation()
+            }
             Self::ReactJsxNoDuplicateProps(_) => ReactJsxNoDuplicateProps::documentation(),
             Self::ReactJsxNoScriptUrl(_) => ReactJsxNoScriptUrl::documentation(),
             Self::ReactJsxNoTargetBlank(_) => ReactJsxNoTargetBlank::documentation(),
@@ -6518,6 +6713,8 @@ impl RuleEnum {
                 .or_else(|| EslintNoSequences::schema(generator)),
             Self::EslintNoSetterReturn(_) => EslintNoSetterReturn::config_schema(generator)
                 .or_else(|| EslintNoSetterReturn::schema(generator)),
+            Self::EslintNoShadow(_) => EslintNoShadow::config_schema(generator)
+                .or_else(|| EslintNoShadow::schema(generator)),
             Self::EslintNoShadowRestrictedNames(_) => {
                 EslintNoShadowRestrictedNames::config_schema(generator)
                     .or_else(|| EslintNoShadowRestrictedNames::schema(generator))
@@ -6544,6 +6741,10 @@ impl RuleEnum {
             Self::EslintNoUnexpectedMultiline(_) => {
                 EslintNoUnexpectedMultiline::config_schema(generator)
                     .or_else(|| EslintNoUnexpectedMultiline::schema(generator))
+            }
+            Self::EslintNoUnmodifiedLoopCondition(_) => {
+                EslintNoUnmodifiedLoopCondition::config_schema(generator)
+                    .or_else(|| EslintNoUnmodifiedLoopCondition::schema(generator))
             }
             Self::EslintNoUnneededTernary(_) => EslintNoUnneededTernary::config_schema(generator)
                 .or_else(|| EslintNoUnneededTernary::schema(generator)),
@@ -6692,6 +6893,10 @@ impl RuleEnum {
                 TypescriptConsistentIndexedObjectStyle::config_schema(generator)
                     .or_else(|| TypescriptConsistentIndexedObjectStyle::schema(generator))
             }
+            Self::TypescriptConsistentReturn(_) => {
+                TypescriptConsistentReturn::config_schema(generator)
+                    .or_else(|| TypescriptConsistentReturn::schema(generator))
+            }
             Self::TypescriptConsistentTypeAssertions(_) => {
                 TypescriptConsistentTypeAssertions::config_schema(generator)
                     .or_else(|| TypescriptConsistentTypeAssertions::schema(generator))
@@ -6699,6 +6904,10 @@ impl RuleEnum {
             Self::TypescriptConsistentTypeDefinitions(_) => {
                 TypescriptConsistentTypeDefinitions::config_schema(generator)
                     .or_else(|| TypescriptConsistentTypeDefinitions::schema(generator))
+            }
+            Self::TypescriptConsistentTypeExports(_) => {
+                TypescriptConsistentTypeExports::config_schema(generator)
+                    .or_else(|| TypescriptConsistentTypeExports::schema(generator))
             }
             Self::TypescriptConsistentTypeImports(_) => {
                 TypescriptConsistentTypeImports::config_schema(generator)
@@ -6834,6 +7043,10 @@ impl RuleEnum {
                         TypescriptNoUnnecessaryParameterPropertyAssignment::schema(generator)
                     })
             }
+            Self::TypescriptNoUnnecessaryQualifier(_) => {
+                TypescriptNoUnnecessaryQualifier::config_schema(generator)
+                    .or_else(|| TypescriptNoUnnecessaryQualifier::schema(generator))
+            }
             Self::TypescriptNoUnnecessaryTemplateExpression(_) => {
                 TypescriptNoUnnecessaryTemplateExpression::config_schema(generator)
                     .or_else(|| TypescriptNoUnnecessaryTemplateExpression::schema(generator))
@@ -6849,6 +7062,10 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryTypeConstraint(_) => {
                 TypescriptNoUnnecessaryTypeConstraint::config_schema(generator)
                     .or_else(|| TypescriptNoUnnecessaryTypeConstraint::schema(generator))
+            }
+            Self::TypescriptNoUnnecessaryTypeParameters(_) => {
+                TypescriptNoUnnecessaryTypeParameters::config_schema(generator)
+                    .or_else(|| TypescriptNoUnnecessaryTypeParameters::schema(generator))
             }
             Self::TypescriptNoUnsafeArgument(_) => {
                 TypescriptNoUnsafeArgument::config_schema(generator)
@@ -6886,6 +7103,14 @@ impl RuleEnum {
                 TypescriptNoUnsafeUnaryMinus::config_schema(generator)
                     .or_else(|| TypescriptNoUnsafeUnaryMinus::schema(generator))
             }
+            Self::TypescriptNoUseBeforeDefine(_) => {
+                TypescriptNoUseBeforeDefine::config_schema(generator)
+                    .or_else(|| TypescriptNoUseBeforeDefine::schema(generator))
+            }
+            Self::TypescriptNoUselessDefaultAssignment(_) => {
+                TypescriptNoUselessDefaultAssignment::config_schema(generator)
+                    .or_else(|| TypescriptNoUselessDefaultAssignment::schema(generator))
+            }
             Self::TypescriptNoUselessEmptyExport(_) => {
                 TypescriptNoUselessEmptyExport::config_schema(generator)
                     .or_else(|| TypescriptNoUselessEmptyExport::schema(generator))
@@ -6902,12 +7127,18 @@ impl RuleEnum {
             }
             Self::TypescriptOnlyThrowError(_) => TypescriptOnlyThrowError::config_schema(generator)
                 .or_else(|| TypescriptOnlyThrowError::schema(generator)),
+            Self::TypescriptParameterProperties(_) => {
+                TypescriptParameterProperties::config_schema(generator)
+                    .or_else(|| TypescriptParameterProperties::schema(generator))
+            }
             Self::TypescriptPreferAsConst(_) => TypescriptPreferAsConst::config_schema(generator)
                 .or_else(|| TypescriptPreferAsConst::schema(generator)),
             Self::TypescriptPreferEnumInitializers(_) => {
                 TypescriptPreferEnumInitializers::config_schema(generator)
                     .or_else(|| TypescriptPreferEnumInitializers::schema(generator))
             }
+            Self::TypescriptPreferFind(_) => TypescriptPreferFind::config_schema(generator)
+                .or_else(|| TypescriptPreferFind::schema(generator)),
             Self::TypescriptPreferForOf(_) => TypescriptPreferForOf::config_schema(generator)
                 .or_else(|| TypescriptPreferForOf::schema(generator)),
             Self::TypescriptPreferFunctionType(_) => {
@@ -6936,13 +7167,27 @@ impl RuleEnum {
                 TypescriptPreferPromiseRejectErrors::config_schema(generator)
                     .or_else(|| TypescriptPreferPromiseRejectErrors::schema(generator))
             }
+            Self::TypescriptPreferReadonly(_) => TypescriptPreferReadonly::config_schema(generator)
+                .or_else(|| TypescriptPreferReadonly::schema(generator)),
+            Self::TypescriptPreferReadonlyParameterTypes(_) => {
+                TypescriptPreferReadonlyParameterTypes::config_schema(generator)
+                    .or_else(|| TypescriptPreferReadonlyParameterTypes::schema(generator))
+            }
             Self::TypescriptPreferReduceTypeParameter(_) => {
                 TypescriptPreferReduceTypeParameter::config_schema(generator)
                     .or_else(|| TypescriptPreferReduceTypeParameter::schema(generator))
             }
+            Self::TypescriptPreferRegexpExec(_) => {
+                TypescriptPreferRegexpExec::config_schema(generator)
+                    .or_else(|| TypescriptPreferRegexpExec::schema(generator))
+            }
             Self::TypescriptPreferReturnThisType(_) => {
                 TypescriptPreferReturnThisType::config_schema(generator)
                     .or_else(|| TypescriptPreferReturnThisType::schema(generator))
+            }
+            Self::TypescriptPreferStringStartsEndsWith(_) => {
+                TypescriptPreferStringStartsEndsWith::config_schema(generator)
+                    .or_else(|| TypescriptPreferStringStartsEndsWith::schema(generator))
             }
             Self::TypescriptPreferTsExpectError(_) => {
                 TypescriptPreferTsExpectError::config_schema(generator)
@@ -6976,6 +7221,10 @@ impl RuleEnum {
                 TypescriptStrictBooleanExpressions::config_schema(generator)
                     .or_else(|| TypescriptStrictBooleanExpressions::schema(generator))
             }
+            Self::TypescriptStrictVoidReturn(_) => {
+                TypescriptStrictVoidReturn::config_schema(generator)
+                    .or_else(|| TypescriptStrictVoidReturn::schema(generator))
+            }
             Self::TypescriptSwitchExhaustivenessCheck(_) => {
                 TypescriptSwitchExhaustivenessCheck::config_schema(generator)
                     .or_else(|| TypescriptSwitchExhaustivenessCheck::schema(generator))
@@ -6986,6 +7235,10 @@ impl RuleEnum {
             }
             Self::TypescriptUnboundMethod(_) => TypescriptUnboundMethod::config_schema(generator)
                 .or_else(|| TypescriptUnboundMethod::schema(generator)),
+            Self::TypescriptUnifiedSignatures(_) => {
+                TypescriptUnifiedSignatures::config_schema(generator)
+                    .or_else(|| TypescriptUnifiedSignatures::schema(generator))
+            }
             Self::TypescriptUseUnknownInCatchCallbackVariable(_) => {
                 TypescriptUseUnknownInCatchCallbackVariable::config_schema(generator)
                     .or_else(|| TypescriptUseUnknownInCatchCallbackVariable::schema(generator))
@@ -7170,6 +7423,10 @@ impl RuleEnum {
             Self::ReactJsxNoCommentTextnodes(_) => {
                 ReactJsxNoCommentTextnodes::config_schema(generator)
                     .or_else(|| ReactJsxNoCommentTextnodes::schema(generator))
+            }
+            Self::ReactJsxNoConstructedContextValues(_) => {
+                ReactJsxNoConstructedContextValues::config_schema(generator)
+                    .or_else(|| ReactJsxNoConstructedContextValues::schema(generator))
             }
             Self::ReactJsxNoDuplicateProps(_) => ReactJsxNoDuplicateProps::config_schema(generator)
                 .or_else(|| ReactJsxNoDuplicateProps::schema(generator)),
@@ -8204,6 +8461,7 @@ impl RuleEnum {
             Self::EslintNoSelfCompare(_) => "eslint",
             Self::EslintNoSequences(_) => "eslint",
             Self::EslintNoSetterReturn(_) => "eslint",
+            Self::EslintNoShadow(_) => "eslint",
             Self::EslintNoShadowRestrictedNames(_) => "eslint",
             Self::EslintNoSparseArrays(_) => "eslint",
             Self::EslintNoTemplateCurlyInString(_) => "eslint",
@@ -8214,6 +8472,7 @@ impl RuleEnum {
             Self::EslintNoUndef(_) => "eslint",
             Self::EslintNoUndefined(_) => "eslint",
             Self::EslintNoUnexpectedMultiline(_) => "eslint",
+            Self::EslintNoUnmodifiedLoopCondition(_) => "eslint",
             Self::EslintNoUnneededTernary(_) => "eslint",
             Self::EslintNoUnreachable(_) => "eslint",
             Self::EslintNoUnsafeFinally(_) => "eslint",
@@ -8269,8 +8528,10 @@ impl RuleEnum {
             Self::TypescriptClassLiteralPropertyStyle(_) => "typescript",
             Self::TypescriptConsistentGenericConstructors(_) => "typescript",
             Self::TypescriptConsistentIndexedObjectStyle(_) => "typescript",
+            Self::TypescriptConsistentReturn(_) => "typescript",
             Self::TypescriptConsistentTypeAssertions(_) => "typescript",
             Self::TypescriptConsistentTypeDefinitions(_) => "typescript",
+            Self::TypescriptConsistentTypeExports(_) => "typescript",
             Self::TypescriptConsistentTypeImports(_) => "typescript",
             Self::TypescriptExplicitFunctionReturnType(_) => "typescript",
             Self::TypescriptExplicitModuleBoundaryTypes(_) => "typescript",
@@ -8309,10 +8570,12 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryBooleanLiteralCompare(_) => "typescript",
             Self::TypescriptNoUnnecessaryCondition(_) => "typescript",
             Self::TypescriptNoUnnecessaryParameterPropertyAssignment(_) => "typescript",
+            Self::TypescriptNoUnnecessaryQualifier(_) => "typescript",
             Self::TypescriptNoUnnecessaryTemplateExpression(_) => "typescript",
             Self::TypescriptNoUnnecessaryTypeArguments(_) => "typescript",
             Self::TypescriptNoUnnecessaryTypeAssertion(_) => "typescript",
             Self::TypescriptNoUnnecessaryTypeConstraint(_) => "typescript",
+            Self::TypescriptNoUnnecessaryTypeParameters(_) => "typescript",
             Self::TypescriptNoUnsafeArgument(_) => "typescript",
             Self::TypescriptNoUnsafeAssignment(_) => "typescript",
             Self::TypescriptNoUnsafeCall(_) => "typescript",
@@ -8323,13 +8586,17 @@ impl RuleEnum {
             Self::TypescriptNoUnsafeReturn(_) => "typescript",
             Self::TypescriptNoUnsafeTypeAssertion(_) => "typescript",
             Self::TypescriptNoUnsafeUnaryMinus(_) => "typescript",
+            Self::TypescriptNoUseBeforeDefine(_) => "typescript",
+            Self::TypescriptNoUselessDefaultAssignment(_) => "typescript",
             Self::TypescriptNoUselessEmptyExport(_) => "typescript",
             Self::TypescriptNoVarRequires(_) => "typescript",
             Self::TypescriptNoWrapperObjectTypes(_) => "typescript",
             Self::TypescriptNonNullableTypeAssertionStyle(_) => "typescript",
             Self::TypescriptOnlyThrowError(_) => "typescript",
+            Self::TypescriptParameterProperties(_) => "typescript",
             Self::TypescriptPreferAsConst(_) => "typescript",
             Self::TypescriptPreferEnumInitializers(_) => "typescript",
+            Self::TypescriptPreferFind(_) => "typescript",
             Self::TypescriptPreferForOf(_) => "typescript",
             Self::TypescriptPreferFunctionType(_) => "typescript",
             Self::TypescriptPreferIncludes(_) => "typescript",
@@ -8338,8 +8605,12 @@ impl RuleEnum {
             Self::TypescriptPreferNullishCoalescing(_) => "typescript",
             Self::TypescriptPreferOptionalChain(_) => "typescript",
             Self::TypescriptPreferPromiseRejectErrors(_) => "typescript",
+            Self::TypescriptPreferReadonly(_) => "typescript",
+            Self::TypescriptPreferReadonlyParameterTypes(_) => "typescript",
             Self::TypescriptPreferReduceTypeParameter(_) => "typescript",
+            Self::TypescriptPreferRegexpExec(_) => "typescript",
             Self::TypescriptPreferReturnThisType(_) => "typescript",
+            Self::TypescriptPreferStringStartsEndsWith(_) => "typescript",
             Self::TypescriptPreferTsExpectError(_) => "typescript",
             Self::TypescriptPromiseFunctionAsync(_) => "typescript",
             Self::TypescriptRelatedGetterSetterPairs(_) => "typescript",
@@ -8349,9 +8620,11 @@ impl RuleEnum {
             Self::TypescriptRestrictTemplateExpressions(_) => "typescript",
             Self::TypescriptReturnAwait(_) => "typescript",
             Self::TypescriptStrictBooleanExpressions(_) => "typescript",
+            Self::TypescriptStrictVoidReturn(_) => "typescript",
             Self::TypescriptSwitchExhaustivenessCheck(_) => "typescript",
             Self::TypescriptTripleSlashReference(_) => "typescript",
             Self::TypescriptUnboundMethod(_) => "typescript",
+            Self::TypescriptUnifiedSignatures(_) => "typescript",
             Self::TypescriptUseUnknownInCatchCallbackVariable(_) => "typescript",
             Self::JestConsistentTestIt(_) => "jest",
             Self::JestExpectExpect(_) => "jest",
@@ -8422,6 +8695,7 @@ impl RuleEnum {
             Self::ReactJsxKey(_) => "react",
             Self::ReactJsxMaxDepth(_) => "react",
             Self::ReactJsxNoCommentTextnodes(_) => "react",
+            Self::ReactJsxNoConstructedContextValues(_) => "react",
             Self::ReactJsxNoDuplicateProps(_) => "react",
             Self::ReactJsxNoScriptUrl(_) => "react",
             Self::ReactJsxNoTargetBlank(_) => "react",
@@ -9164,6 +9438,9 @@ impl RuleEnum {
             Self::EslintNoSetterReturn(_) => {
                 Ok(Self::EslintNoSetterReturn(EslintNoSetterReturn::from_configuration(value)?))
             }
+            Self::EslintNoShadow(_) => {
+                Ok(Self::EslintNoShadow(EslintNoShadow::from_configuration(value)?))
+            }
             Self::EslintNoShadowRestrictedNames(_) => Ok(Self::EslintNoShadowRestrictedNames(
                 EslintNoShadowRestrictedNames::from_configuration(value)?,
             )),
@@ -9193,6 +9470,9 @@ impl RuleEnum {
             }
             Self::EslintNoUnexpectedMultiline(_) => Ok(Self::EslintNoUnexpectedMultiline(
                 EslintNoUnexpectedMultiline::from_configuration(value)?,
+            )),
+            Self::EslintNoUnmodifiedLoopCondition(_) => Ok(Self::EslintNoUnmodifiedLoopCondition(
+                EslintNoUnmodifiedLoopCondition::from_configuration(value)?,
             )),
             Self::EslintNoUnneededTernary(_) => Ok(Self::EslintNoUnneededTernary(
                 EslintNoUnneededTernary::from_configuration(value)?,
@@ -9365,6 +9645,9 @@ impl RuleEnum {
                     TypescriptConsistentIndexedObjectStyle::from_configuration(value)?,
                 ))
             }
+            Self::TypescriptConsistentReturn(_) => Ok(Self::TypescriptConsistentReturn(
+                TypescriptConsistentReturn::from_configuration(value)?,
+            )),
             Self::TypescriptConsistentTypeAssertions(_) => {
                 Ok(Self::TypescriptConsistentTypeAssertions(
                     TypescriptConsistentTypeAssertions::from_configuration(value)?,
@@ -9375,6 +9658,9 @@ impl RuleEnum {
                     TypescriptConsistentTypeDefinitions::from_configuration(value)?,
                 ))
             }
+            Self::TypescriptConsistentTypeExports(_) => Ok(Self::TypescriptConsistentTypeExports(
+                TypescriptConsistentTypeExports::from_configuration(value)?,
+            )),
             Self::TypescriptConsistentTypeImports(_) => Ok(Self::TypescriptConsistentTypeImports(
                 TypescriptConsistentTypeImports::from_configuration(value)?,
             )),
@@ -9517,6 +9803,11 @@ impl RuleEnum {
                     TypescriptNoUnnecessaryParameterPropertyAssignment::from_configuration(value)?,
                 ))
             }
+            Self::TypescriptNoUnnecessaryQualifier(_) => {
+                Ok(Self::TypescriptNoUnnecessaryQualifier(
+                    TypescriptNoUnnecessaryQualifier::from_configuration(value)?,
+                ))
+            }
             Self::TypescriptNoUnnecessaryTemplateExpression(_) => {
                 Ok(Self::TypescriptNoUnnecessaryTemplateExpression(
                     TypescriptNoUnnecessaryTemplateExpression::from_configuration(value)?,
@@ -9535,6 +9826,11 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryTypeConstraint(_) => {
                 Ok(Self::TypescriptNoUnnecessaryTypeConstraint(
                     TypescriptNoUnnecessaryTypeConstraint::from_configuration(value)?,
+                ))
+            }
+            Self::TypescriptNoUnnecessaryTypeParameters(_) => {
+                Ok(Self::TypescriptNoUnnecessaryTypeParameters(
+                    TypescriptNoUnnecessaryTypeParameters::from_configuration(value)?,
                 ))
             }
             Self::TypescriptNoUnsafeArgument(_) => Ok(Self::TypescriptNoUnsafeArgument(
@@ -9571,6 +9867,14 @@ impl RuleEnum {
             Self::TypescriptNoUnsafeUnaryMinus(_) => Ok(Self::TypescriptNoUnsafeUnaryMinus(
                 TypescriptNoUnsafeUnaryMinus::from_configuration(value)?,
             )),
+            Self::TypescriptNoUseBeforeDefine(_) => Ok(Self::TypescriptNoUseBeforeDefine(
+                TypescriptNoUseBeforeDefine::from_configuration(value)?,
+            )),
+            Self::TypescriptNoUselessDefaultAssignment(_) => {
+                Ok(Self::TypescriptNoUselessDefaultAssignment(
+                    TypescriptNoUselessDefaultAssignment::from_configuration(value)?,
+                ))
+            }
             Self::TypescriptNoUselessEmptyExport(_) => Ok(Self::TypescriptNoUselessEmptyExport(
                 TypescriptNoUselessEmptyExport::from_configuration(value)?,
             )),
@@ -9588,6 +9892,9 @@ impl RuleEnum {
             Self::TypescriptOnlyThrowError(_) => Ok(Self::TypescriptOnlyThrowError(
                 TypescriptOnlyThrowError::from_configuration(value)?,
             )),
+            Self::TypescriptParameterProperties(_) => Ok(Self::TypescriptParameterProperties(
+                TypescriptParameterProperties::from_configuration(value)?,
+            )),
             Self::TypescriptPreferAsConst(_) => Ok(Self::TypescriptPreferAsConst(
                 TypescriptPreferAsConst::from_configuration(value)?,
             )),
@@ -9595,6 +9902,9 @@ impl RuleEnum {
                 Ok(Self::TypescriptPreferEnumInitializers(
                     TypescriptPreferEnumInitializers::from_configuration(value)?,
                 ))
+            }
+            Self::TypescriptPreferFind(_) => {
+                Ok(Self::TypescriptPreferFind(TypescriptPreferFind::from_configuration(value)?))
             }
             Self::TypescriptPreferForOf(_) => {
                 Ok(Self::TypescriptPreferForOf(TypescriptPreferForOf::from_configuration(value)?))
@@ -9628,14 +9938,30 @@ impl RuleEnum {
                     TypescriptPreferPromiseRejectErrors::from_configuration(value)?,
                 ))
             }
+            Self::TypescriptPreferReadonly(_) => Ok(Self::TypescriptPreferReadonly(
+                TypescriptPreferReadonly::from_configuration(value)?,
+            )),
+            Self::TypescriptPreferReadonlyParameterTypes(_) => {
+                Ok(Self::TypescriptPreferReadonlyParameterTypes(
+                    TypescriptPreferReadonlyParameterTypes::from_configuration(value)?,
+                ))
+            }
             Self::TypescriptPreferReduceTypeParameter(_) => {
                 Ok(Self::TypescriptPreferReduceTypeParameter(
                     TypescriptPreferReduceTypeParameter::from_configuration(value)?,
                 ))
             }
+            Self::TypescriptPreferRegexpExec(_) => Ok(Self::TypescriptPreferRegexpExec(
+                TypescriptPreferRegexpExec::from_configuration(value)?,
+            )),
             Self::TypescriptPreferReturnThisType(_) => Ok(Self::TypescriptPreferReturnThisType(
                 TypescriptPreferReturnThisType::from_configuration(value)?,
             )),
+            Self::TypescriptPreferStringStartsEndsWith(_) => {
+                Ok(Self::TypescriptPreferStringStartsEndsWith(
+                    TypescriptPreferStringStartsEndsWith::from_configuration(value)?,
+                ))
+            }
             Self::TypescriptPreferTsExpectError(_) => Ok(Self::TypescriptPreferTsExpectError(
                 TypescriptPreferTsExpectError::from_configuration(value)?,
             )),
@@ -9671,6 +9997,9 @@ impl RuleEnum {
                     TypescriptStrictBooleanExpressions::from_configuration(value)?,
                 ))
             }
+            Self::TypescriptStrictVoidReturn(_) => Ok(Self::TypescriptStrictVoidReturn(
+                TypescriptStrictVoidReturn::from_configuration(value)?,
+            )),
             Self::TypescriptSwitchExhaustivenessCheck(_) => {
                 Ok(Self::TypescriptSwitchExhaustivenessCheck(
                     TypescriptSwitchExhaustivenessCheck::from_configuration(value)?,
@@ -9681,6 +10010,9 @@ impl RuleEnum {
             )),
             Self::TypescriptUnboundMethod(_) => Ok(Self::TypescriptUnboundMethod(
                 TypescriptUnboundMethod::from_configuration(value)?,
+            )),
+            Self::TypescriptUnifiedSignatures(_) => Ok(Self::TypescriptUnifiedSignatures(
+                TypescriptUnifiedSignatures::from_configuration(value)?,
             )),
             Self::TypescriptUseUnknownInCatchCallbackVariable(_) => {
                 Ok(Self::TypescriptUseUnknownInCatchCallbackVariable(
@@ -9894,6 +10226,11 @@ impl RuleEnum {
             Self::ReactJsxNoCommentTextnodes(_) => Ok(Self::ReactJsxNoCommentTextnodes(
                 ReactJsxNoCommentTextnodes::from_configuration(value)?,
             )),
+            Self::ReactJsxNoConstructedContextValues(_) => {
+                Ok(Self::ReactJsxNoConstructedContextValues(
+                    ReactJsxNoConstructedContextValues::from_configuration(value)?,
+                ))
+            }
             Self::ReactJsxNoDuplicateProps(_) => Ok(Self::ReactJsxNoDuplicateProps(
                 ReactJsxNoDuplicateProps::from_configuration(value)?,
             )),
@@ -11029,6 +11366,7 @@ impl RuleEnum {
             Self::EslintNoSelfCompare(rule) => rule.to_configuration(),
             Self::EslintNoSequences(rule) => rule.to_configuration(),
             Self::EslintNoSetterReturn(rule) => rule.to_configuration(),
+            Self::EslintNoShadow(rule) => rule.to_configuration(),
             Self::EslintNoShadowRestrictedNames(rule) => rule.to_configuration(),
             Self::EslintNoSparseArrays(rule) => rule.to_configuration(),
             Self::EslintNoTemplateCurlyInString(rule) => rule.to_configuration(),
@@ -11039,6 +11377,7 @@ impl RuleEnum {
             Self::EslintNoUndef(rule) => rule.to_configuration(),
             Self::EslintNoUndefined(rule) => rule.to_configuration(),
             Self::EslintNoUnexpectedMultiline(rule) => rule.to_configuration(),
+            Self::EslintNoUnmodifiedLoopCondition(rule) => rule.to_configuration(),
             Self::EslintNoUnneededTernary(rule) => rule.to_configuration(),
             Self::EslintNoUnreachable(rule) => rule.to_configuration(),
             Self::EslintNoUnsafeFinally(rule) => rule.to_configuration(),
@@ -11094,8 +11433,10 @@ impl RuleEnum {
             Self::TypescriptClassLiteralPropertyStyle(rule) => rule.to_configuration(),
             Self::TypescriptConsistentGenericConstructors(rule) => rule.to_configuration(),
             Self::TypescriptConsistentIndexedObjectStyle(rule) => rule.to_configuration(),
+            Self::TypescriptConsistentReturn(rule) => rule.to_configuration(),
             Self::TypescriptConsistentTypeAssertions(rule) => rule.to_configuration(),
             Self::TypescriptConsistentTypeDefinitions(rule) => rule.to_configuration(),
+            Self::TypescriptConsistentTypeExports(rule) => rule.to_configuration(),
             Self::TypescriptConsistentTypeImports(rule) => rule.to_configuration(),
             Self::TypescriptExplicitFunctionReturnType(rule) => rule.to_configuration(),
             Self::TypescriptExplicitModuleBoundaryTypes(rule) => rule.to_configuration(),
@@ -11136,10 +11477,12 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryParameterPropertyAssignment(rule) => {
                 rule.to_configuration()
             }
+            Self::TypescriptNoUnnecessaryQualifier(rule) => rule.to_configuration(),
             Self::TypescriptNoUnnecessaryTemplateExpression(rule) => rule.to_configuration(),
             Self::TypescriptNoUnnecessaryTypeArguments(rule) => rule.to_configuration(),
             Self::TypescriptNoUnnecessaryTypeAssertion(rule) => rule.to_configuration(),
             Self::TypescriptNoUnnecessaryTypeConstraint(rule) => rule.to_configuration(),
+            Self::TypescriptNoUnnecessaryTypeParameters(rule) => rule.to_configuration(),
             Self::TypescriptNoUnsafeArgument(rule) => rule.to_configuration(),
             Self::TypescriptNoUnsafeAssignment(rule) => rule.to_configuration(),
             Self::TypescriptNoUnsafeCall(rule) => rule.to_configuration(),
@@ -11150,13 +11493,17 @@ impl RuleEnum {
             Self::TypescriptNoUnsafeReturn(rule) => rule.to_configuration(),
             Self::TypescriptNoUnsafeTypeAssertion(rule) => rule.to_configuration(),
             Self::TypescriptNoUnsafeUnaryMinus(rule) => rule.to_configuration(),
+            Self::TypescriptNoUseBeforeDefine(rule) => rule.to_configuration(),
+            Self::TypescriptNoUselessDefaultAssignment(rule) => rule.to_configuration(),
             Self::TypescriptNoUselessEmptyExport(rule) => rule.to_configuration(),
             Self::TypescriptNoVarRequires(rule) => rule.to_configuration(),
             Self::TypescriptNoWrapperObjectTypes(rule) => rule.to_configuration(),
             Self::TypescriptNonNullableTypeAssertionStyle(rule) => rule.to_configuration(),
             Self::TypescriptOnlyThrowError(rule) => rule.to_configuration(),
+            Self::TypescriptParameterProperties(rule) => rule.to_configuration(),
             Self::TypescriptPreferAsConst(rule) => rule.to_configuration(),
             Self::TypescriptPreferEnumInitializers(rule) => rule.to_configuration(),
+            Self::TypescriptPreferFind(rule) => rule.to_configuration(),
             Self::TypescriptPreferForOf(rule) => rule.to_configuration(),
             Self::TypescriptPreferFunctionType(rule) => rule.to_configuration(),
             Self::TypescriptPreferIncludes(rule) => rule.to_configuration(),
@@ -11165,8 +11512,12 @@ impl RuleEnum {
             Self::TypescriptPreferNullishCoalescing(rule) => rule.to_configuration(),
             Self::TypescriptPreferOptionalChain(rule) => rule.to_configuration(),
             Self::TypescriptPreferPromiseRejectErrors(rule) => rule.to_configuration(),
+            Self::TypescriptPreferReadonly(rule) => rule.to_configuration(),
+            Self::TypescriptPreferReadonlyParameterTypes(rule) => rule.to_configuration(),
             Self::TypescriptPreferReduceTypeParameter(rule) => rule.to_configuration(),
+            Self::TypescriptPreferRegexpExec(rule) => rule.to_configuration(),
             Self::TypescriptPreferReturnThisType(rule) => rule.to_configuration(),
+            Self::TypescriptPreferStringStartsEndsWith(rule) => rule.to_configuration(),
             Self::TypescriptPreferTsExpectError(rule) => rule.to_configuration(),
             Self::TypescriptPromiseFunctionAsync(rule) => rule.to_configuration(),
             Self::TypescriptRelatedGetterSetterPairs(rule) => rule.to_configuration(),
@@ -11176,9 +11527,11 @@ impl RuleEnum {
             Self::TypescriptRestrictTemplateExpressions(rule) => rule.to_configuration(),
             Self::TypescriptReturnAwait(rule) => rule.to_configuration(),
             Self::TypescriptStrictBooleanExpressions(rule) => rule.to_configuration(),
+            Self::TypescriptStrictVoidReturn(rule) => rule.to_configuration(),
             Self::TypescriptSwitchExhaustivenessCheck(rule) => rule.to_configuration(),
             Self::TypescriptTripleSlashReference(rule) => rule.to_configuration(),
             Self::TypescriptUnboundMethod(rule) => rule.to_configuration(),
+            Self::TypescriptUnifiedSignatures(rule) => rule.to_configuration(),
             Self::TypescriptUseUnknownInCatchCallbackVariable(rule) => rule.to_configuration(),
             Self::JestConsistentTestIt(rule) => rule.to_configuration(),
             Self::JestExpectExpect(rule) => rule.to_configuration(),
@@ -11249,6 +11602,7 @@ impl RuleEnum {
             Self::ReactJsxKey(rule) => rule.to_configuration(),
             Self::ReactJsxMaxDepth(rule) => rule.to_configuration(),
             Self::ReactJsxNoCommentTextnodes(rule) => rule.to_configuration(),
+            Self::ReactJsxNoConstructedContextValues(rule) => rule.to_configuration(),
             Self::ReactJsxNoDuplicateProps(rule) => rule.to_configuration(),
             Self::ReactJsxNoScriptUrl(rule) => rule.to_configuration(),
             Self::ReactJsxNoTargetBlank(rule) => rule.to_configuration(),
@@ -11708,6 +12062,7 @@ impl RuleEnum {
             Self::EslintNoSelfCompare(rule) => rule.run(node, ctx),
             Self::EslintNoSequences(rule) => rule.run(node, ctx),
             Self::EslintNoSetterReturn(rule) => rule.run(node, ctx),
+            Self::EslintNoShadow(rule) => rule.run(node, ctx),
             Self::EslintNoShadowRestrictedNames(rule) => rule.run(node, ctx),
             Self::EslintNoSparseArrays(rule) => rule.run(node, ctx),
             Self::EslintNoTemplateCurlyInString(rule) => rule.run(node, ctx),
@@ -11718,6 +12073,7 @@ impl RuleEnum {
             Self::EslintNoUndef(rule) => rule.run(node, ctx),
             Self::EslintNoUndefined(rule) => rule.run(node, ctx),
             Self::EslintNoUnexpectedMultiline(rule) => rule.run(node, ctx),
+            Self::EslintNoUnmodifiedLoopCondition(rule) => rule.run(node, ctx),
             Self::EslintNoUnneededTernary(rule) => rule.run(node, ctx),
             Self::EslintNoUnreachable(rule) => rule.run(node, ctx),
             Self::EslintNoUnsafeFinally(rule) => rule.run(node, ctx),
@@ -11773,8 +12129,10 @@ impl RuleEnum {
             Self::TypescriptClassLiteralPropertyStyle(rule) => rule.run(node, ctx),
             Self::TypescriptConsistentGenericConstructors(rule) => rule.run(node, ctx),
             Self::TypescriptConsistentIndexedObjectStyle(rule) => rule.run(node, ctx),
+            Self::TypescriptConsistentReturn(rule) => rule.run(node, ctx),
             Self::TypescriptConsistentTypeAssertions(rule) => rule.run(node, ctx),
             Self::TypescriptConsistentTypeDefinitions(rule) => rule.run(node, ctx),
+            Self::TypescriptConsistentTypeExports(rule) => rule.run(node, ctx),
             Self::TypescriptConsistentTypeImports(rule) => rule.run(node, ctx),
             Self::TypescriptExplicitFunctionReturnType(rule) => rule.run(node, ctx),
             Self::TypescriptExplicitModuleBoundaryTypes(rule) => rule.run(node, ctx),
@@ -11813,10 +12171,12 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryBooleanLiteralCompare(rule) => rule.run(node, ctx),
             Self::TypescriptNoUnnecessaryCondition(rule) => rule.run(node, ctx),
             Self::TypescriptNoUnnecessaryParameterPropertyAssignment(rule) => rule.run(node, ctx),
+            Self::TypescriptNoUnnecessaryQualifier(rule) => rule.run(node, ctx),
             Self::TypescriptNoUnnecessaryTemplateExpression(rule) => rule.run(node, ctx),
             Self::TypescriptNoUnnecessaryTypeArguments(rule) => rule.run(node, ctx),
             Self::TypescriptNoUnnecessaryTypeAssertion(rule) => rule.run(node, ctx),
             Self::TypescriptNoUnnecessaryTypeConstraint(rule) => rule.run(node, ctx),
+            Self::TypescriptNoUnnecessaryTypeParameters(rule) => rule.run(node, ctx),
             Self::TypescriptNoUnsafeArgument(rule) => rule.run(node, ctx),
             Self::TypescriptNoUnsafeAssignment(rule) => rule.run(node, ctx),
             Self::TypescriptNoUnsafeCall(rule) => rule.run(node, ctx),
@@ -11827,13 +12187,17 @@ impl RuleEnum {
             Self::TypescriptNoUnsafeReturn(rule) => rule.run(node, ctx),
             Self::TypescriptNoUnsafeTypeAssertion(rule) => rule.run(node, ctx),
             Self::TypescriptNoUnsafeUnaryMinus(rule) => rule.run(node, ctx),
+            Self::TypescriptNoUseBeforeDefine(rule) => rule.run(node, ctx),
+            Self::TypescriptNoUselessDefaultAssignment(rule) => rule.run(node, ctx),
             Self::TypescriptNoUselessEmptyExport(rule) => rule.run(node, ctx),
             Self::TypescriptNoVarRequires(rule) => rule.run(node, ctx),
             Self::TypescriptNoWrapperObjectTypes(rule) => rule.run(node, ctx),
             Self::TypescriptNonNullableTypeAssertionStyle(rule) => rule.run(node, ctx),
             Self::TypescriptOnlyThrowError(rule) => rule.run(node, ctx),
+            Self::TypescriptParameterProperties(rule) => rule.run(node, ctx),
             Self::TypescriptPreferAsConst(rule) => rule.run(node, ctx),
             Self::TypescriptPreferEnumInitializers(rule) => rule.run(node, ctx),
+            Self::TypescriptPreferFind(rule) => rule.run(node, ctx),
             Self::TypescriptPreferForOf(rule) => rule.run(node, ctx),
             Self::TypescriptPreferFunctionType(rule) => rule.run(node, ctx),
             Self::TypescriptPreferIncludes(rule) => rule.run(node, ctx),
@@ -11842,8 +12206,12 @@ impl RuleEnum {
             Self::TypescriptPreferNullishCoalescing(rule) => rule.run(node, ctx),
             Self::TypescriptPreferOptionalChain(rule) => rule.run(node, ctx),
             Self::TypescriptPreferPromiseRejectErrors(rule) => rule.run(node, ctx),
+            Self::TypescriptPreferReadonly(rule) => rule.run(node, ctx),
+            Self::TypescriptPreferReadonlyParameterTypes(rule) => rule.run(node, ctx),
             Self::TypescriptPreferReduceTypeParameter(rule) => rule.run(node, ctx),
+            Self::TypescriptPreferRegexpExec(rule) => rule.run(node, ctx),
             Self::TypescriptPreferReturnThisType(rule) => rule.run(node, ctx),
+            Self::TypescriptPreferStringStartsEndsWith(rule) => rule.run(node, ctx),
             Self::TypescriptPreferTsExpectError(rule) => rule.run(node, ctx),
             Self::TypescriptPromiseFunctionAsync(rule) => rule.run(node, ctx),
             Self::TypescriptRelatedGetterSetterPairs(rule) => rule.run(node, ctx),
@@ -11853,9 +12221,11 @@ impl RuleEnum {
             Self::TypescriptRestrictTemplateExpressions(rule) => rule.run(node, ctx),
             Self::TypescriptReturnAwait(rule) => rule.run(node, ctx),
             Self::TypescriptStrictBooleanExpressions(rule) => rule.run(node, ctx),
+            Self::TypescriptStrictVoidReturn(rule) => rule.run(node, ctx),
             Self::TypescriptSwitchExhaustivenessCheck(rule) => rule.run(node, ctx),
             Self::TypescriptTripleSlashReference(rule) => rule.run(node, ctx),
             Self::TypescriptUnboundMethod(rule) => rule.run(node, ctx),
+            Self::TypescriptUnifiedSignatures(rule) => rule.run(node, ctx),
             Self::TypescriptUseUnknownInCatchCallbackVariable(rule) => rule.run(node, ctx),
             Self::JestConsistentTestIt(rule) => rule.run(node, ctx),
             Self::JestExpectExpect(rule) => rule.run(node, ctx),
@@ -11926,6 +12296,7 @@ impl RuleEnum {
             Self::ReactJsxKey(rule) => rule.run(node, ctx),
             Self::ReactJsxMaxDepth(rule) => rule.run(node, ctx),
             Self::ReactJsxNoCommentTextnodes(rule) => rule.run(node, ctx),
+            Self::ReactJsxNoConstructedContextValues(rule) => rule.run(node, ctx),
             Self::ReactJsxNoDuplicateProps(rule) => rule.run(node, ctx),
             Self::ReactJsxNoScriptUrl(rule) => rule.run(node, ctx),
             Self::ReactJsxNoTargetBlank(rule) => rule.run(node, ctx),
@@ -12383,6 +12754,7 @@ impl RuleEnum {
             Self::EslintNoSelfCompare(rule) => rule.run_once(ctx),
             Self::EslintNoSequences(rule) => rule.run_once(ctx),
             Self::EslintNoSetterReturn(rule) => rule.run_once(ctx),
+            Self::EslintNoShadow(rule) => rule.run_once(ctx),
             Self::EslintNoShadowRestrictedNames(rule) => rule.run_once(ctx),
             Self::EslintNoSparseArrays(rule) => rule.run_once(ctx),
             Self::EslintNoTemplateCurlyInString(rule) => rule.run_once(ctx),
@@ -12393,6 +12765,7 @@ impl RuleEnum {
             Self::EslintNoUndef(rule) => rule.run_once(ctx),
             Self::EslintNoUndefined(rule) => rule.run_once(ctx),
             Self::EslintNoUnexpectedMultiline(rule) => rule.run_once(ctx),
+            Self::EslintNoUnmodifiedLoopCondition(rule) => rule.run_once(ctx),
             Self::EslintNoUnneededTernary(rule) => rule.run_once(ctx),
             Self::EslintNoUnreachable(rule) => rule.run_once(ctx),
             Self::EslintNoUnsafeFinally(rule) => rule.run_once(ctx),
@@ -12448,8 +12821,10 @@ impl RuleEnum {
             Self::TypescriptClassLiteralPropertyStyle(rule) => rule.run_once(ctx),
             Self::TypescriptConsistentGenericConstructors(rule) => rule.run_once(ctx),
             Self::TypescriptConsistentIndexedObjectStyle(rule) => rule.run_once(ctx),
+            Self::TypescriptConsistentReturn(rule) => rule.run_once(ctx),
             Self::TypescriptConsistentTypeAssertions(rule) => rule.run_once(ctx),
             Self::TypescriptConsistentTypeDefinitions(rule) => rule.run_once(ctx),
+            Self::TypescriptConsistentTypeExports(rule) => rule.run_once(ctx),
             Self::TypescriptConsistentTypeImports(rule) => rule.run_once(ctx),
             Self::TypescriptExplicitFunctionReturnType(rule) => rule.run_once(ctx),
             Self::TypescriptExplicitModuleBoundaryTypes(rule) => rule.run_once(ctx),
@@ -12488,10 +12863,12 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryBooleanLiteralCompare(rule) => rule.run_once(ctx),
             Self::TypescriptNoUnnecessaryCondition(rule) => rule.run_once(ctx),
             Self::TypescriptNoUnnecessaryParameterPropertyAssignment(rule) => rule.run_once(ctx),
+            Self::TypescriptNoUnnecessaryQualifier(rule) => rule.run_once(ctx),
             Self::TypescriptNoUnnecessaryTemplateExpression(rule) => rule.run_once(ctx),
             Self::TypescriptNoUnnecessaryTypeArguments(rule) => rule.run_once(ctx),
             Self::TypescriptNoUnnecessaryTypeAssertion(rule) => rule.run_once(ctx),
             Self::TypescriptNoUnnecessaryTypeConstraint(rule) => rule.run_once(ctx),
+            Self::TypescriptNoUnnecessaryTypeParameters(rule) => rule.run_once(ctx),
             Self::TypescriptNoUnsafeArgument(rule) => rule.run_once(ctx),
             Self::TypescriptNoUnsafeAssignment(rule) => rule.run_once(ctx),
             Self::TypescriptNoUnsafeCall(rule) => rule.run_once(ctx),
@@ -12502,13 +12879,17 @@ impl RuleEnum {
             Self::TypescriptNoUnsafeReturn(rule) => rule.run_once(ctx),
             Self::TypescriptNoUnsafeTypeAssertion(rule) => rule.run_once(ctx),
             Self::TypescriptNoUnsafeUnaryMinus(rule) => rule.run_once(ctx),
+            Self::TypescriptNoUseBeforeDefine(rule) => rule.run_once(ctx),
+            Self::TypescriptNoUselessDefaultAssignment(rule) => rule.run_once(ctx),
             Self::TypescriptNoUselessEmptyExport(rule) => rule.run_once(ctx),
             Self::TypescriptNoVarRequires(rule) => rule.run_once(ctx),
             Self::TypescriptNoWrapperObjectTypes(rule) => rule.run_once(ctx),
             Self::TypescriptNonNullableTypeAssertionStyle(rule) => rule.run_once(ctx),
             Self::TypescriptOnlyThrowError(rule) => rule.run_once(ctx),
+            Self::TypescriptParameterProperties(rule) => rule.run_once(ctx),
             Self::TypescriptPreferAsConst(rule) => rule.run_once(ctx),
             Self::TypescriptPreferEnumInitializers(rule) => rule.run_once(ctx),
+            Self::TypescriptPreferFind(rule) => rule.run_once(ctx),
             Self::TypescriptPreferForOf(rule) => rule.run_once(ctx),
             Self::TypescriptPreferFunctionType(rule) => rule.run_once(ctx),
             Self::TypescriptPreferIncludes(rule) => rule.run_once(ctx),
@@ -12517,8 +12898,12 @@ impl RuleEnum {
             Self::TypescriptPreferNullishCoalescing(rule) => rule.run_once(ctx),
             Self::TypescriptPreferOptionalChain(rule) => rule.run_once(ctx),
             Self::TypescriptPreferPromiseRejectErrors(rule) => rule.run_once(ctx),
+            Self::TypescriptPreferReadonly(rule) => rule.run_once(ctx),
+            Self::TypescriptPreferReadonlyParameterTypes(rule) => rule.run_once(ctx),
             Self::TypescriptPreferReduceTypeParameter(rule) => rule.run_once(ctx),
+            Self::TypescriptPreferRegexpExec(rule) => rule.run_once(ctx),
             Self::TypescriptPreferReturnThisType(rule) => rule.run_once(ctx),
+            Self::TypescriptPreferStringStartsEndsWith(rule) => rule.run_once(ctx),
             Self::TypescriptPreferTsExpectError(rule) => rule.run_once(ctx),
             Self::TypescriptPromiseFunctionAsync(rule) => rule.run_once(ctx),
             Self::TypescriptRelatedGetterSetterPairs(rule) => rule.run_once(ctx),
@@ -12528,9 +12913,11 @@ impl RuleEnum {
             Self::TypescriptRestrictTemplateExpressions(rule) => rule.run_once(ctx),
             Self::TypescriptReturnAwait(rule) => rule.run_once(ctx),
             Self::TypescriptStrictBooleanExpressions(rule) => rule.run_once(ctx),
+            Self::TypescriptStrictVoidReturn(rule) => rule.run_once(ctx),
             Self::TypescriptSwitchExhaustivenessCheck(rule) => rule.run_once(ctx),
             Self::TypescriptTripleSlashReference(rule) => rule.run_once(ctx),
             Self::TypescriptUnboundMethod(rule) => rule.run_once(ctx),
+            Self::TypescriptUnifiedSignatures(rule) => rule.run_once(ctx),
             Self::TypescriptUseUnknownInCatchCallbackVariable(rule) => rule.run_once(ctx),
             Self::JestConsistentTestIt(rule) => rule.run_once(ctx),
             Self::JestExpectExpect(rule) => rule.run_once(ctx),
@@ -12601,6 +12988,7 @@ impl RuleEnum {
             Self::ReactJsxKey(rule) => rule.run_once(ctx),
             Self::ReactJsxMaxDepth(rule) => rule.run_once(ctx),
             Self::ReactJsxNoCommentTextnodes(rule) => rule.run_once(ctx),
+            Self::ReactJsxNoConstructedContextValues(rule) => rule.run_once(ctx),
             Self::ReactJsxNoDuplicateProps(rule) => rule.run_once(ctx),
             Self::ReactJsxNoScriptUrl(rule) => rule.run_once(ctx),
             Self::ReactJsxNoTargetBlank(rule) => rule.run_once(ctx),
@@ -13062,6 +13450,7 @@ impl RuleEnum {
             Self::EslintNoSelfCompare(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::EslintNoSequences(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::EslintNoSetterReturn(rule) => rule.run_on_jest_node(jest_node, ctx),
+            Self::EslintNoShadow(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::EslintNoShadowRestrictedNames(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::EslintNoSparseArrays(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::EslintNoTemplateCurlyInString(rule) => rule.run_on_jest_node(jest_node, ctx),
@@ -13072,6 +13461,7 @@ impl RuleEnum {
             Self::EslintNoUndef(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::EslintNoUndefined(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::EslintNoUnexpectedMultiline(rule) => rule.run_on_jest_node(jest_node, ctx),
+            Self::EslintNoUnmodifiedLoopCondition(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::EslintNoUnneededTernary(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::EslintNoUnreachable(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::EslintNoUnsafeFinally(rule) => rule.run_on_jest_node(jest_node, ctx),
@@ -13135,10 +13525,12 @@ impl RuleEnum {
             Self::TypescriptConsistentIndexedObjectStyle(rule) => {
                 rule.run_on_jest_node(jest_node, ctx)
             }
+            Self::TypescriptConsistentReturn(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptConsistentTypeAssertions(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptConsistentTypeDefinitions(rule) => {
                 rule.run_on_jest_node(jest_node, ctx)
             }
+            Self::TypescriptConsistentTypeExports(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptConsistentTypeImports(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptExplicitFunctionReturnType(rule) => {
                 rule.run_on_jest_node(jest_node, ctx)
@@ -13199,6 +13591,7 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryParameterPropertyAssignment(rule) => {
                 rule.run_on_jest_node(jest_node, ctx)
             }
+            Self::TypescriptNoUnnecessaryQualifier(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptNoUnnecessaryTemplateExpression(rule) => {
                 rule.run_on_jest_node(jest_node, ctx)
             }
@@ -13209,6 +13602,9 @@ impl RuleEnum {
                 rule.run_on_jest_node(jest_node, ctx)
             }
             Self::TypescriptNoUnnecessaryTypeConstraint(rule) => {
+                rule.run_on_jest_node(jest_node, ctx)
+            }
+            Self::TypescriptNoUnnecessaryTypeParameters(rule) => {
                 rule.run_on_jest_node(jest_node, ctx)
             }
             Self::TypescriptNoUnsafeArgument(rule) => rule.run_on_jest_node(jest_node, ctx),
@@ -13223,6 +13619,10 @@ impl RuleEnum {
             Self::TypescriptNoUnsafeReturn(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptNoUnsafeTypeAssertion(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptNoUnsafeUnaryMinus(rule) => rule.run_on_jest_node(jest_node, ctx),
+            Self::TypescriptNoUseBeforeDefine(rule) => rule.run_on_jest_node(jest_node, ctx),
+            Self::TypescriptNoUselessDefaultAssignment(rule) => {
+                rule.run_on_jest_node(jest_node, ctx)
+            }
             Self::TypescriptNoUselessEmptyExport(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptNoVarRequires(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptNoWrapperObjectTypes(rule) => rule.run_on_jest_node(jest_node, ctx),
@@ -13230,8 +13630,10 @@ impl RuleEnum {
                 rule.run_on_jest_node(jest_node, ctx)
             }
             Self::TypescriptOnlyThrowError(rule) => rule.run_on_jest_node(jest_node, ctx),
+            Self::TypescriptParameterProperties(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptPreferAsConst(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptPreferEnumInitializers(rule) => rule.run_on_jest_node(jest_node, ctx),
+            Self::TypescriptPreferFind(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptPreferForOf(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptPreferFunctionType(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptPreferIncludes(rule) => rule.run_on_jest_node(jest_node, ctx),
@@ -13242,10 +13644,18 @@ impl RuleEnum {
             Self::TypescriptPreferPromiseRejectErrors(rule) => {
                 rule.run_on_jest_node(jest_node, ctx)
             }
+            Self::TypescriptPreferReadonly(rule) => rule.run_on_jest_node(jest_node, ctx),
+            Self::TypescriptPreferReadonlyParameterTypes(rule) => {
+                rule.run_on_jest_node(jest_node, ctx)
+            }
             Self::TypescriptPreferReduceTypeParameter(rule) => {
                 rule.run_on_jest_node(jest_node, ctx)
             }
+            Self::TypescriptPreferRegexpExec(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptPreferReturnThisType(rule) => rule.run_on_jest_node(jest_node, ctx),
+            Self::TypescriptPreferStringStartsEndsWith(rule) => {
+                rule.run_on_jest_node(jest_node, ctx)
+            }
             Self::TypescriptPreferTsExpectError(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptPromiseFunctionAsync(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptRelatedGetterSetterPairs(rule) => rule.run_on_jest_node(jest_node, ctx),
@@ -13257,11 +13667,13 @@ impl RuleEnum {
             }
             Self::TypescriptReturnAwait(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptStrictBooleanExpressions(rule) => rule.run_on_jest_node(jest_node, ctx),
+            Self::TypescriptStrictVoidReturn(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptSwitchExhaustivenessCheck(rule) => {
                 rule.run_on_jest_node(jest_node, ctx)
             }
             Self::TypescriptTripleSlashReference(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptUnboundMethod(rule) => rule.run_on_jest_node(jest_node, ctx),
+            Self::TypescriptUnifiedSignatures(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::TypescriptUseUnknownInCatchCallbackVariable(rule) => {
                 rule.run_on_jest_node(jest_node, ctx)
             }
@@ -13336,6 +13748,7 @@ impl RuleEnum {
             Self::ReactJsxKey(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::ReactJsxMaxDepth(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::ReactJsxNoCommentTextnodes(rule) => rule.run_on_jest_node(jest_node, ctx),
+            Self::ReactJsxNoConstructedContextValues(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::ReactJsxNoDuplicateProps(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::ReactJsxNoScriptUrl(rule) => rule.run_on_jest_node(jest_node, ctx),
             Self::ReactJsxNoTargetBlank(rule) => rule.run_on_jest_node(jest_node, ctx),
@@ -13823,6 +14236,7 @@ impl RuleEnum {
             Self::EslintNoSelfCompare(rule) => rule.should_run(ctx),
             Self::EslintNoSequences(rule) => rule.should_run(ctx),
             Self::EslintNoSetterReturn(rule) => rule.should_run(ctx),
+            Self::EslintNoShadow(rule) => rule.should_run(ctx),
             Self::EslintNoShadowRestrictedNames(rule) => rule.should_run(ctx),
             Self::EslintNoSparseArrays(rule) => rule.should_run(ctx),
             Self::EslintNoTemplateCurlyInString(rule) => rule.should_run(ctx),
@@ -13833,6 +14247,7 @@ impl RuleEnum {
             Self::EslintNoUndef(rule) => rule.should_run(ctx),
             Self::EslintNoUndefined(rule) => rule.should_run(ctx),
             Self::EslintNoUnexpectedMultiline(rule) => rule.should_run(ctx),
+            Self::EslintNoUnmodifiedLoopCondition(rule) => rule.should_run(ctx),
             Self::EslintNoUnneededTernary(rule) => rule.should_run(ctx),
             Self::EslintNoUnreachable(rule) => rule.should_run(ctx),
             Self::EslintNoUnsafeFinally(rule) => rule.should_run(ctx),
@@ -13888,8 +14303,10 @@ impl RuleEnum {
             Self::TypescriptClassLiteralPropertyStyle(rule) => rule.should_run(ctx),
             Self::TypescriptConsistentGenericConstructors(rule) => rule.should_run(ctx),
             Self::TypescriptConsistentIndexedObjectStyle(rule) => rule.should_run(ctx),
+            Self::TypescriptConsistentReturn(rule) => rule.should_run(ctx),
             Self::TypescriptConsistentTypeAssertions(rule) => rule.should_run(ctx),
             Self::TypescriptConsistentTypeDefinitions(rule) => rule.should_run(ctx),
+            Self::TypescriptConsistentTypeExports(rule) => rule.should_run(ctx),
             Self::TypescriptConsistentTypeImports(rule) => rule.should_run(ctx),
             Self::TypescriptExplicitFunctionReturnType(rule) => rule.should_run(ctx),
             Self::TypescriptExplicitModuleBoundaryTypes(rule) => rule.should_run(ctx),
@@ -13928,10 +14345,12 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryBooleanLiteralCompare(rule) => rule.should_run(ctx),
             Self::TypescriptNoUnnecessaryCondition(rule) => rule.should_run(ctx),
             Self::TypescriptNoUnnecessaryParameterPropertyAssignment(rule) => rule.should_run(ctx),
+            Self::TypescriptNoUnnecessaryQualifier(rule) => rule.should_run(ctx),
             Self::TypescriptNoUnnecessaryTemplateExpression(rule) => rule.should_run(ctx),
             Self::TypescriptNoUnnecessaryTypeArguments(rule) => rule.should_run(ctx),
             Self::TypescriptNoUnnecessaryTypeAssertion(rule) => rule.should_run(ctx),
             Self::TypescriptNoUnnecessaryTypeConstraint(rule) => rule.should_run(ctx),
+            Self::TypescriptNoUnnecessaryTypeParameters(rule) => rule.should_run(ctx),
             Self::TypescriptNoUnsafeArgument(rule) => rule.should_run(ctx),
             Self::TypescriptNoUnsafeAssignment(rule) => rule.should_run(ctx),
             Self::TypescriptNoUnsafeCall(rule) => rule.should_run(ctx),
@@ -13942,13 +14361,17 @@ impl RuleEnum {
             Self::TypescriptNoUnsafeReturn(rule) => rule.should_run(ctx),
             Self::TypescriptNoUnsafeTypeAssertion(rule) => rule.should_run(ctx),
             Self::TypescriptNoUnsafeUnaryMinus(rule) => rule.should_run(ctx),
+            Self::TypescriptNoUseBeforeDefine(rule) => rule.should_run(ctx),
+            Self::TypescriptNoUselessDefaultAssignment(rule) => rule.should_run(ctx),
             Self::TypescriptNoUselessEmptyExport(rule) => rule.should_run(ctx),
             Self::TypescriptNoVarRequires(rule) => rule.should_run(ctx),
             Self::TypescriptNoWrapperObjectTypes(rule) => rule.should_run(ctx),
             Self::TypescriptNonNullableTypeAssertionStyle(rule) => rule.should_run(ctx),
             Self::TypescriptOnlyThrowError(rule) => rule.should_run(ctx),
+            Self::TypescriptParameterProperties(rule) => rule.should_run(ctx),
             Self::TypescriptPreferAsConst(rule) => rule.should_run(ctx),
             Self::TypescriptPreferEnumInitializers(rule) => rule.should_run(ctx),
+            Self::TypescriptPreferFind(rule) => rule.should_run(ctx),
             Self::TypescriptPreferForOf(rule) => rule.should_run(ctx),
             Self::TypescriptPreferFunctionType(rule) => rule.should_run(ctx),
             Self::TypescriptPreferIncludes(rule) => rule.should_run(ctx),
@@ -13957,8 +14380,12 @@ impl RuleEnum {
             Self::TypescriptPreferNullishCoalescing(rule) => rule.should_run(ctx),
             Self::TypescriptPreferOptionalChain(rule) => rule.should_run(ctx),
             Self::TypescriptPreferPromiseRejectErrors(rule) => rule.should_run(ctx),
+            Self::TypescriptPreferReadonly(rule) => rule.should_run(ctx),
+            Self::TypescriptPreferReadonlyParameterTypes(rule) => rule.should_run(ctx),
             Self::TypescriptPreferReduceTypeParameter(rule) => rule.should_run(ctx),
+            Self::TypescriptPreferRegexpExec(rule) => rule.should_run(ctx),
             Self::TypescriptPreferReturnThisType(rule) => rule.should_run(ctx),
+            Self::TypescriptPreferStringStartsEndsWith(rule) => rule.should_run(ctx),
             Self::TypescriptPreferTsExpectError(rule) => rule.should_run(ctx),
             Self::TypescriptPromiseFunctionAsync(rule) => rule.should_run(ctx),
             Self::TypescriptRelatedGetterSetterPairs(rule) => rule.should_run(ctx),
@@ -13968,9 +14395,11 @@ impl RuleEnum {
             Self::TypescriptRestrictTemplateExpressions(rule) => rule.should_run(ctx),
             Self::TypescriptReturnAwait(rule) => rule.should_run(ctx),
             Self::TypescriptStrictBooleanExpressions(rule) => rule.should_run(ctx),
+            Self::TypescriptStrictVoidReturn(rule) => rule.should_run(ctx),
             Self::TypescriptSwitchExhaustivenessCheck(rule) => rule.should_run(ctx),
             Self::TypescriptTripleSlashReference(rule) => rule.should_run(ctx),
             Self::TypescriptUnboundMethod(rule) => rule.should_run(ctx),
+            Self::TypescriptUnifiedSignatures(rule) => rule.should_run(ctx),
             Self::TypescriptUseUnknownInCatchCallbackVariable(rule) => rule.should_run(ctx),
             Self::JestConsistentTestIt(rule) => rule.should_run(ctx),
             Self::JestExpectExpect(rule) => rule.should_run(ctx),
@@ -14041,6 +14470,7 @@ impl RuleEnum {
             Self::ReactJsxKey(rule) => rule.should_run(ctx),
             Self::ReactJsxMaxDepth(rule) => rule.should_run(ctx),
             Self::ReactJsxNoCommentTextnodes(rule) => rule.should_run(ctx),
+            Self::ReactJsxNoConstructedContextValues(rule) => rule.should_run(ctx),
             Self::ReactJsxNoDuplicateProps(rule) => rule.should_run(ctx),
             Self::ReactJsxNoScriptUrl(rule) => rule.should_run(ctx),
             Self::ReactJsxNoTargetBlank(rule) => rule.should_run(ctx),
@@ -14514,6 +14944,7 @@ impl RuleEnum {
             Self::EslintNoSelfCompare(_) => EslintNoSelfCompare::IS_TSGOLINT_RULE,
             Self::EslintNoSequences(_) => EslintNoSequences::IS_TSGOLINT_RULE,
             Self::EslintNoSetterReturn(_) => EslintNoSetterReturn::IS_TSGOLINT_RULE,
+            Self::EslintNoShadow(_) => EslintNoShadow::IS_TSGOLINT_RULE,
             Self::EslintNoShadowRestrictedNames(_) => {
                 EslintNoShadowRestrictedNames::IS_TSGOLINT_RULE
             }
@@ -14528,6 +14959,9 @@ impl RuleEnum {
             Self::EslintNoUndef(_) => EslintNoUndef::IS_TSGOLINT_RULE,
             Self::EslintNoUndefined(_) => EslintNoUndefined::IS_TSGOLINT_RULE,
             Self::EslintNoUnexpectedMultiline(_) => EslintNoUnexpectedMultiline::IS_TSGOLINT_RULE,
+            Self::EslintNoUnmodifiedLoopCondition(_) => {
+                EslintNoUnmodifiedLoopCondition::IS_TSGOLINT_RULE
+            }
             Self::EslintNoUnneededTernary(_) => EslintNoUnneededTernary::IS_TSGOLINT_RULE,
             Self::EslintNoUnreachable(_) => EslintNoUnreachable::IS_TSGOLINT_RULE,
             Self::EslintNoUnsafeFinally(_) => EslintNoUnsafeFinally::IS_TSGOLINT_RULE,
@@ -14599,11 +15033,15 @@ impl RuleEnum {
             Self::TypescriptConsistentIndexedObjectStyle(_) => {
                 TypescriptConsistentIndexedObjectStyle::IS_TSGOLINT_RULE
             }
+            Self::TypescriptConsistentReturn(_) => TypescriptConsistentReturn::IS_TSGOLINT_RULE,
             Self::TypescriptConsistentTypeAssertions(_) => {
                 TypescriptConsistentTypeAssertions::IS_TSGOLINT_RULE
             }
             Self::TypescriptConsistentTypeDefinitions(_) => {
                 TypescriptConsistentTypeDefinitions::IS_TSGOLINT_RULE
+            }
+            Self::TypescriptConsistentTypeExports(_) => {
+                TypescriptConsistentTypeExports::IS_TSGOLINT_RULE
             }
             Self::TypescriptConsistentTypeImports(_) => {
                 TypescriptConsistentTypeImports::IS_TSGOLINT_RULE
@@ -14675,6 +15113,9 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryParameterPropertyAssignment(_) => {
                 TypescriptNoUnnecessaryParameterPropertyAssignment::IS_TSGOLINT_RULE
             }
+            Self::TypescriptNoUnnecessaryQualifier(_) => {
+                TypescriptNoUnnecessaryQualifier::IS_TSGOLINT_RULE
+            }
             Self::TypescriptNoUnnecessaryTemplateExpression(_) => {
                 TypescriptNoUnnecessaryTemplateExpression::IS_TSGOLINT_RULE
             }
@@ -14686,6 +15127,9 @@ impl RuleEnum {
             }
             Self::TypescriptNoUnnecessaryTypeConstraint(_) => {
                 TypescriptNoUnnecessaryTypeConstraint::IS_TSGOLINT_RULE
+            }
+            Self::TypescriptNoUnnecessaryTypeParameters(_) => {
+                TypescriptNoUnnecessaryTypeParameters::IS_TSGOLINT_RULE
             }
             Self::TypescriptNoUnsafeArgument(_) => TypescriptNoUnsafeArgument::IS_TSGOLINT_RULE,
             Self::TypescriptNoUnsafeAssignment(_) => TypescriptNoUnsafeAssignment::IS_TSGOLINT_RULE,
@@ -14707,6 +15151,10 @@ impl RuleEnum {
                 TypescriptNoUnsafeTypeAssertion::IS_TSGOLINT_RULE
             }
             Self::TypescriptNoUnsafeUnaryMinus(_) => TypescriptNoUnsafeUnaryMinus::IS_TSGOLINT_RULE,
+            Self::TypescriptNoUseBeforeDefine(_) => TypescriptNoUseBeforeDefine::IS_TSGOLINT_RULE,
+            Self::TypescriptNoUselessDefaultAssignment(_) => {
+                TypescriptNoUselessDefaultAssignment::IS_TSGOLINT_RULE
+            }
             Self::TypescriptNoUselessEmptyExport(_) => {
                 TypescriptNoUselessEmptyExport::IS_TSGOLINT_RULE
             }
@@ -14718,10 +15166,14 @@ impl RuleEnum {
                 TypescriptNonNullableTypeAssertionStyle::IS_TSGOLINT_RULE
             }
             Self::TypescriptOnlyThrowError(_) => TypescriptOnlyThrowError::IS_TSGOLINT_RULE,
+            Self::TypescriptParameterProperties(_) => {
+                TypescriptParameterProperties::IS_TSGOLINT_RULE
+            }
             Self::TypescriptPreferAsConst(_) => TypescriptPreferAsConst::IS_TSGOLINT_RULE,
             Self::TypescriptPreferEnumInitializers(_) => {
                 TypescriptPreferEnumInitializers::IS_TSGOLINT_RULE
             }
+            Self::TypescriptPreferFind(_) => TypescriptPreferFind::IS_TSGOLINT_RULE,
             Self::TypescriptPreferForOf(_) => TypescriptPreferForOf::IS_TSGOLINT_RULE,
             Self::TypescriptPreferFunctionType(_) => TypescriptPreferFunctionType::IS_TSGOLINT_RULE,
             Self::TypescriptPreferIncludes(_) => TypescriptPreferIncludes::IS_TSGOLINT_RULE,
@@ -14740,11 +15192,19 @@ impl RuleEnum {
             Self::TypescriptPreferPromiseRejectErrors(_) => {
                 TypescriptPreferPromiseRejectErrors::IS_TSGOLINT_RULE
             }
+            Self::TypescriptPreferReadonly(_) => TypescriptPreferReadonly::IS_TSGOLINT_RULE,
+            Self::TypescriptPreferReadonlyParameterTypes(_) => {
+                TypescriptPreferReadonlyParameterTypes::IS_TSGOLINT_RULE
+            }
             Self::TypescriptPreferReduceTypeParameter(_) => {
                 TypescriptPreferReduceTypeParameter::IS_TSGOLINT_RULE
             }
+            Self::TypescriptPreferRegexpExec(_) => TypescriptPreferRegexpExec::IS_TSGOLINT_RULE,
             Self::TypescriptPreferReturnThisType(_) => {
                 TypescriptPreferReturnThisType::IS_TSGOLINT_RULE
+            }
+            Self::TypescriptPreferStringStartsEndsWith(_) => {
+                TypescriptPreferStringStartsEndsWith::IS_TSGOLINT_RULE
             }
             Self::TypescriptPreferTsExpectError(_) => {
                 TypescriptPreferTsExpectError::IS_TSGOLINT_RULE
@@ -14769,6 +15229,7 @@ impl RuleEnum {
             Self::TypescriptStrictBooleanExpressions(_) => {
                 TypescriptStrictBooleanExpressions::IS_TSGOLINT_RULE
             }
+            Self::TypescriptStrictVoidReturn(_) => TypescriptStrictVoidReturn::IS_TSGOLINT_RULE,
             Self::TypescriptSwitchExhaustivenessCheck(_) => {
                 TypescriptSwitchExhaustivenessCheck::IS_TSGOLINT_RULE
             }
@@ -14776,6 +15237,7 @@ impl RuleEnum {
                 TypescriptTripleSlashReference::IS_TSGOLINT_RULE
             }
             Self::TypescriptUnboundMethod(_) => TypescriptUnboundMethod::IS_TSGOLINT_RULE,
+            Self::TypescriptUnifiedSignatures(_) => TypescriptUnifiedSignatures::IS_TSGOLINT_RULE,
             Self::TypescriptUseUnknownInCatchCallbackVariable(_) => {
                 TypescriptUseUnknownInCatchCallbackVariable::IS_TSGOLINT_RULE
             }
@@ -14858,6 +15320,9 @@ impl RuleEnum {
             Self::ReactJsxKey(_) => ReactJsxKey::IS_TSGOLINT_RULE,
             Self::ReactJsxMaxDepth(_) => ReactJsxMaxDepth::IS_TSGOLINT_RULE,
             Self::ReactJsxNoCommentTextnodes(_) => ReactJsxNoCommentTextnodes::IS_TSGOLINT_RULE,
+            Self::ReactJsxNoConstructedContextValues(_) => {
+                ReactJsxNoConstructedContextValues::IS_TSGOLINT_RULE
+            }
             Self::ReactJsxNoDuplicateProps(_) => ReactJsxNoDuplicateProps::IS_TSGOLINT_RULE,
             Self::ReactJsxNoScriptUrl(_) => ReactJsxNoScriptUrl::IS_TSGOLINT_RULE,
             Self::ReactJsxNoTargetBlank(_) => ReactJsxNoTargetBlank::IS_TSGOLINT_RULE,
@@ -15450,6 +15915,7 @@ impl RuleEnum {
             Self::EslintNoSelfCompare(_) => EslintNoSelfCompare::HAS_CONFIG,
             Self::EslintNoSequences(_) => EslintNoSequences::HAS_CONFIG,
             Self::EslintNoSetterReturn(_) => EslintNoSetterReturn::HAS_CONFIG,
+            Self::EslintNoShadow(_) => EslintNoShadow::HAS_CONFIG,
             Self::EslintNoShadowRestrictedNames(_) => EslintNoShadowRestrictedNames::HAS_CONFIG,
             Self::EslintNoSparseArrays(_) => EslintNoSparseArrays::HAS_CONFIG,
             Self::EslintNoTemplateCurlyInString(_) => EslintNoTemplateCurlyInString::HAS_CONFIG,
@@ -15460,6 +15926,7 @@ impl RuleEnum {
             Self::EslintNoUndef(_) => EslintNoUndef::HAS_CONFIG,
             Self::EslintNoUndefined(_) => EslintNoUndefined::HAS_CONFIG,
             Self::EslintNoUnexpectedMultiline(_) => EslintNoUnexpectedMultiline::HAS_CONFIG,
+            Self::EslintNoUnmodifiedLoopCondition(_) => EslintNoUnmodifiedLoopCondition::HAS_CONFIG,
             Self::EslintNoUnneededTernary(_) => EslintNoUnneededTernary::HAS_CONFIG,
             Self::EslintNoUnreachable(_) => EslintNoUnreachable::HAS_CONFIG,
             Self::EslintNoUnsafeFinally(_) => EslintNoUnsafeFinally::HAS_CONFIG,
@@ -15527,12 +15994,14 @@ impl RuleEnum {
             Self::TypescriptConsistentIndexedObjectStyle(_) => {
                 TypescriptConsistentIndexedObjectStyle::HAS_CONFIG
             }
+            Self::TypescriptConsistentReturn(_) => TypescriptConsistentReturn::HAS_CONFIG,
             Self::TypescriptConsistentTypeAssertions(_) => {
                 TypescriptConsistentTypeAssertions::HAS_CONFIG
             }
             Self::TypescriptConsistentTypeDefinitions(_) => {
                 TypescriptConsistentTypeDefinitions::HAS_CONFIG
             }
+            Self::TypescriptConsistentTypeExports(_) => TypescriptConsistentTypeExports::HAS_CONFIG,
             Self::TypescriptConsistentTypeImports(_) => TypescriptConsistentTypeImports::HAS_CONFIG,
             Self::TypescriptExplicitFunctionReturnType(_) => {
                 TypescriptExplicitFunctionReturnType::HAS_CONFIG
@@ -15599,6 +16068,9 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryParameterPropertyAssignment(_) => {
                 TypescriptNoUnnecessaryParameterPropertyAssignment::HAS_CONFIG
             }
+            Self::TypescriptNoUnnecessaryQualifier(_) => {
+                TypescriptNoUnnecessaryQualifier::HAS_CONFIG
+            }
             Self::TypescriptNoUnnecessaryTemplateExpression(_) => {
                 TypescriptNoUnnecessaryTemplateExpression::HAS_CONFIG
             }
@@ -15610,6 +16082,9 @@ impl RuleEnum {
             }
             Self::TypescriptNoUnnecessaryTypeConstraint(_) => {
                 TypescriptNoUnnecessaryTypeConstraint::HAS_CONFIG
+            }
+            Self::TypescriptNoUnnecessaryTypeParameters(_) => {
+                TypescriptNoUnnecessaryTypeParameters::HAS_CONFIG
             }
             Self::TypescriptNoUnsafeArgument(_) => TypescriptNoUnsafeArgument::HAS_CONFIG,
             Self::TypescriptNoUnsafeAssignment(_) => TypescriptNoUnsafeAssignment::HAS_CONFIG,
@@ -15625,6 +16100,10 @@ impl RuleEnum {
             Self::TypescriptNoUnsafeReturn(_) => TypescriptNoUnsafeReturn::HAS_CONFIG,
             Self::TypescriptNoUnsafeTypeAssertion(_) => TypescriptNoUnsafeTypeAssertion::HAS_CONFIG,
             Self::TypescriptNoUnsafeUnaryMinus(_) => TypescriptNoUnsafeUnaryMinus::HAS_CONFIG,
+            Self::TypescriptNoUseBeforeDefine(_) => TypescriptNoUseBeforeDefine::HAS_CONFIG,
+            Self::TypescriptNoUselessDefaultAssignment(_) => {
+                TypescriptNoUselessDefaultAssignment::HAS_CONFIG
+            }
             Self::TypescriptNoUselessEmptyExport(_) => TypescriptNoUselessEmptyExport::HAS_CONFIG,
             Self::TypescriptNoVarRequires(_) => TypescriptNoVarRequires::HAS_CONFIG,
             Self::TypescriptNoWrapperObjectTypes(_) => TypescriptNoWrapperObjectTypes::HAS_CONFIG,
@@ -15632,10 +16111,12 @@ impl RuleEnum {
                 TypescriptNonNullableTypeAssertionStyle::HAS_CONFIG
             }
             Self::TypescriptOnlyThrowError(_) => TypescriptOnlyThrowError::HAS_CONFIG,
+            Self::TypescriptParameterProperties(_) => TypescriptParameterProperties::HAS_CONFIG,
             Self::TypescriptPreferAsConst(_) => TypescriptPreferAsConst::HAS_CONFIG,
             Self::TypescriptPreferEnumInitializers(_) => {
                 TypescriptPreferEnumInitializers::HAS_CONFIG
             }
+            Self::TypescriptPreferFind(_) => TypescriptPreferFind::HAS_CONFIG,
             Self::TypescriptPreferForOf(_) => TypescriptPreferForOf::HAS_CONFIG,
             Self::TypescriptPreferFunctionType(_) => TypescriptPreferFunctionType::HAS_CONFIG,
             Self::TypescriptPreferIncludes(_) => TypescriptPreferIncludes::HAS_CONFIG,
@@ -15652,10 +16133,18 @@ impl RuleEnum {
             Self::TypescriptPreferPromiseRejectErrors(_) => {
                 TypescriptPreferPromiseRejectErrors::HAS_CONFIG
             }
+            Self::TypescriptPreferReadonly(_) => TypescriptPreferReadonly::HAS_CONFIG,
+            Self::TypescriptPreferReadonlyParameterTypes(_) => {
+                TypescriptPreferReadonlyParameterTypes::HAS_CONFIG
+            }
             Self::TypescriptPreferReduceTypeParameter(_) => {
                 TypescriptPreferReduceTypeParameter::HAS_CONFIG
             }
+            Self::TypescriptPreferRegexpExec(_) => TypescriptPreferRegexpExec::HAS_CONFIG,
             Self::TypescriptPreferReturnThisType(_) => TypescriptPreferReturnThisType::HAS_CONFIG,
+            Self::TypescriptPreferStringStartsEndsWith(_) => {
+                TypescriptPreferStringStartsEndsWith::HAS_CONFIG
+            }
             Self::TypescriptPreferTsExpectError(_) => TypescriptPreferTsExpectError::HAS_CONFIG,
             Self::TypescriptPromiseFunctionAsync(_) => TypescriptPromiseFunctionAsync::HAS_CONFIG,
             Self::TypescriptRelatedGetterSetterPairs(_) => {
@@ -15673,11 +16162,13 @@ impl RuleEnum {
             Self::TypescriptStrictBooleanExpressions(_) => {
                 TypescriptStrictBooleanExpressions::HAS_CONFIG
             }
+            Self::TypescriptStrictVoidReturn(_) => TypescriptStrictVoidReturn::HAS_CONFIG,
             Self::TypescriptSwitchExhaustivenessCheck(_) => {
                 TypescriptSwitchExhaustivenessCheck::HAS_CONFIG
             }
             Self::TypescriptTripleSlashReference(_) => TypescriptTripleSlashReference::HAS_CONFIG,
             Self::TypescriptUnboundMethod(_) => TypescriptUnboundMethod::HAS_CONFIG,
+            Self::TypescriptUnifiedSignatures(_) => TypescriptUnifiedSignatures::HAS_CONFIG,
             Self::TypescriptUseUnknownInCatchCallbackVariable(_) => {
                 TypescriptUseUnknownInCatchCallbackVariable::HAS_CONFIG
             }
@@ -15754,6 +16245,9 @@ impl RuleEnum {
             Self::ReactJsxKey(_) => ReactJsxKey::HAS_CONFIG,
             Self::ReactJsxMaxDepth(_) => ReactJsxMaxDepth::HAS_CONFIG,
             Self::ReactJsxNoCommentTextnodes(_) => ReactJsxNoCommentTextnodes::HAS_CONFIG,
+            Self::ReactJsxNoConstructedContextValues(_) => {
+                ReactJsxNoConstructedContextValues::HAS_CONFIG
+            }
             Self::ReactJsxNoDuplicateProps(_) => ReactJsxNoDuplicateProps::HAS_CONFIG,
             Self::ReactJsxNoScriptUrl(_) => ReactJsxNoScriptUrl::HAS_CONFIG,
             Self::ReactJsxNoTargetBlank(_) => ReactJsxNoTargetBlank::HAS_CONFIG,
@@ -16273,6 +16767,7 @@ impl RuleEnum {
             Self::EslintNoSelfCompare(rule) => rule.types_info(),
             Self::EslintNoSequences(rule) => rule.types_info(),
             Self::EslintNoSetterReturn(rule) => rule.types_info(),
+            Self::EslintNoShadow(rule) => rule.types_info(),
             Self::EslintNoShadowRestrictedNames(rule) => rule.types_info(),
             Self::EslintNoSparseArrays(rule) => rule.types_info(),
             Self::EslintNoTemplateCurlyInString(rule) => rule.types_info(),
@@ -16283,6 +16778,7 @@ impl RuleEnum {
             Self::EslintNoUndef(rule) => rule.types_info(),
             Self::EslintNoUndefined(rule) => rule.types_info(),
             Self::EslintNoUnexpectedMultiline(rule) => rule.types_info(),
+            Self::EslintNoUnmodifiedLoopCondition(rule) => rule.types_info(),
             Self::EslintNoUnneededTernary(rule) => rule.types_info(),
             Self::EslintNoUnreachable(rule) => rule.types_info(),
             Self::EslintNoUnsafeFinally(rule) => rule.types_info(),
@@ -16338,8 +16834,10 @@ impl RuleEnum {
             Self::TypescriptClassLiteralPropertyStyle(rule) => rule.types_info(),
             Self::TypescriptConsistentGenericConstructors(rule) => rule.types_info(),
             Self::TypescriptConsistentIndexedObjectStyle(rule) => rule.types_info(),
+            Self::TypescriptConsistentReturn(rule) => rule.types_info(),
             Self::TypescriptConsistentTypeAssertions(rule) => rule.types_info(),
             Self::TypescriptConsistentTypeDefinitions(rule) => rule.types_info(),
+            Self::TypescriptConsistentTypeExports(rule) => rule.types_info(),
             Self::TypescriptConsistentTypeImports(rule) => rule.types_info(),
             Self::TypescriptExplicitFunctionReturnType(rule) => rule.types_info(),
             Self::TypescriptExplicitModuleBoundaryTypes(rule) => rule.types_info(),
@@ -16378,10 +16876,12 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryBooleanLiteralCompare(rule) => rule.types_info(),
             Self::TypescriptNoUnnecessaryCondition(rule) => rule.types_info(),
             Self::TypescriptNoUnnecessaryParameterPropertyAssignment(rule) => rule.types_info(),
+            Self::TypescriptNoUnnecessaryQualifier(rule) => rule.types_info(),
             Self::TypescriptNoUnnecessaryTemplateExpression(rule) => rule.types_info(),
             Self::TypescriptNoUnnecessaryTypeArguments(rule) => rule.types_info(),
             Self::TypescriptNoUnnecessaryTypeAssertion(rule) => rule.types_info(),
             Self::TypescriptNoUnnecessaryTypeConstraint(rule) => rule.types_info(),
+            Self::TypescriptNoUnnecessaryTypeParameters(rule) => rule.types_info(),
             Self::TypescriptNoUnsafeArgument(rule) => rule.types_info(),
             Self::TypescriptNoUnsafeAssignment(rule) => rule.types_info(),
             Self::TypescriptNoUnsafeCall(rule) => rule.types_info(),
@@ -16392,13 +16892,17 @@ impl RuleEnum {
             Self::TypescriptNoUnsafeReturn(rule) => rule.types_info(),
             Self::TypescriptNoUnsafeTypeAssertion(rule) => rule.types_info(),
             Self::TypescriptNoUnsafeUnaryMinus(rule) => rule.types_info(),
+            Self::TypescriptNoUseBeforeDefine(rule) => rule.types_info(),
+            Self::TypescriptNoUselessDefaultAssignment(rule) => rule.types_info(),
             Self::TypescriptNoUselessEmptyExport(rule) => rule.types_info(),
             Self::TypescriptNoVarRequires(rule) => rule.types_info(),
             Self::TypescriptNoWrapperObjectTypes(rule) => rule.types_info(),
             Self::TypescriptNonNullableTypeAssertionStyle(rule) => rule.types_info(),
             Self::TypescriptOnlyThrowError(rule) => rule.types_info(),
+            Self::TypescriptParameterProperties(rule) => rule.types_info(),
             Self::TypescriptPreferAsConst(rule) => rule.types_info(),
             Self::TypescriptPreferEnumInitializers(rule) => rule.types_info(),
+            Self::TypescriptPreferFind(rule) => rule.types_info(),
             Self::TypescriptPreferForOf(rule) => rule.types_info(),
             Self::TypescriptPreferFunctionType(rule) => rule.types_info(),
             Self::TypescriptPreferIncludes(rule) => rule.types_info(),
@@ -16407,8 +16911,12 @@ impl RuleEnum {
             Self::TypescriptPreferNullishCoalescing(rule) => rule.types_info(),
             Self::TypescriptPreferOptionalChain(rule) => rule.types_info(),
             Self::TypescriptPreferPromiseRejectErrors(rule) => rule.types_info(),
+            Self::TypescriptPreferReadonly(rule) => rule.types_info(),
+            Self::TypescriptPreferReadonlyParameterTypes(rule) => rule.types_info(),
             Self::TypescriptPreferReduceTypeParameter(rule) => rule.types_info(),
+            Self::TypescriptPreferRegexpExec(rule) => rule.types_info(),
             Self::TypescriptPreferReturnThisType(rule) => rule.types_info(),
+            Self::TypescriptPreferStringStartsEndsWith(rule) => rule.types_info(),
             Self::TypescriptPreferTsExpectError(rule) => rule.types_info(),
             Self::TypescriptPromiseFunctionAsync(rule) => rule.types_info(),
             Self::TypescriptRelatedGetterSetterPairs(rule) => rule.types_info(),
@@ -16418,9 +16926,11 @@ impl RuleEnum {
             Self::TypescriptRestrictTemplateExpressions(rule) => rule.types_info(),
             Self::TypescriptReturnAwait(rule) => rule.types_info(),
             Self::TypescriptStrictBooleanExpressions(rule) => rule.types_info(),
+            Self::TypescriptStrictVoidReturn(rule) => rule.types_info(),
             Self::TypescriptSwitchExhaustivenessCheck(rule) => rule.types_info(),
             Self::TypescriptTripleSlashReference(rule) => rule.types_info(),
             Self::TypescriptUnboundMethod(rule) => rule.types_info(),
+            Self::TypescriptUnifiedSignatures(rule) => rule.types_info(),
             Self::TypescriptUseUnknownInCatchCallbackVariable(rule) => rule.types_info(),
             Self::JestConsistentTestIt(rule) => rule.types_info(),
             Self::JestExpectExpect(rule) => rule.types_info(),
@@ -16491,6 +17001,7 @@ impl RuleEnum {
             Self::ReactJsxKey(rule) => rule.types_info(),
             Self::ReactJsxMaxDepth(rule) => rule.types_info(),
             Self::ReactJsxNoCommentTextnodes(rule) => rule.types_info(),
+            Self::ReactJsxNoConstructedContextValues(rule) => rule.types_info(),
             Self::ReactJsxNoDuplicateProps(rule) => rule.types_info(),
             Self::ReactJsxNoScriptUrl(rule) => rule.types_info(),
             Self::ReactJsxNoTargetBlank(rule) => rule.types_info(),
@@ -16948,6 +17459,7 @@ impl RuleEnum {
             Self::EslintNoSelfCompare(rule) => rule.run_info(),
             Self::EslintNoSequences(rule) => rule.run_info(),
             Self::EslintNoSetterReturn(rule) => rule.run_info(),
+            Self::EslintNoShadow(rule) => rule.run_info(),
             Self::EslintNoShadowRestrictedNames(rule) => rule.run_info(),
             Self::EslintNoSparseArrays(rule) => rule.run_info(),
             Self::EslintNoTemplateCurlyInString(rule) => rule.run_info(),
@@ -16958,6 +17470,7 @@ impl RuleEnum {
             Self::EslintNoUndef(rule) => rule.run_info(),
             Self::EslintNoUndefined(rule) => rule.run_info(),
             Self::EslintNoUnexpectedMultiline(rule) => rule.run_info(),
+            Self::EslintNoUnmodifiedLoopCondition(rule) => rule.run_info(),
             Self::EslintNoUnneededTernary(rule) => rule.run_info(),
             Self::EslintNoUnreachable(rule) => rule.run_info(),
             Self::EslintNoUnsafeFinally(rule) => rule.run_info(),
@@ -17013,8 +17526,10 @@ impl RuleEnum {
             Self::TypescriptClassLiteralPropertyStyle(rule) => rule.run_info(),
             Self::TypescriptConsistentGenericConstructors(rule) => rule.run_info(),
             Self::TypescriptConsistentIndexedObjectStyle(rule) => rule.run_info(),
+            Self::TypescriptConsistentReturn(rule) => rule.run_info(),
             Self::TypescriptConsistentTypeAssertions(rule) => rule.run_info(),
             Self::TypescriptConsistentTypeDefinitions(rule) => rule.run_info(),
+            Self::TypescriptConsistentTypeExports(rule) => rule.run_info(),
             Self::TypescriptConsistentTypeImports(rule) => rule.run_info(),
             Self::TypescriptExplicitFunctionReturnType(rule) => rule.run_info(),
             Self::TypescriptExplicitModuleBoundaryTypes(rule) => rule.run_info(),
@@ -17053,10 +17568,12 @@ impl RuleEnum {
             Self::TypescriptNoUnnecessaryBooleanLiteralCompare(rule) => rule.run_info(),
             Self::TypescriptNoUnnecessaryCondition(rule) => rule.run_info(),
             Self::TypescriptNoUnnecessaryParameterPropertyAssignment(rule) => rule.run_info(),
+            Self::TypescriptNoUnnecessaryQualifier(rule) => rule.run_info(),
             Self::TypescriptNoUnnecessaryTemplateExpression(rule) => rule.run_info(),
             Self::TypescriptNoUnnecessaryTypeArguments(rule) => rule.run_info(),
             Self::TypescriptNoUnnecessaryTypeAssertion(rule) => rule.run_info(),
             Self::TypescriptNoUnnecessaryTypeConstraint(rule) => rule.run_info(),
+            Self::TypescriptNoUnnecessaryTypeParameters(rule) => rule.run_info(),
             Self::TypescriptNoUnsafeArgument(rule) => rule.run_info(),
             Self::TypescriptNoUnsafeAssignment(rule) => rule.run_info(),
             Self::TypescriptNoUnsafeCall(rule) => rule.run_info(),
@@ -17067,13 +17584,17 @@ impl RuleEnum {
             Self::TypescriptNoUnsafeReturn(rule) => rule.run_info(),
             Self::TypescriptNoUnsafeTypeAssertion(rule) => rule.run_info(),
             Self::TypescriptNoUnsafeUnaryMinus(rule) => rule.run_info(),
+            Self::TypescriptNoUseBeforeDefine(rule) => rule.run_info(),
+            Self::TypescriptNoUselessDefaultAssignment(rule) => rule.run_info(),
             Self::TypescriptNoUselessEmptyExport(rule) => rule.run_info(),
             Self::TypescriptNoVarRequires(rule) => rule.run_info(),
             Self::TypescriptNoWrapperObjectTypes(rule) => rule.run_info(),
             Self::TypescriptNonNullableTypeAssertionStyle(rule) => rule.run_info(),
             Self::TypescriptOnlyThrowError(rule) => rule.run_info(),
+            Self::TypescriptParameterProperties(rule) => rule.run_info(),
             Self::TypescriptPreferAsConst(rule) => rule.run_info(),
             Self::TypescriptPreferEnumInitializers(rule) => rule.run_info(),
+            Self::TypescriptPreferFind(rule) => rule.run_info(),
             Self::TypescriptPreferForOf(rule) => rule.run_info(),
             Self::TypescriptPreferFunctionType(rule) => rule.run_info(),
             Self::TypescriptPreferIncludes(rule) => rule.run_info(),
@@ -17082,8 +17603,12 @@ impl RuleEnum {
             Self::TypescriptPreferNullishCoalescing(rule) => rule.run_info(),
             Self::TypescriptPreferOptionalChain(rule) => rule.run_info(),
             Self::TypescriptPreferPromiseRejectErrors(rule) => rule.run_info(),
+            Self::TypescriptPreferReadonly(rule) => rule.run_info(),
+            Self::TypescriptPreferReadonlyParameterTypes(rule) => rule.run_info(),
             Self::TypescriptPreferReduceTypeParameter(rule) => rule.run_info(),
+            Self::TypescriptPreferRegexpExec(rule) => rule.run_info(),
             Self::TypescriptPreferReturnThisType(rule) => rule.run_info(),
+            Self::TypescriptPreferStringStartsEndsWith(rule) => rule.run_info(),
             Self::TypescriptPreferTsExpectError(rule) => rule.run_info(),
             Self::TypescriptPromiseFunctionAsync(rule) => rule.run_info(),
             Self::TypescriptRelatedGetterSetterPairs(rule) => rule.run_info(),
@@ -17093,9 +17618,11 @@ impl RuleEnum {
             Self::TypescriptRestrictTemplateExpressions(rule) => rule.run_info(),
             Self::TypescriptReturnAwait(rule) => rule.run_info(),
             Self::TypescriptStrictBooleanExpressions(rule) => rule.run_info(),
+            Self::TypescriptStrictVoidReturn(rule) => rule.run_info(),
             Self::TypescriptSwitchExhaustivenessCheck(rule) => rule.run_info(),
             Self::TypescriptTripleSlashReference(rule) => rule.run_info(),
             Self::TypescriptUnboundMethod(rule) => rule.run_info(),
+            Self::TypescriptUnifiedSignatures(rule) => rule.run_info(),
             Self::TypescriptUseUnknownInCatchCallbackVariable(rule) => rule.run_info(),
             Self::JestConsistentTestIt(rule) => rule.run_info(),
             Self::JestExpectExpect(rule) => rule.run_info(),
@@ -17166,6 +17693,7 @@ impl RuleEnum {
             Self::ReactJsxKey(rule) => rule.run_info(),
             Self::ReactJsxMaxDepth(rule) => rule.run_info(),
             Self::ReactJsxNoCommentTextnodes(rule) => rule.run_info(),
+            Self::ReactJsxNoConstructedContextValues(rule) => rule.run_info(),
             Self::ReactJsxNoDuplicateProps(rule) => rule.run_info(),
             Self::ReactJsxNoScriptUrl(rule) => rule.run_info(),
             Self::ReactJsxNoTargetBlank(rule) => rule.run_info(),
@@ -17645,6 +18173,7 @@ pub static RULES: std::sync::LazyLock<Vec<RuleEnum>> = std::sync::LazyLock::new(
         RuleEnum::EslintNoSelfCompare(EslintNoSelfCompare::default()),
         RuleEnum::EslintNoSequences(EslintNoSequences::default()),
         RuleEnum::EslintNoSetterReturn(EslintNoSetterReturn::default()),
+        RuleEnum::EslintNoShadow(EslintNoShadow::default()),
         RuleEnum::EslintNoShadowRestrictedNames(EslintNoShadowRestrictedNames::default()),
         RuleEnum::EslintNoSparseArrays(EslintNoSparseArrays::default()),
         RuleEnum::EslintNoTemplateCurlyInString(EslintNoTemplateCurlyInString::default()),
@@ -17655,6 +18184,7 @@ pub static RULES: std::sync::LazyLock<Vec<RuleEnum>> = std::sync::LazyLock::new(
         RuleEnum::EslintNoUndef(EslintNoUndef::default()),
         RuleEnum::EslintNoUndefined(EslintNoUndefined::default()),
         RuleEnum::EslintNoUnexpectedMultiline(EslintNoUnexpectedMultiline::default()),
+        RuleEnum::EslintNoUnmodifiedLoopCondition(EslintNoUnmodifiedLoopCondition::default()),
         RuleEnum::EslintNoUnneededTernary(EslintNoUnneededTernary::default()),
         RuleEnum::EslintNoUnreachable(EslintNoUnreachable::default()),
         RuleEnum::EslintNoUnsafeFinally(EslintNoUnsafeFinally::default()),
@@ -17718,10 +18248,12 @@ pub static RULES: std::sync::LazyLock<Vec<RuleEnum>> = std::sync::LazyLock::new(
         RuleEnum::TypescriptConsistentIndexedObjectStyle(
             TypescriptConsistentIndexedObjectStyle::default(),
         ),
+        RuleEnum::TypescriptConsistentReturn(TypescriptConsistentReturn::default()),
         RuleEnum::TypescriptConsistentTypeAssertions(TypescriptConsistentTypeAssertions::default()),
         RuleEnum::TypescriptConsistentTypeDefinitions(
             TypescriptConsistentTypeDefinitions::default(),
         ),
+        RuleEnum::TypescriptConsistentTypeExports(TypescriptConsistentTypeExports::default()),
         RuleEnum::TypescriptConsistentTypeImports(TypescriptConsistentTypeImports::default()),
         RuleEnum::TypescriptExplicitFunctionReturnType(
             TypescriptExplicitFunctionReturnType::default(),
@@ -17782,6 +18314,7 @@ pub static RULES: std::sync::LazyLock<Vec<RuleEnum>> = std::sync::LazyLock::new(
         RuleEnum::TypescriptNoUnnecessaryParameterPropertyAssignment(
             TypescriptNoUnnecessaryParameterPropertyAssignment::default(),
         ),
+        RuleEnum::TypescriptNoUnnecessaryQualifier(TypescriptNoUnnecessaryQualifier::default()),
         RuleEnum::TypescriptNoUnnecessaryTemplateExpression(
             TypescriptNoUnnecessaryTemplateExpression::default(),
         ),
@@ -17793,6 +18326,9 @@ pub static RULES: std::sync::LazyLock<Vec<RuleEnum>> = std::sync::LazyLock::new(
         ),
         RuleEnum::TypescriptNoUnnecessaryTypeConstraint(
             TypescriptNoUnnecessaryTypeConstraint::default(),
+        ),
+        RuleEnum::TypescriptNoUnnecessaryTypeParameters(
+            TypescriptNoUnnecessaryTypeParameters::default(),
         ),
         RuleEnum::TypescriptNoUnsafeArgument(TypescriptNoUnsafeArgument::default()),
         RuleEnum::TypescriptNoUnsafeAssignment(TypescriptNoUnsafeAssignment::default()),
@@ -17806,6 +18342,10 @@ pub static RULES: std::sync::LazyLock<Vec<RuleEnum>> = std::sync::LazyLock::new(
         RuleEnum::TypescriptNoUnsafeReturn(TypescriptNoUnsafeReturn::default()),
         RuleEnum::TypescriptNoUnsafeTypeAssertion(TypescriptNoUnsafeTypeAssertion::default()),
         RuleEnum::TypescriptNoUnsafeUnaryMinus(TypescriptNoUnsafeUnaryMinus::default()),
+        RuleEnum::TypescriptNoUseBeforeDefine(TypescriptNoUseBeforeDefine::default()),
+        RuleEnum::TypescriptNoUselessDefaultAssignment(
+            TypescriptNoUselessDefaultAssignment::default(),
+        ),
         RuleEnum::TypescriptNoUselessEmptyExport(TypescriptNoUselessEmptyExport::default()),
         RuleEnum::TypescriptNoVarRequires(TypescriptNoVarRequires::default()),
         RuleEnum::TypescriptNoWrapperObjectTypes(TypescriptNoWrapperObjectTypes::default()),
@@ -17813,8 +18353,10 @@ pub static RULES: std::sync::LazyLock<Vec<RuleEnum>> = std::sync::LazyLock::new(
             TypescriptNonNullableTypeAssertionStyle::default(),
         ),
         RuleEnum::TypescriptOnlyThrowError(TypescriptOnlyThrowError::default()),
+        RuleEnum::TypescriptParameterProperties(TypescriptParameterProperties::default()),
         RuleEnum::TypescriptPreferAsConst(TypescriptPreferAsConst::default()),
         RuleEnum::TypescriptPreferEnumInitializers(TypescriptPreferEnumInitializers::default()),
+        RuleEnum::TypescriptPreferFind(TypescriptPreferFind::default()),
         RuleEnum::TypescriptPreferForOf(TypescriptPreferForOf::default()),
         RuleEnum::TypescriptPreferFunctionType(TypescriptPreferFunctionType::default()),
         RuleEnum::TypescriptPreferIncludes(TypescriptPreferIncludes::default()),
@@ -17825,10 +18367,18 @@ pub static RULES: std::sync::LazyLock<Vec<RuleEnum>> = std::sync::LazyLock::new(
         RuleEnum::TypescriptPreferPromiseRejectErrors(
             TypescriptPreferPromiseRejectErrors::default(),
         ),
+        RuleEnum::TypescriptPreferReadonly(TypescriptPreferReadonly::default()),
+        RuleEnum::TypescriptPreferReadonlyParameterTypes(
+            TypescriptPreferReadonlyParameterTypes::default(),
+        ),
         RuleEnum::TypescriptPreferReduceTypeParameter(
             TypescriptPreferReduceTypeParameter::default(),
         ),
+        RuleEnum::TypescriptPreferRegexpExec(TypescriptPreferRegexpExec::default()),
         RuleEnum::TypescriptPreferReturnThisType(TypescriptPreferReturnThisType::default()),
+        RuleEnum::TypescriptPreferStringStartsEndsWith(
+            TypescriptPreferStringStartsEndsWith::default(),
+        ),
         RuleEnum::TypescriptPreferTsExpectError(TypescriptPreferTsExpectError::default()),
         RuleEnum::TypescriptPromiseFunctionAsync(TypescriptPromiseFunctionAsync::default()),
         RuleEnum::TypescriptRelatedGetterSetterPairs(TypescriptRelatedGetterSetterPairs::default()),
@@ -17840,11 +18390,13 @@ pub static RULES: std::sync::LazyLock<Vec<RuleEnum>> = std::sync::LazyLock::new(
         ),
         RuleEnum::TypescriptReturnAwait(TypescriptReturnAwait::default()),
         RuleEnum::TypescriptStrictBooleanExpressions(TypescriptStrictBooleanExpressions::default()),
+        RuleEnum::TypescriptStrictVoidReturn(TypescriptStrictVoidReturn::default()),
         RuleEnum::TypescriptSwitchExhaustivenessCheck(
             TypescriptSwitchExhaustivenessCheck::default(),
         ),
         RuleEnum::TypescriptTripleSlashReference(TypescriptTripleSlashReference::default()),
         RuleEnum::TypescriptUnboundMethod(TypescriptUnboundMethod::default()),
+        RuleEnum::TypescriptUnifiedSignatures(TypescriptUnifiedSignatures::default()),
         RuleEnum::TypescriptUseUnknownInCatchCallbackVariable(
             TypescriptUseUnknownInCatchCallbackVariable::default(),
         ),
@@ -17919,6 +18471,7 @@ pub static RULES: std::sync::LazyLock<Vec<RuleEnum>> = std::sync::LazyLock::new(
         RuleEnum::ReactJsxKey(ReactJsxKey::default()),
         RuleEnum::ReactJsxMaxDepth(ReactJsxMaxDepth::default()),
         RuleEnum::ReactJsxNoCommentTextnodes(ReactJsxNoCommentTextnodes::default()),
+        RuleEnum::ReactJsxNoConstructedContextValues(ReactJsxNoConstructedContextValues::default()),
         RuleEnum::ReactJsxNoDuplicateProps(ReactJsxNoDuplicateProps::default()),
         RuleEnum::ReactJsxNoScriptUrl(ReactJsxNoScriptUrl::default()),
         RuleEnum::ReactJsxNoTargetBlank(ReactJsxNoTargetBlank::default()),

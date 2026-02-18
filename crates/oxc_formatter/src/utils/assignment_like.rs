@@ -1061,7 +1061,7 @@ fn is_short_argument(argument: &Expression, threshold: u16, f: &Formatter) -> bo
 /// If the type arguments is complex the function call is breakable.
 ///
 /// NOTE: This function does not follow Prettier exactly.
-////// <https://github.com/prettier/prettier/blob/a043ac0d733c4d53f980aa73807a63fc914f23bd/src/language-js/print/assignment.js#L432-L459>
+/// <https://github.com/prettier/prettier/blob/a043ac0d733c4d53f980aa73807a63fc914f23bd/src/language-js/print/assignment.js#L432-L459>
 fn is_complex_type_arguments<'a>(
     type_arguments: &TSTypeParameterInstantiation<'a>,
     f: &Formatter<'_, 'a>,
