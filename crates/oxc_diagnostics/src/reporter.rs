@@ -114,38 +114,31 @@ impl Info {
         let mut filename = String::new();
         let mut message = String::new();
         let mut severity = Severity::Warning;
-        let mut rule_id = None;
-        if let Some(mut labels) = diagnostic.labels() {
-            if let Some(source) = diagnostic.source_code() {
-                if let Some(label) = labels.next() {
-                    if let Ok(span_content) = source.read_span(label.inner(), 0, 0) {
-                        start.line = span_content.line() + 1;
-                        start.column = span_content.column() + 1;
+        let rule_id = diagnostic.code().map(|code| code.to_string());
 
-                        let end_offset = label.inner().offset() + label.inner().len();
+        if let Some(mut labels) = diagnostic.labels()
+            && let Some(source) = diagnostic.source_code()
+            && let Some(label) = labels.next()
+            && let Ok(span_content) = source.read_span(label.inner(), 0, 0)
+        {
+            start.line = span_content.line() + 1;
+            start.column = span_content.column() + 1;
 
-                        if let Ok(span_content) =
-                            source.read_span(&SourceSpan::from((end_offset, 0)), 0, 0)
-                        {
-                            end.line = span_content.line() + 1;
-                            end.column = span_content.column() + 1;
-                        }
+            let end_offset = label.inner().offset() + label.inner().len();
 
-                        if let Some(name) = span_content.name() {
-                            filename = name.to_string();
-                        }
-                        if matches!(diagnostic.severity(), Some(Severity::Error)) {
-                            severity = Severity::Error;
-                        }
-                        let msg = diagnostic.to_string();
-                        // Our messages usually comes with `eslint(rule): message`
-                        (rule_id, message) = msg.split_once(':').map_or_else(
-                            || (None, msg.to_string()),
-                            |(id, msg)| (Some(id.to_string()), msg.trim().to_string()),
-                        );
-                    }
-                }
+            if let Ok(span_content) = source.read_span(&SourceSpan::from((end_offset, 0)), 0, 0) {
+                end.line = span_content.line() + 1;
+                end.column = span_content.column() + 1;
             }
+
+            if let Some(name) = span_content.name() {
+                filename = name.to_string();
+            }
+            if matches!(diagnostic.severity(), Some(Severity::Error)) {
+                severity = Severity::Error;
+            }
+
+            message = diagnostic.to_string();
         }
 
         Self { start, end, filename, message, severity, rule_id }
