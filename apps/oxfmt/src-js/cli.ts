@@ -1,11 +1,13 @@
 import { runCli } from "./bindings";
 import {
   initExternalFormatter,
-  formatEmbeddedCode,
-  formatFile,
-  sortTailwindClasses,
   disposeExternalFormatter,
+  formatFile,
+  formatEmbeddedCode,
+  formatEmbeddedDoc,
+  sortTailwindClasses,
 } from "./cli/worker-proxy";
+import { loadJsConfig } from "./cli/js_config";
 
 // napi-JS `oxfmt` CLI entry point
 // See also `run_cli()` function in `./src/main_napi.rs`
@@ -21,14 +23,18 @@ void (async () => {
   // See: https://github.com/napi-rs/napi-rs/issues/1630
   // @ts-expect-error: `_handle` is an internal API
   if (!process.stdout.isTTY) process.stdout._handle?.setBlocking?.(true);
+  // @ts-expect-error: `_handle` is an internal API
+  if (!process.stdin.isTTY) process.stdin._handle?.setBlocking?.(true);
 
   // Call the Rust CLI first, to parse args and determine mode
   // NOTE: If the mode is formatter CLI, it will also perform formatting and return an exit code
   const [mode, exitCode] = await runCli(
     args,
+    loadJsConfig,
     initExternalFormatter,
-    formatEmbeddedCode,
     formatFile,
+    formatEmbeddedCode,
+    formatEmbeddedDoc,
     sortTailwindClasses,
   );
 

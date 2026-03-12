@@ -9,7 +9,9 @@ use oxc_syntax::class::ElementKind;
 use crate::{context::LintContext, rule::Rule};
 
 fn no_unused_private_class_members_diagnostic(name: &str, span: Span) -> OxcDiagnostic {
-    OxcDiagnostic::warn(format!("'{name}' is defined but never used.")).with_label(span)
+    OxcDiagnostic::warn(format!("'{name}' is defined but never used."))
+        .with_help("Remove the declaration or use it in the code.")
+        .with_label(span)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -192,6 +194,13 @@ fn is_read(current_node_id: NodeId, semantic: &Semantic) -> bool {
                     return true;
                 }
                 if is_value_context(parent, curr, semantic) {
+                    return true;
+                }
+            }
+            (AstKind::PrivateFieldExpression(_), AstKind::LogicalExpression(logical_expr)) => {
+                // Reading the left side of a logical expression can affect control flow
+                // (e.g. `this.#flag && sideEffect()`), even when used as a statement.
+                if logical_expr.left.span().contains_inclusive(curr.span()) {
                     return true;
                 }
             }
@@ -493,6 +502,7 @@ fn test() {
         r"class Foo { #x; method(val) { switch(val) { case (a ? this.#x : b): break; } } }",
         r"class Foo { #x; method() { throw a ? this.#x : new Error(); } }",
         r"class Foo { #x; method() { while (a ? this.#x : b) {} } }",
+        r"class Bug { #flag = false; foo() { this.#flag && console.log('spam'); } }",
         r"class Foo { #a; #b; #c; method() { return this.#a ? this.#b : this.#c; } }",
         // Issue #15548: Private member used in logical expression on RHS of assignment
         r"class ExampleFoo { #foo = 0; foo(foo) { foo = foo ?? this.#foo; return foo; } }",

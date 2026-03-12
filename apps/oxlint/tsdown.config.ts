@@ -2,6 +2,9 @@ import fs from "node:fs";
 import { join as pathJoin, relative as pathRelative, dirname } from "node:path";
 import { defineConfig } from "tsdown";
 import { parseSync, Visitor } from "oxc-parser";
+// oxlint-disable-next-line typescript/ban-ts-comment
+// @ts-ignore - file is generated and not checked in to git
+import ruleNames from "./src-js/generated/plugin-eslint/rule_names.ts";
 
 import type { Plugin } from "rolldown";
 
@@ -26,9 +29,11 @@ const commonConfig = defineConfig({
   unbundle: false,
   hash: false,
   fixedExtension: false,
-  // tsdown warns about final bundled modules by `unbundle` + `external`.
-  // But we know what we are doing, just suppress the warnings.
-  inlineOnly: false,
+  deps: {
+    // tsdown warns about final bundled modules by `unbundle` + `deps.neverBundle`.
+    // But we know what we are doing, just suppress the warnings.
+    onlyBundle: false,
+  },
 });
 
 // Minification options.
@@ -63,6 +68,25 @@ const pluginsPkgConfig = defineConfig({
   define: definedGlobals,
 });
 
+// Base config for `oxlint-plugin-eslint` package
+const pluginEslintPkgConfig = defineConfig({
+  ...commonConfig,
+  outDir: "dist-pkg-plugin-eslint",
+  minify: minifyConfig,
+  // `build.ts` deletes the directory before TSDown runs.
+  // This allows generating the ESM and CommonJS builds in the same directory.
+  clean: false,
+  dts: false,
+});
+
+// Build entries for `oxlint-plugin-eslint` rule files.
+// Each rule is a separate CJS file, lazy-loaded on demand.
+const pluginEslintRulesEntries: Record<string, string> = {};
+for (const ruleName of ruleNames) {
+  pluginEslintRulesEntries[`rules/${ruleName}`] =
+    `src-js/generated/plugin-eslint/rules/${ruleName}.cjs`;
+}
+
 // Plugins.
 // Only remove debug assertions in release build.
 const plugins = [createReplaceGlobalsPlugin()];
@@ -75,11 +99,14 @@ export default defineConfig([
     ...commonConfig,
     entry: ["src-js/cli.ts", "src-js/index.ts", "src-js/plugins-dev.ts"],
     format: "esm",
-    external: [
-      // External native bindings
-      "./oxlint.*.node",
-      "@oxlint/*",
-    ],
+    deps: {
+      ...commonConfig.deps,
+      neverBundle: [
+        // External native bindings
+        "./oxlint.*.node",
+        "@oxlint/*",
+      ],
+    },
     minify: minifyConfig,
     dts: true,
     attw: { profile: "esm-only" },
@@ -89,18 +116,6 @@ export default defineConfig([
       // For `replaceAssertsPlugin` and `replaceGlobalsPlugin`
       experimental: { nativeMagicString: true },
     },
-  },
-
-  // TypeScript.
-  // Bundled separately and lazy-loaded, as it's a lot of code.
-  // Only used for tokens APIs.
-  {
-    ...commonConfig,
-    entry: "src-js/plugins/typescript.cjs",
-    format: "commonjs",
-    // Minify as this bundle is just dependencies. We don't need to be able to debug it.
-    // Minification halves the size of the bundle.
-    minify: true,
   },
 
   // `@oxlint/plugins` package.
@@ -114,6 +129,31 @@ export default defineConfig([
     ...pluginsPkgConfig,
     format: "commonjs",
     dts: false,
+  },
+
+  // `oxlint-plugin-eslint` package
+  {
+    ...pluginEslintPkgConfig,
+    entry: { index: "src-js/plugin-eslint/index.ts" },
+    format: "esm",
+    banner: {
+      js: [
+        "/**",
+        " * ESLint's rules code copied from https://github.com/eslint/eslint",
+        " *",
+        " * License: MIT",
+        " * https://github.com/eslint/eslint/blob/a0d1a3772679d3d74bb860fc65b5b58678acd452/LICENSE",
+        " */",
+      ].join("\n"),
+    },
+  },
+  {
+    ...pluginEslintPkgConfig,
+    entry: pluginEslintRulesEntries,
+    format: "commonjs",
+    outputOptions: {
+      chunkFileNames: "common/[name].cjs",
+    },
   },
 ]);
 
@@ -169,7 +209,7 @@ function createReplaceAssertsPlugin(): Plugin {
     name: "replace-asserts",
     transform: {
       // Only process TS files in `src-js` directory
-      filter: { id: /\/src-js\/.+\.ts$/ },
+      filter: { id: /\/src-js\/.+(?<!\.d)\.ts$/ },
 
       async handler(code, path, meta) {
         const magicString = meta.magicString!;
@@ -277,7 +317,7 @@ function createReplaceGlobalsPlugin(): Plugin {
     name: "replace-globals",
     transform: {
       // Only process TS files in `src-js` directory
-      filter: { id: /\/src-js\/.+\.ts$/ },
+      filter: { id: /\/src-js\/.+(?<!\.d)\.ts$/ },
 
       async handler(code, path, meta) {
         const magicString = meta.magicString!;

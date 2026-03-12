@@ -208,10 +208,11 @@ fn generate_deserializers(
     #[rustfmt::skip]
     let code_type_definition_linter = "
         import type { Program } from './types.d.ts';
+        import type { Node, Comment } from '../plugins/types.ts';
         import type { Location as SourceLocation } from '../plugins/location.ts';
 
         type BufferWithArrays = Uint8Array & { uint32: Uint32Array; float64: Float64Array };
-        type GetLoc = (node: { range: [number, number] }) => SourceLocation;
+        type GetLoc = (node: Node | Comment) => SourceLocation;
 
         export declare function deserializeProgramOnly(
             buffer: BufferWithArrays,
@@ -1305,6 +1306,10 @@ struct Constants {
     is_jsx_pos: u32,
     /// Offset within buffer of `bool` indicating if source text has BOM
     has_bom_pos: u32,
+    /// Offset within buffer of `u32` containing position of lexer `Token`s
+    tokens_offset_pos: u32,
+    /// Offset within buffer of `u32` containing number of lexer `Token`s
+    tokens_len_pos: u32,
     /// Offset of `Program` in buffer, relative to position of `RawTransferData`
     program_offset: u32,
     /// Offset of `u32` source text start pos, relative to position of `Program`
@@ -1324,6 +1329,8 @@ fn generate_constants(consts: Constants) -> (String, TokenStream) {
         is_ts_pos,
         is_jsx_pos,
         has_bom_pos,
+        tokens_offset_pos,
+        tokens_len_pos,
         program_offset,
         source_start_offset,
         source_len_offset,
@@ -1331,18 +1338,69 @@ fn generate_constants(consts: Constants) -> (String, TokenStream) {
     } = consts;
 
     let data_pointer_pos_32 = data_pointer_pos / 4;
+    let tokens_offset_pos_32 = tokens_offset_pos / 4;
+    let tokens_len_pos_32 = tokens_len_pos / 4;
 
     #[rustfmt::skip]
     let js_output = format!("
+        /**
+         * Total size of the transfer buffer in bytes (block size minus allocator metadata).
+         */
         export const BUFFER_SIZE = {buffer_size};
+
+        /**
+         * Required alignment of the transfer buffer (4 GiB).
+         */
         export const BUFFER_ALIGN = {BLOCK_ALIGN};
+
+        /**
+         * Size of the active data area in bytes (buffer size minus raw metadata and chunk footer).
+         */
         export const ACTIVE_SIZE = {active_size};
+
+        /**
+         * Byte offset of the data pointer within the buffer, divided by 4 (for `Uint32Array` indexing).
+         */
         export const DATA_POINTER_POS_32 = {data_pointer_pos_32};
+
+        /**
+         * Byte offset of the `is_ts` flag within the buffer.
+         */
         export const IS_TS_FLAG_POS = {is_ts_pos};
+
+        /**
+         * Byte offset of the `is_jsx` flag within the buffer.
+         */
         export const IS_JSX_FLAG_POS = {is_jsx_pos};
+
+        /**
+         * Byte offset of the `has_bom` flag within the buffer.
+         */
         export const HAS_BOM_FLAG_POS = {has_bom_pos};
+
+        /**
+         * Byte offset of the tokens offset within the buffer, divided by 4 (for `Uint32Array` indexing).
+         */
+        export const TOKENS_OFFSET_POS_32 = {tokens_offset_pos_32};
+
+        /**
+         * Byte offset of the tokens length within the buffer, divided by 4 (for `Uint32Array` indexing).
+         */
+        export const TOKENS_LEN_POS_32 = {tokens_len_pos_32};
+
+        /**
+         * Byte offset of the `program` field, relative to start of `RawTransferData`.
+         */
         export const PROGRAM_OFFSET = {program_offset};
+
+        /**
+         * Byte offset of pointer to start of source text, relative to start of `Program`.
+         */
         export const SOURCE_START_OFFSET = {source_start_offset};
+
+        /**
+         * Byte offset of length of source text, relative to start of `Program`.
+         */
         export const SOURCE_LEN_OFFSET = {source_len_offset};
     ");
 
@@ -1379,6 +1437,8 @@ fn get_constants(schema: &Schema) -> Constants {
     let mut is_ts_field = None;
     let mut is_jsx_field = None;
     let mut has_bom_field = None;
+    let mut tokens_offset_field = None;
+    let mut tokens_len_field = None;
     for (field1, field2) in raw_metadata_struct.fields.iter().zip(&raw_metadata2_struct.fields) {
         assert_eq!(field1.name(), field2.name());
         assert_eq!(field1.type_id, field2.type_id);
@@ -1388,6 +1448,8 @@ fn get_constants(schema: &Schema) -> Constants {
             "is_ts" => is_ts_field = Some(field1),
             "is_jsx" => is_jsx_field = Some(field1),
             "has_bom" => has_bom_field = Some(field1),
+            "tokens_offset" => tokens_offset_field = Some(field1),
+            "tokens_len" => tokens_len_field = Some(field1),
             _ => {}
         }
     }
@@ -1395,6 +1457,8 @@ fn get_constants(schema: &Schema) -> Constants {
     let is_ts_field = is_ts_field.unwrap();
     let is_jsx_field = is_jsx_field.unwrap();
     let has_bom_field = has_bom_field.unwrap();
+    let tokens_offset_field = tokens_offset_field.unwrap();
+    let tokens_len_field = tokens_len_field.unwrap();
 
     let raw_metadata_size = raw_metadata_struct.layout_64().size;
 
@@ -1413,6 +1477,8 @@ fn get_constants(schema: &Schema) -> Constants {
     let is_ts_pos = raw_metadata_pos + is_ts_field.offset_64();
     let is_jsx_pos = raw_metadata_pos + is_jsx_field.offset_64();
     let has_bom_pos = raw_metadata_pos + has_bom_field.offset_64();
+    let tokens_offset_pos = raw_metadata_pos + tokens_offset_field.offset_64();
+    let tokens_len_pos = raw_metadata_pos + tokens_len_field.offset_64();
 
     let program_offset = schema
         .type_by_name("RawTransferData")
@@ -1437,6 +1503,8 @@ fn get_constants(schema: &Schema) -> Constants {
         is_ts_pos,
         is_jsx_pos,
         has_bom_pos,
+        tokens_offset_pos,
+        tokens_len_pos,
         program_offset,
         source_start_offset,
         source_len_offset,

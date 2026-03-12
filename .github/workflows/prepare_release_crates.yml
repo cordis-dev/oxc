@@ -14,11 +14,12 @@ concurrency:
 
 jobs:
   check:
+    if: github.repository == 'oxc-project/oxc'
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - uses: taiki-e/checkout-action@3ab630d442e198ebb0ca30872832406ca01c46eb # v1.4.0
-      - uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
+      - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
+      - uses: oxc-project/setup-rust@4f86b5d871ae7d24bc420e578be68964ab09e5cc # v1.0.15
         with:
           cache-key: warm
           tools: cargo-release-oxc
@@ -26,6 +27,7 @@ jobs:
       - run: cargo release-oxc publish --release crates --dry-run # zizmor: ignore[use-trusted-publishing]
 
   prepare:
+    if: github.repository == 'oxc-project/oxc'
     name: Prepare Release
     runs-on: ubuntu-latest
     outputs:
@@ -37,7 +39,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: oxc-project/setup-rust@c8224157c0bf235aabc633e8cd50d344f087a7de # v1.0.12
+      - uses: oxc-project/setup-rust@4f86b5d871ae7d24bc420e578be68964ab09e5cc # v1.0.15
         with:
           cache-key: warm
           tools: cargo-release-oxc
@@ -85,7 +87,7 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - uses: taiki-e/checkout-action@3ab630d442e198ebb0ca30872832406ca01c46eb # v1.4.0
+      - uses: taiki-e/checkout-action@83ed61bfbe2b8abbb3c66e8b65b1335484c70009 # v1.4.1
 
       - uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
         id: comment
