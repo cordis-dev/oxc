@@ -169,16 +169,6 @@ impl ResolvedOptions {
             }
         }
     }
-
-    /// Set the filepath override for js-in-xxx flows.
-    /// See [`ResolvedOptions::OxcFormatter::filepath_override`] for details.
-    #[cfg(feature = "napi")]
-    pub fn set_filepath_override(&mut self, filepath: PathBuf) {
-        let ResolvedOptions::OxcFormatter { filepath_override, .. } = self else {
-            unreachable!("`filepath_override` is only applicable for `OxcFormatter` options");
-        };
-        *filepath_override = Some(filepath);
-    }
 }
 
 // ---
@@ -278,9 +268,15 @@ impl ConfigResolver {
 
         #[cfg(feature = "napi")]
         if is_js_config_file(path) {
-            let loader = js_config_loader
-                .expect("JS config loader must be set when `napi` feature is enabled");
-            let raw_config = load_js_config(loader, path)?.ok_or_else(|| {
+            // Load successful and `.fmt` field found -> Use it as config
+            // Load failed (e.g. syntax error, missing dependencies) -> Propagate error
+            let raw_config = load_js_config(
+                js_config_loader
+                    .expect("JS config loader must be set when `napi` feature is enabled"),
+                path,
+            )?
+            // Load successful but no `.fmt` field -> Error (explicitly specified config must have it)
+            .ok_or_else(|| {
                 format!("Expected a `fmt` field in the default export of {}", path.display())
             })?;
 
@@ -311,20 +307,18 @@ impl ConfigResolver {
                 // For `vite.config.ts`
                 #[cfg(feature = "napi")]
                 if is_vite_plus_config(&path) {
+                    // Load successful and `.fmt` field found -> Use it as config
+                    // Load failed (e.g. syntax error, missing dependencies) -> Propagate error
                     if let Some(raw_config) = load_js_config(
                         js_config_loader
                             .expect("JS config loader must be set when `napi` feature is enabled"),
                         &path,
                     )? {
                         let editorconfig = load_editorconfig(cwd, editorconfig_path)?;
-                        return Ok(Self::new(
-                            raw_config,
-                            path.parent().map(Path::to_path_buf),
-                            editorconfig,
-                        ));
+                        let config_dir = path.parent().map(Path::to_path_buf);
+                        return Ok(Self::new(raw_config, config_dir, editorconfig));
                     }
-                    // `load_js_config()` returns `None` if `.fmt` is missing.
-                    // Skip it and continue, otherwise `load_config_at()` would treat as an error.
+                    // Load successful but no `.fmt` field found -> Skip this file and continue searching.
                     continue;
                 }
 
@@ -502,9 +496,9 @@ fn load_js_config(
     js_config_loader: &JsConfigLoaderCb,
     path: &Path,
 ) -> Result<Option<Value>, String> {
-    let value = js_config_loader(path.to_string_lossy().into_owned()).map_err(|_| {
+    let value = js_config_loader(path.to_string_lossy().into_owned()).map_err(|err| {
         format!(
-            "{}\nEnsure the file has a valid default export of a JSON-serializable configuration object.",
+            "{}\n{err}\nEnsure the file has a valid default export of a JSON-serializable configuration object.",
             path.display()
         )
     })?;
