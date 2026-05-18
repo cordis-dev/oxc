@@ -49,14 +49,10 @@ fn format_github(diagnostic: &Error) -> String {
     let filename = escape_property(&filename);
     let message = escape_data(&message);
     let code = escape_data(&diagnostic.code().map_or_else(String::new, |c| c.to_string()));
-    
+
     format!(
         "::{severity} file={filename},line={},endLine={},col={},endColumn={},code={},title={title}::{message}\n",
-        start.line,
-        end.line,
-        start.column,
-        end.column,
-        code
+        start.line, end.line, start.column, end.column, code
     )
 }
 
@@ -115,6 +111,8 @@ mod test {
             number_of_rules: Some(10),
             threads_count: 12,
             start_time: Duration::new(1, 0),
+            oxlint_suppression_file_action: oxc_linter::OxlintSuppressionFileAction::None,
+            rule_timings: None,
         });
 
         assert_eq!(
@@ -131,6 +129,8 @@ mod test {
             number_of_rules: None,
             threads_count: 12,
             start_time: Duration::new(1, 0),
+            oxlint_suppression_file_action: oxc_linter::OxlintSuppressionFileAction::None,
+            rule_timings: None,
         });
 
         assert_eq!(result.unwrap(), "Finished in 1.0s on 5 files using 12 threads.\n");
