@@ -29,6 +29,7 @@ pub use crate::rules::eslint::getter_return::GetterReturn as EslintGetterReturn;
 pub use crate::rules::eslint::grouped_accessor_pairs::GroupedAccessorPairs as EslintGroupedAccessorPairs;
 pub use crate::rules::eslint::guard_for_in::GuardForIn as EslintGuardForIn;
 pub use crate::rules::eslint::id_length::IdLength as EslintIdLength;
+pub use crate::rules::eslint::id_match::IdMatch as EslintIdMatch;
 pub use crate::rules::eslint::init_declarations::InitDeclarations as EslintInitDeclarations;
 pub use crate::rules::eslint::logical_assignment_operators::LogicalAssignmentOperators as EslintLogicalAssignmentOperators;
 pub use crate::rules::eslint::max_classes_per_file::MaxClassesPerFile as EslintMaxClassesPerFile;
@@ -361,6 +362,7 @@ pub use crate::rules::nextjs::no_sync_scripts::NoSyncScripts as NextjsNoSyncScri
 pub use crate::rules::nextjs::no_title_in_document_head::NoTitleInDocumentHead as NextjsNoTitleInDocumentHead;
 pub use crate::rules::nextjs::no_typos::NoTypos as NextjsNoTypos;
 pub use crate::rules::nextjs::no_unwanted_polyfillio::NoUnwantedPolyfillio as NextjsNoUnwantedPolyfillio;
+pub use crate::rules::node::callback_return::CallbackReturn as NodeCallbackReturn;
 pub use crate::rules::node::global_require::GlobalRequire as NodeGlobalRequire;
 pub use crate::rules::node::handle_callback_err::HandleCallbackErr as NodeHandleCallbackErr;
 pub use crate::rules::node::no_exports_assign::NoExportsAssign as NodeNoExportsAssign;
@@ -596,6 +598,7 @@ pub use crate::rules::unicorn::error_message::ErrorMessage as UnicornErrorMessag
 pub use crate::rules::unicorn::escape_case::EscapeCase as UnicornEscapeCase;
 pub use crate::rules::unicorn::explicit_length_check::ExplicitLengthCheck as UnicornExplicitLengthCheck;
 pub use crate::rules::unicorn::filename_case::FilenameCase as UnicornFilenameCase;
+pub use crate::rules::unicorn::import_style::ImportStyle as UnicornImportStyle;
 pub use crate::rules::unicorn::new_for_builtins::NewForBuiltins as UnicornNewForBuiltins;
 pub use crate::rules::unicorn::no_abusive_eslint_disable::NoAbusiveEslintDisable as UnicornNoAbusiveEslintDisable;
 pub use crate::rules::unicorn::no_accessor_recursion::NoAccessorRecursion as UnicornNoAccessorRecursion;
@@ -790,24 +793,34 @@ pub use crate::rules::vue::define_props_declaration::DefinePropsDeclaration as V
 pub use crate::rules::vue::define_props_destructuring::DefinePropsDestructuring as VueDefinePropsDestructuring;
 pub use crate::rules::vue::max_props::MaxProps as VueMaxProps;
 pub use crate::rules::vue::no_arrow_functions_in_watch::NoArrowFunctionsInWatch as VueNoArrowFunctionsInWatch;
+pub use crate::rules::vue::no_computed_properties_in_data::NoComputedPropertiesInData as VueNoComputedPropertiesInData;
 pub use crate::rules::vue::no_deprecated_data_object_declaration::NoDeprecatedDataObjectDeclaration as VueNoDeprecatedDataObjectDeclaration;
 pub use crate::rules::vue::no_deprecated_delete_set::NoDeprecatedDeleteSet as VueNoDeprecatedDeleteSet;
 pub use crate::rules::vue::no_deprecated_destroyed_lifecycle::NoDeprecatedDestroyedLifecycle as VueNoDeprecatedDestroyedLifecycle;
 pub use crate::rules::vue::no_deprecated_events_api::NoDeprecatedEventsApi as VueNoDeprecatedEventsApi;
 pub use crate::rules::vue::no_deprecated_model_definition::NoDeprecatedModelDefinition as VueNoDeprecatedModelDefinition;
+pub use crate::rules::vue::no_deprecated_props_default_this::NoDeprecatedPropsDefaultThis as VueNoDeprecatedPropsDefaultThis;
 pub use crate::rules::vue::no_deprecated_vue_config_keycodes::NoDeprecatedVueConfigKeycodes as VueNoDeprecatedVueConfigKeycodes;
 pub use crate::rules::vue::no_export_in_script_setup::NoExportInScriptSetup as VueNoExportInScriptSetup;
+pub use crate::rules::vue::no_expose_after_await::NoExposeAfterAwait as VueNoExposeAfterAwait;
 pub use crate::rules::vue::no_import_compiler_macros::NoImportCompilerMacros as VueNoImportCompilerMacros;
 pub use crate::rules::vue::no_lifecycle_after_await::NoLifecycleAfterAwait as VueNoLifecycleAfterAwait;
 pub use crate::rules::vue::no_multiple_slot_args::NoMultipleSlotArgs as VueNoMultipleSlotArgs;
 pub use crate::rules::vue::no_required_prop_with_default::NoRequiredPropWithDefault as VueNoRequiredPropWithDefault;
+pub use crate::rules::vue::no_shared_component_data::NoSharedComponentData as VueNoSharedComponentData;
 pub use crate::rules::vue::no_this_in_before_route_enter::NoThisInBeforeRouteEnter as VueNoThisInBeforeRouteEnter;
+pub use crate::rules::vue::no_watch_after_await::NoWatchAfterAwait as VueNoWatchAfterAwait;
 pub use crate::rules::vue::prefer_import_from_vue::PreferImportFromVue as VuePreferImportFromVue;
 pub use crate::rules::vue::require_default_export::RequireDefaultExport as VueRequireDefaultExport;
+pub use crate::rules::vue::require_render_return::RequireRenderReturn as VueRequireRenderReturn;
+pub use crate::rules::vue::require_slots_as_functions::RequireSlotsAsFunctions as VueRequireSlotsAsFunctions;
 pub use crate::rules::vue::require_typed_ref::RequireTypedRef as VueRequireTypedRef;
 pub use crate::rules::vue::return_in_computed_property::ReturnInComputedProperty as VueReturnInComputedProperty;
+pub use crate::rules::vue::return_in_emits_validator::ReturnInEmitsValidator as VueReturnInEmitsValidator;
 pub use crate::rules::vue::valid_define_emits::ValidDefineEmits as VueValidDefineEmits;
+pub use crate::rules::vue::valid_define_options::ValidDefineOptions as VueValidDefineOptions;
 pub use crate::rules::vue::valid_define_props::ValidDefineProps as VueValidDefineProps;
+pub use crate::rules::vue::valid_next_tick::ValidNextTick as VueValidNextTick;
 use crate::{
     AstNode,
     context::{ContextHost, LintContext},
@@ -872,6 +885,7 @@ pub enum RuleEnum {
     EslintGroupedAccessorPairs(EslintGroupedAccessorPairs),
     EslintGuardForIn(EslintGuardForIn),
     EslintIdLength(EslintIdLength),
+    EslintIdMatch(EslintIdMatch),
     EslintInitDeclarations(EslintInitDeclarations),
     EslintLogicalAssignmentOperators(EslintLogicalAssignmentOperators),
     EslintMaxClassesPerFile(EslintMaxClassesPerFile),
@@ -1282,6 +1296,7 @@ pub enum RuleEnum {
     UnicornEscapeCase(UnicornEscapeCase),
     UnicornExplicitLengthCheck(UnicornExplicitLengthCheck),
     UnicornFilenameCase(UnicornFilenameCase),
+    UnicornImportStyle(UnicornImportStyle),
     UnicornNewForBuiltins(UnicornNewForBuiltins),
     UnicornNoAbusiveEslintDisable(UnicornNoAbusiveEslintDisable),
     UnicornNoAccessorRecursion(UnicornNoAccessorRecursion),
@@ -1597,6 +1612,7 @@ pub enum RuleEnum {
     VitestValidExpectInPromise(VitestValidExpectInPromise),
     VitestValidTitle(VitestValidTitle),
     VitestWarnTodo(VitestWarnTodo),
+    NodeCallbackReturn(NodeCallbackReturn),
     NodeGlobalRequire(NodeGlobalRequire),
     NodeHandleCallbackErr(NodeHandleCallbackErr),
     NodeNoExportsAssign(NodeNoExportsAssign),
@@ -1608,24 +1624,34 @@ pub enum RuleEnum {
     VueDefinePropsDestructuring(VueDefinePropsDestructuring),
     VueMaxProps(VueMaxProps),
     VueNoArrowFunctionsInWatch(VueNoArrowFunctionsInWatch),
+    VueNoComputedPropertiesInData(VueNoComputedPropertiesInData),
     VueNoDeprecatedDataObjectDeclaration(VueNoDeprecatedDataObjectDeclaration),
     VueNoDeprecatedDeleteSet(VueNoDeprecatedDeleteSet),
     VueNoDeprecatedDestroyedLifecycle(VueNoDeprecatedDestroyedLifecycle),
     VueNoDeprecatedEventsApi(VueNoDeprecatedEventsApi),
     VueNoDeprecatedModelDefinition(VueNoDeprecatedModelDefinition),
+    VueNoDeprecatedPropsDefaultThis(VueNoDeprecatedPropsDefaultThis),
     VueNoDeprecatedVueConfigKeycodes(VueNoDeprecatedVueConfigKeycodes),
     VueNoExportInScriptSetup(VueNoExportInScriptSetup),
+    VueNoExposeAfterAwait(VueNoExposeAfterAwait),
     VueNoImportCompilerMacros(VueNoImportCompilerMacros),
     VueNoLifecycleAfterAwait(VueNoLifecycleAfterAwait),
     VueNoMultipleSlotArgs(VueNoMultipleSlotArgs),
     VueNoRequiredPropWithDefault(VueNoRequiredPropWithDefault),
+    VueNoSharedComponentData(VueNoSharedComponentData),
     VueNoThisInBeforeRouteEnter(VueNoThisInBeforeRouteEnter),
+    VueNoWatchAfterAwait(VueNoWatchAfterAwait),
     VuePreferImportFromVue(VuePreferImportFromVue),
     VueRequireDefaultExport(VueRequireDefaultExport),
+    VueRequireRenderReturn(VueRequireRenderReturn),
+    VueRequireSlotsAsFunctions(VueRequireSlotsAsFunctions),
     VueRequireTypedRef(VueRequireTypedRef),
     VueReturnInComputedProperty(VueReturnInComputedProperty),
+    VueReturnInEmitsValidator(VueReturnInEmitsValidator),
     VueValidDefineEmits(VueValidDefineEmits),
+    VueValidDefineOptions(VueValidDefineOptions),
     VueValidDefineProps(VueValidDefineProps),
+    VueValidNextTick(VueValidNextTick),
 }
 const IMPORT_CONSISTENT_TYPE_SPECIFIER_STYLE_ID: usize = 0usize;
 const IMPORT_DEFAULT_ID: usize = IMPORT_CONSISTENT_TYPE_SPECIFIER_STYLE_ID + 1usize;
@@ -1681,7 +1707,8 @@ const ESLINT_GETTER_RETURN_ID: usize = ESLINT_FUNC_STYLE_ID + 1usize;
 const ESLINT_GROUPED_ACCESSOR_PAIRS_ID: usize = ESLINT_GETTER_RETURN_ID + 1usize;
 const ESLINT_GUARD_FOR_IN_ID: usize = ESLINT_GROUPED_ACCESSOR_PAIRS_ID + 1usize;
 const ESLINT_ID_LENGTH_ID: usize = ESLINT_GUARD_FOR_IN_ID + 1usize;
-const ESLINT_INIT_DECLARATIONS_ID: usize = ESLINT_ID_LENGTH_ID + 1usize;
+const ESLINT_ID_MATCH_ID: usize = ESLINT_ID_LENGTH_ID + 1usize;
+const ESLINT_INIT_DECLARATIONS_ID: usize = ESLINT_ID_MATCH_ID + 1usize;
 const ESLINT_LOGICAL_ASSIGNMENT_OPERATORS_ID: usize = ESLINT_INIT_DECLARATIONS_ID + 1usize;
 const ESLINT_MAX_CLASSES_PER_FILE_ID: usize = ESLINT_LOGICAL_ASSIGNMENT_OPERATORS_ID + 1usize;
 const ESLINT_MAX_DEPTH_ID: usize = ESLINT_MAX_CLASSES_PER_FILE_ID + 1usize;
@@ -2143,7 +2170,8 @@ const UNICORN_ERROR_MESSAGE_ID: usize = UNICORN_EMPTY_BRACE_SPACES_ID + 1usize;
 const UNICORN_ESCAPE_CASE_ID: usize = UNICORN_ERROR_MESSAGE_ID + 1usize;
 const UNICORN_EXPLICIT_LENGTH_CHECK_ID: usize = UNICORN_ESCAPE_CASE_ID + 1usize;
 const UNICORN_FILENAME_CASE_ID: usize = UNICORN_EXPLICIT_LENGTH_CHECK_ID + 1usize;
-const UNICORN_NEW_FOR_BUILTINS_ID: usize = UNICORN_FILENAME_CASE_ID + 1usize;
+const UNICORN_IMPORT_STYLE_ID: usize = UNICORN_FILENAME_CASE_ID + 1usize;
+const UNICORN_NEW_FOR_BUILTINS_ID: usize = UNICORN_IMPORT_STYLE_ID + 1usize;
 const UNICORN_NO_ABUSIVE_ESLINT_DISABLE_ID: usize = UNICORN_NEW_FOR_BUILTINS_ID + 1usize;
 const UNICORN_NO_ACCESSOR_RECURSION_ID: usize = UNICORN_NO_ABUSIVE_ESLINT_DISABLE_ID + 1usize;
 const UNICORN_NO_ANONYMOUS_DEFAULT_EXPORT_ID: usize = UNICORN_NO_ACCESSOR_RECURSION_ID + 1usize;
@@ -2496,7 +2524,8 @@ const VITEST_VALID_EXPECT_ID: usize = VITEST_VALID_DESCRIBE_CALLBACK_ID + 1usize
 const VITEST_VALID_EXPECT_IN_PROMISE_ID: usize = VITEST_VALID_EXPECT_ID + 1usize;
 const VITEST_VALID_TITLE_ID: usize = VITEST_VALID_EXPECT_IN_PROMISE_ID + 1usize;
 const VITEST_WARN_TODO_ID: usize = VITEST_VALID_TITLE_ID + 1usize;
-const NODE_GLOBAL_REQUIRE_ID: usize = VITEST_WARN_TODO_ID + 1usize;
+const NODE_CALLBACK_RETURN_ID: usize = VITEST_WARN_TODO_ID + 1usize;
+const NODE_GLOBAL_REQUIRE_ID: usize = NODE_CALLBACK_RETURN_ID + 1usize;
 const NODE_HANDLE_CALLBACK_ERR_ID: usize = NODE_GLOBAL_REQUIRE_ID + 1usize;
 const NODE_NO_EXPORTS_ASSIGN_ID: usize = NODE_HANDLE_CALLBACK_ERR_ID + 1usize;
 const NODE_NO_NEW_REQUIRE_ID: usize = NODE_NO_EXPORTS_ASSIGN_ID + 1usize;
@@ -2507,27 +2536,38 @@ const VUE_DEFINE_PROPS_DECLARATION_ID: usize = VUE_DEFINE_EMITS_DECLARATION_ID +
 const VUE_DEFINE_PROPS_DESTRUCTURING_ID: usize = VUE_DEFINE_PROPS_DECLARATION_ID + 1usize;
 const VUE_MAX_PROPS_ID: usize = VUE_DEFINE_PROPS_DESTRUCTURING_ID + 1usize;
 const VUE_NO_ARROW_FUNCTIONS_IN_WATCH_ID: usize = VUE_MAX_PROPS_ID + 1usize;
+const VUE_NO_COMPUTED_PROPERTIES_IN_DATA_ID: usize = VUE_NO_ARROW_FUNCTIONS_IN_WATCH_ID + 1usize;
 const VUE_NO_DEPRECATED_DATA_OBJECT_DECLARATION_ID: usize =
-    VUE_NO_ARROW_FUNCTIONS_IN_WATCH_ID + 1usize;
+    VUE_NO_COMPUTED_PROPERTIES_IN_DATA_ID + 1usize;
 const VUE_NO_DEPRECATED_DELETE_SET_ID: usize =
     VUE_NO_DEPRECATED_DATA_OBJECT_DECLARATION_ID + 1usize;
 const VUE_NO_DEPRECATED_DESTROYED_LIFECYCLE_ID: usize = VUE_NO_DEPRECATED_DELETE_SET_ID + 1usize;
 const VUE_NO_DEPRECATED_EVENTS_API_ID: usize = VUE_NO_DEPRECATED_DESTROYED_LIFECYCLE_ID + 1usize;
 const VUE_NO_DEPRECATED_MODEL_DEFINITION_ID: usize = VUE_NO_DEPRECATED_EVENTS_API_ID + 1usize;
-const VUE_NO_DEPRECATED_VUE_CONFIG_KEYCODES_ID: usize =
+const VUE_NO_DEPRECATED_PROPS_DEFAULT_THIS_ID: usize =
     VUE_NO_DEPRECATED_MODEL_DEFINITION_ID + 1usize;
+const VUE_NO_DEPRECATED_VUE_CONFIG_KEYCODES_ID: usize =
+    VUE_NO_DEPRECATED_PROPS_DEFAULT_THIS_ID + 1usize;
 const VUE_NO_EXPORT_IN_SCRIPT_SETUP_ID: usize = VUE_NO_DEPRECATED_VUE_CONFIG_KEYCODES_ID + 1usize;
-const VUE_NO_IMPORT_COMPILER_MACROS_ID: usize = VUE_NO_EXPORT_IN_SCRIPT_SETUP_ID + 1usize;
+const VUE_NO_EXPOSE_AFTER_AWAIT_ID: usize = VUE_NO_EXPORT_IN_SCRIPT_SETUP_ID + 1usize;
+const VUE_NO_IMPORT_COMPILER_MACROS_ID: usize = VUE_NO_EXPOSE_AFTER_AWAIT_ID + 1usize;
 const VUE_NO_LIFECYCLE_AFTER_AWAIT_ID: usize = VUE_NO_IMPORT_COMPILER_MACROS_ID + 1usize;
 const VUE_NO_MULTIPLE_SLOT_ARGS_ID: usize = VUE_NO_LIFECYCLE_AFTER_AWAIT_ID + 1usize;
 const VUE_NO_REQUIRED_PROP_WITH_DEFAULT_ID: usize = VUE_NO_MULTIPLE_SLOT_ARGS_ID + 1usize;
-const VUE_NO_THIS_IN_BEFORE_ROUTE_ENTER_ID: usize = VUE_NO_REQUIRED_PROP_WITH_DEFAULT_ID + 1usize;
-const VUE_PREFER_IMPORT_FROM_VUE_ID: usize = VUE_NO_THIS_IN_BEFORE_ROUTE_ENTER_ID + 1usize;
+const VUE_NO_SHARED_COMPONENT_DATA_ID: usize = VUE_NO_REQUIRED_PROP_WITH_DEFAULT_ID + 1usize;
+const VUE_NO_THIS_IN_BEFORE_ROUTE_ENTER_ID: usize = VUE_NO_SHARED_COMPONENT_DATA_ID + 1usize;
+const VUE_NO_WATCH_AFTER_AWAIT_ID: usize = VUE_NO_THIS_IN_BEFORE_ROUTE_ENTER_ID + 1usize;
+const VUE_PREFER_IMPORT_FROM_VUE_ID: usize = VUE_NO_WATCH_AFTER_AWAIT_ID + 1usize;
 const VUE_REQUIRE_DEFAULT_EXPORT_ID: usize = VUE_PREFER_IMPORT_FROM_VUE_ID + 1usize;
-const VUE_REQUIRE_TYPED_REF_ID: usize = VUE_REQUIRE_DEFAULT_EXPORT_ID + 1usize;
+const VUE_REQUIRE_RENDER_RETURN_ID: usize = VUE_REQUIRE_DEFAULT_EXPORT_ID + 1usize;
+const VUE_REQUIRE_SLOTS_AS_FUNCTIONS_ID: usize = VUE_REQUIRE_RENDER_RETURN_ID + 1usize;
+const VUE_REQUIRE_TYPED_REF_ID: usize = VUE_REQUIRE_SLOTS_AS_FUNCTIONS_ID + 1usize;
 const VUE_RETURN_IN_COMPUTED_PROPERTY_ID: usize = VUE_REQUIRE_TYPED_REF_ID + 1usize;
-const VUE_VALID_DEFINE_EMITS_ID: usize = VUE_RETURN_IN_COMPUTED_PROPERTY_ID + 1usize;
-const VUE_VALID_DEFINE_PROPS_ID: usize = VUE_VALID_DEFINE_EMITS_ID + 1usize;
+const VUE_RETURN_IN_EMITS_VALIDATOR_ID: usize = VUE_RETURN_IN_COMPUTED_PROPERTY_ID + 1usize;
+const VUE_VALID_DEFINE_EMITS_ID: usize = VUE_RETURN_IN_EMITS_VALIDATOR_ID + 1usize;
+const VUE_VALID_DEFINE_OPTIONS_ID: usize = VUE_VALID_DEFINE_EMITS_ID + 1usize;
+const VUE_VALID_DEFINE_PROPS_ID: usize = VUE_VALID_DEFINE_OPTIONS_ID + 1usize;
+const VUE_VALID_NEXT_TICK_ID: usize = VUE_VALID_DEFINE_PROPS_ID + 1usize;
 impl RuleEnum {
     pub fn id(&self) -> usize {
         match self {
@@ -2587,6 +2627,7 @@ impl RuleEnum {
             Self::EslintGroupedAccessorPairs(_) => ESLINT_GROUPED_ACCESSOR_PAIRS_ID,
             Self::EslintGuardForIn(_) => ESLINT_GUARD_FOR_IN_ID,
             Self::EslintIdLength(_) => ESLINT_ID_LENGTH_ID,
+            Self::EslintIdMatch(_) => ESLINT_ID_MATCH_ID,
             Self::EslintInitDeclarations(_) => ESLINT_INIT_DECLARATIONS_ID,
             Self::EslintLogicalAssignmentOperators(_) => ESLINT_LOGICAL_ASSIGNMENT_OPERATORS_ID,
             Self::EslintMaxClassesPerFile(_) => ESLINT_MAX_CLASSES_PER_FILE_ID,
@@ -3073,6 +3114,7 @@ impl RuleEnum {
             Self::UnicornEscapeCase(_) => UNICORN_ESCAPE_CASE_ID,
             Self::UnicornExplicitLengthCheck(_) => UNICORN_EXPLICIT_LENGTH_CHECK_ID,
             Self::UnicornFilenameCase(_) => UNICORN_FILENAME_CASE_ID,
+            Self::UnicornImportStyle(_) => UNICORN_IMPORT_STYLE_ID,
             Self::UnicornNewForBuiltins(_) => UNICORN_NEW_FOR_BUILTINS_ID,
             Self::UnicornNoAbusiveEslintDisable(_) => UNICORN_NO_ABUSIVE_ESLINT_DISABLE_ID,
             Self::UnicornNoAccessorRecursion(_) => UNICORN_NO_ACCESSOR_RECURSION_ID,
@@ -3426,6 +3468,7 @@ impl RuleEnum {
             Self::VitestValidExpectInPromise(_) => VITEST_VALID_EXPECT_IN_PROMISE_ID,
             Self::VitestValidTitle(_) => VITEST_VALID_TITLE_ID,
             Self::VitestWarnTodo(_) => VITEST_WARN_TODO_ID,
+            Self::NodeCallbackReturn(_) => NODE_CALLBACK_RETURN_ID,
             Self::NodeGlobalRequire(_) => NODE_GLOBAL_REQUIRE_ID,
             Self::NodeHandleCallbackErr(_) => NODE_HANDLE_CALLBACK_ERR_ID,
             Self::NodeNoExportsAssign(_) => NODE_NO_EXPORTS_ASSIGN_ID,
@@ -3437,6 +3480,7 @@ impl RuleEnum {
             Self::VueDefinePropsDestructuring(_) => VUE_DEFINE_PROPS_DESTRUCTURING_ID,
             Self::VueMaxProps(_) => VUE_MAX_PROPS_ID,
             Self::VueNoArrowFunctionsInWatch(_) => VUE_NO_ARROW_FUNCTIONS_IN_WATCH_ID,
+            Self::VueNoComputedPropertiesInData(_) => VUE_NO_COMPUTED_PROPERTIES_IN_DATA_ID,
             Self::VueNoDeprecatedDataObjectDeclaration(_) => {
                 VUE_NO_DEPRECATED_DATA_OBJECT_DECLARATION_ID
             }
@@ -3444,19 +3488,28 @@ impl RuleEnum {
             Self::VueNoDeprecatedDestroyedLifecycle(_) => VUE_NO_DEPRECATED_DESTROYED_LIFECYCLE_ID,
             Self::VueNoDeprecatedEventsApi(_) => VUE_NO_DEPRECATED_EVENTS_API_ID,
             Self::VueNoDeprecatedModelDefinition(_) => VUE_NO_DEPRECATED_MODEL_DEFINITION_ID,
+            Self::VueNoDeprecatedPropsDefaultThis(_) => VUE_NO_DEPRECATED_PROPS_DEFAULT_THIS_ID,
             Self::VueNoDeprecatedVueConfigKeycodes(_) => VUE_NO_DEPRECATED_VUE_CONFIG_KEYCODES_ID,
             Self::VueNoExportInScriptSetup(_) => VUE_NO_EXPORT_IN_SCRIPT_SETUP_ID,
+            Self::VueNoExposeAfterAwait(_) => VUE_NO_EXPOSE_AFTER_AWAIT_ID,
             Self::VueNoImportCompilerMacros(_) => VUE_NO_IMPORT_COMPILER_MACROS_ID,
             Self::VueNoLifecycleAfterAwait(_) => VUE_NO_LIFECYCLE_AFTER_AWAIT_ID,
             Self::VueNoMultipleSlotArgs(_) => VUE_NO_MULTIPLE_SLOT_ARGS_ID,
             Self::VueNoRequiredPropWithDefault(_) => VUE_NO_REQUIRED_PROP_WITH_DEFAULT_ID,
+            Self::VueNoSharedComponentData(_) => VUE_NO_SHARED_COMPONENT_DATA_ID,
             Self::VueNoThisInBeforeRouteEnter(_) => VUE_NO_THIS_IN_BEFORE_ROUTE_ENTER_ID,
+            Self::VueNoWatchAfterAwait(_) => VUE_NO_WATCH_AFTER_AWAIT_ID,
             Self::VuePreferImportFromVue(_) => VUE_PREFER_IMPORT_FROM_VUE_ID,
             Self::VueRequireDefaultExport(_) => VUE_REQUIRE_DEFAULT_EXPORT_ID,
+            Self::VueRequireRenderReturn(_) => VUE_REQUIRE_RENDER_RETURN_ID,
+            Self::VueRequireSlotsAsFunctions(_) => VUE_REQUIRE_SLOTS_AS_FUNCTIONS_ID,
             Self::VueRequireTypedRef(_) => VUE_REQUIRE_TYPED_REF_ID,
             Self::VueReturnInComputedProperty(_) => VUE_RETURN_IN_COMPUTED_PROPERTY_ID,
+            Self::VueReturnInEmitsValidator(_) => VUE_RETURN_IN_EMITS_VALIDATOR_ID,
             Self::VueValidDefineEmits(_) => VUE_VALID_DEFINE_EMITS_ID,
+            Self::VueValidDefineOptions(_) => VUE_VALID_DEFINE_OPTIONS_ID,
             Self::VueValidDefineProps(_) => VUE_VALID_DEFINE_PROPS_ID,
+            Self::VueValidNextTick(_) => VUE_VALID_NEXT_TICK_ID,
         }
     }
     pub fn name(&self) -> &'static str {
@@ -3515,6 +3568,7 @@ impl RuleEnum {
             Self::EslintGroupedAccessorPairs(_) => EslintGroupedAccessorPairs::NAME,
             Self::EslintGuardForIn(_) => EslintGuardForIn::NAME,
             Self::EslintIdLength(_) => EslintIdLength::NAME,
+            Self::EslintIdMatch(_) => EslintIdMatch::NAME,
             Self::EslintInitDeclarations(_) => EslintInitDeclarations::NAME,
             Self::EslintLogicalAssignmentOperators(_) => EslintLogicalAssignmentOperators::NAME,
             Self::EslintMaxClassesPerFile(_) => EslintMaxClassesPerFile::NAME,
@@ -3997,6 +4051,7 @@ impl RuleEnum {
             Self::UnicornEscapeCase(_) => UnicornEscapeCase::NAME,
             Self::UnicornExplicitLengthCheck(_) => UnicornExplicitLengthCheck::NAME,
             Self::UnicornFilenameCase(_) => UnicornFilenameCase::NAME,
+            Self::UnicornImportStyle(_) => UnicornImportStyle::NAME,
             Self::UnicornNewForBuiltins(_) => UnicornNewForBuiltins::NAME,
             Self::UnicornNoAbusiveEslintDisable(_) => UnicornNoAbusiveEslintDisable::NAME,
             Self::UnicornNoAccessorRecursion(_) => UnicornNoAccessorRecursion::NAME,
@@ -4340,6 +4395,7 @@ impl RuleEnum {
             Self::VitestValidExpectInPromise(_) => VitestValidExpectInPromise::NAME,
             Self::VitestValidTitle(_) => VitestValidTitle::NAME,
             Self::VitestWarnTodo(_) => VitestWarnTodo::NAME,
+            Self::NodeCallbackReturn(_) => NodeCallbackReturn::NAME,
             Self::NodeGlobalRequire(_) => NodeGlobalRequire::NAME,
             Self::NodeHandleCallbackErr(_) => NodeHandleCallbackErr::NAME,
             Self::NodeNoExportsAssign(_) => NodeNoExportsAssign::NAME,
@@ -4351,6 +4407,7 @@ impl RuleEnum {
             Self::VueDefinePropsDestructuring(_) => VueDefinePropsDestructuring::NAME,
             Self::VueMaxProps(_) => VueMaxProps::NAME,
             Self::VueNoArrowFunctionsInWatch(_) => VueNoArrowFunctionsInWatch::NAME,
+            Self::VueNoComputedPropertiesInData(_) => VueNoComputedPropertiesInData::NAME,
             Self::VueNoDeprecatedDataObjectDeclaration(_) => {
                 VueNoDeprecatedDataObjectDeclaration::NAME
             }
@@ -4358,19 +4415,28 @@ impl RuleEnum {
             Self::VueNoDeprecatedDestroyedLifecycle(_) => VueNoDeprecatedDestroyedLifecycle::NAME,
             Self::VueNoDeprecatedEventsApi(_) => VueNoDeprecatedEventsApi::NAME,
             Self::VueNoDeprecatedModelDefinition(_) => VueNoDeprecatedModelDefinition::NAME,
+            Self::VueNoDeprecatedPropsDefaultThis(_) => VueNoDeprecatedPropsDefaultThis::NAME,
             Self::VueNoDeprecatedVueConfigKeycodes(_) => VueNoDeprecatedVueConfigKeycodes::NAME,
             Self::VueNoExportInScriptSetup(_) => VueNoExportInScriptSetup::NAME,
+            Self::VueNoExposeAfterAwait(_) => VueNoExposeAfterAwait::NAME,
             Self::VueNoImportCompilerMacros(_) => VueNoImportCompilerMacros::NAME,
             Self::VueNoLifecycleAfterAwait(_) => VueNoLifecycleAfterAwait::NAME,
             Self::VueNoMultipleSlotArgs(_) => VueNoMultipleSlotArgs::NAME,
             Self::VueNoRequiredPropWithDefault(_) => VueNoRequiredPropWithDefault::NAME,
+            Self::VueNoSharedComponentData(_) => VueNoSharedComponentData::NAME,
             Self::VueNoThisInBeforeRouteEnter(_) => VueNoThisInBeforeRouteEnter::NAME,
+            Self::VueNoWatchAfterAwait(_) => VueNoWatchAfterAwait::NAME,
             Self::VuePreferImportFromVue(_) => VuePreferImportFromVue::NAME,
             Self::VueRequireDefaultExport(_) => VueRequireDefaultExport::NAME,
+            Self::VueRequireRenderReturn(_) => VueRequireRenderReturn::NAME,
+            Self::VueRequireSlotsAsFunctions(_) => VueRequireSlotsAsFunctions::NAME,
             Self::VueRequireTypedRef(_) => VueRequireTypedRef::NAME,
             Self::VueReturnInComputedProperty(_) => VueReturnInComputedProperty::NAME,
+            Self::VueReturnInEmitsValidator(_) => VueReturnInEmitsValidator::NAME,
             Self::VueValidDefineEmits(_) => VueValidDefineEmits::NAME,
+            Self::VueValidDefineOptions(_) => VueValidDefineOptions::NAME,
             Self::VueValidDefineProps(_) => VueValidDefineProps::NAME,
+            Self::VueValidNextTick(_) => VueValidNextTick::NAME,
         }
     }
     pub fn category(&self) -> RuleCategory {
@@ -4431,6 +4497,7 @@ impl RuleEnum {
             Self::EslintGroupedAccessorPairs(_) => EslintGroupedAccessorPairs::CATEGORY,
             Self::EslintGuardForIn(_) => EslintGuardForIn::CATEGORY,
             Self::EslintIdLength(_) => EslintIdLength::CATEGORY,
+            Self::EslintIdMatch(_) => EslintIdMatch::CATEGORY,
             Self::EslintInitDeclarations(_) => EslintInitDeclarations::CATEGORY,
             Self::EslintLogicalAssignmentOperators(_) => EslintLogicalAssignmentOperators::CATEGORY,
             Self::EslintMaxClassesPerFile(_) => EslintMaxClassesPerFile::CATEGORY,
@@ -4939,6 +5006,7 @@ impl RuleEnum {
             Self::UnicornEscapeCase(_) => UnicornEscapeCase::CATEGORY,
             Self::UnicornExplicitLengthCheck(_) => UnicornExplicitLengthCheck::CATEGORY,
             Self::UnicornFilenameCase(_) => UnicornFilenameCase::CATEGORY,
+            Self::UnicornImportStyle(_) => UnicornImportStyle::CATEGORY,
             Self::UnicornNewForBuiltins(_) => UnicornNewForBuiltins::CATEGORY,
             Self::UnicornNoAbusiveEslintDisable(_) => UnicornNoAbusiveEslintDisable::CATEGORY,
             Self::UnicornNoAccessorRecursion(_) => UnicornNoAccessorRecursion::CATEGORY,
@@ -5310,6 +5378,7 @@ impl RuleEnum {
             Self::VitestValidExpectInPromise(_) => VitestValidExpectInPromise::CATEGORY,
             Self::VitestValidTitle(_) => VitestValidTitle::CATEGORY,
             Self::VitestWarnTodo(_) => VitestWarnTodo::CATEGORY,
+            Self::NodeCallbackReturn(_) => NodeCallbackReturn::CATEGORY,
             Self::NodeGlobalRequire(_) => NodeGlobalRequire::CATEGORY,
             Self::NodeHandleCallbackErr(_) => NodeHandleCallbackErr::CATEGORY,
             Self::NodeNoExportsAssign(_) => NodeNoExportsAssign::CATEGORY,
@@ -5321,6 +5390,7 @@ impl RuleEnum {
             Self::VueDefinePropsDestructuring(_) => VueDefinePropsDestructuring::CATEGORY,
             Self::VueMaxProps(_) => VueMaxProps::CATEGORY,
             Self::VueNoArrowFunctionsInWatch(_) => VueNoArrowFunctionsInWatch::CATEGORY,
+            Self::VueNoComputedPropertiesInData(_) => VueNoComputedPropertiesInData::CATEGORY,
             Self::VueNoDeprecatedDataObjectDeclaration(_) => {
                 VueNoDeprecatedDataObjectDeclaration::CATEGORY
             }
@@ -5330,19 +5400,28 @@ impl RuleEnum {
             }
             Self::VueNoDeprecatedEventsApi(_) => VueNoDeprecatedEventsApi::CATEGORY,
             Self::VueNoDeprecatedModelDefinition(_) => VueNoDeprecatedModelDefinition::CATEGORY,
+            Self::VueNoDeprecatedPropsDefaultThis(_) => VueNoDeprecatedPropsDefaultThis::CATEGORY,
             Self::VueNoDeprecatedVueConfigKeycodes(_) => VueNoDeprecatedVueConfigKeycodes::CATEGORY,
             Self::VueNoExportInScriptSetup(_) => VueNoExportInScriptSetup::CATEGORY,
+            Self::VueNoExposeAfterAwait(_) => VueNoExposeAfterAwait::CATEGORY,
             Self::VueNoImportCompilerMacros(_) => VueNoImportCompilerMacros::CATEGORY,
             Self::VueNoLifecycleAfterAwait(_) => VueNoLifecycleAfterAwait::CATEGORY,
             Self::VueNoMultipleSlotArgs(_) => VueNoMultipleSlotArgs::CATEGORY,
             Self::VueNoRequiredPropWithDefault(_) => VueNoRequiredPropWithDefault::CATEGORY,
+            Self::VueNoSharedComponentData(_) => VueNoSharedComponentData::CATEGORY,
             Self::VueNoThisInBeforeRouteEnter(_) => VueNoThisInBeforeRouteEnter::CATEGORY,
+            Self::VueNoWatchAfterAwait(_) => VueNoWatchAfterAwait::CATEGORY,
             Self::VuePreferImportFromVue(_) => VuePreferImportFromVue::CATEGORY,
             Self::VueRequireDefaultExport(_) => VueRequireDefaultExport::CATEGORY,
+            Self::VueRequireRenderReturn(_) => VueRequireRenderReturn::CATEGORY,
+            Self::VueRequireSlotsAsFunctions(_) => VueRequireSlotsAsFunctions::CATEGORY,
             Self::VueRequireTypedRef(_) => VueRequireTypedRef::CATEGORY,
             Self::VueReturnInComputedProperty(_) => VueReturnInComputedProperty::CATEGORY,
+            Self::VueReturnInEmitsValidator(_) => VueReturnInEmitsValidator::CATEGORY,
             Self::VueValidDefineEmits(_) => VueValidDefineEmits::CATEGORY,
+            Self::VueValidDefineOptions(_) => VueValidDefineOptions::CATEGORY,
             Self::VueValidDefineProps(_) => VueValidDefineProps::CATEGORY,
+            Self::VueValidNextTick(_) => VueValidNextTick::CATEGORY,
         }
     }
     #[doc = r" This [`Rule`]'s auto-fix capabilities."]
@@ -5402,6 +5481,7 @@ impl RuleEnum {
             Self::EslintGroupedAccessorPairs(_) => EslintGroupedAccessorPairs::FIX,
             Self::EslintGuardForIn(_) => EslintGuardForIn::FIX,
             Self::EslintIdLength(_) => EslintIdLength::FIX,
+            Self::EslintIdMatch(_) => EslintIdMatch::FIX,
             Self::EslintInitDeclarations(_) => EslintInitDeclarations::FIX,
             Self::EslintLogicalAssignmentOperators(_) => EslintLogicalAssignmentOperators::FIX,
             Self::EslintMaxClassesPerFile(_) => EslintMaxClassesPerFile::FIX,
@@ -5884,6 +5964,7 @@ impl RuleEnum {
             Self::UnicornEscapeCase(_) => UnicornEscapeCase::FIX,
             Self::UnicornExplicitLengthCheck(_) => UnicornExplicitLengthCheck::FIX,
             Self::UnicornFilenameCase(_) => UnicornFilenameCase::FIX,
+            Self::UnicornImportStyle(_) => UnicornImportStyle::FIX,
             Self::UnicornNewForBuiltins(_) => UnicornNewForBuiltins::FIX,
             Self::UnicornNoAbusiveEslintDisable(_) => UnicornNoAbusiveEslintDisable::FIX,
             Self::UnicornNoAccessorRecursion(_) => UnicornNoAccessorRecursion::FIX,
@@ -6227,6 +6308,7 @@ impl RuleEnum {
             Self::VitestValidExpectInPromise(_) => VitestValidExpectInPromise::FIX,
             Self::VitestValidTitle(_) => VitestValidTitle::FIX,
             Self::VitestWarnTodo(_) => VitestWarnTodo::FIX,
+            Self::NodeCallbackReturn(_) => NodeCallbackReturn::FIX,
             Self::NodeGlobalRequire(_) => NodeGlobalRequire::FIX,
             Self::NodeHandleCallbackErr(_) => NodeHandleCallbackErr::FIX,
             Self::NodeNoExportsAssign(_) => NodeNoExportsAssign::FIX,
@@ -6238,6 +6320,7 @@ impl RuleEnum {
             Self::VueDefinePropsDestructuring(_) => VueDefinePropsDestructuring::FIX,
             Self::VueMaxProps(_) => VueMaxProps::FIX,
             Self::VueNoArrowFunctionsInWatch(_) => VueNoArrowFunctionsInWatch::FIX,
+            Self::VueNoComputedPropertiesInData(_) => VueNoComputedPropertiesInData::FIX,
             Self::VueNoDeprecatedDataObjectDeclaration(_) => {
                 VueNoDeprecatedDataObjectDeclaration::FIX
             }
@@ -6245,19 +6328,28 @@ impl RuleEnum {
             Self::VueNoDeprecatedDestroyedLifecycle(_) => VueNoDeprecatedDestroyedLifecycle::FIX,
             Self::VueNoDeprecatedEventsApi(_) => VueNoDeprecatedEventsApi::FIX,
             Self::VueNoDeprecatedModelDefinition(_) => VueNoDeprecatedModelDefinition::FIX,
+            Self::VueNoDeprecatedPropsDefaultThis(_) => VueNoDeprecatedPropsDefaultThis::FIX,
             Self::VueNoDeprecatedVueConfigKeycodes(_) => VueNoDeprecatedVueConfigKeycodes::FIX,
             Self::VueNoExportInScriptSetup(_) => VueNoExportInScriptSetup::FIX,
+            Self::VueNoExposeAfterAwait(_) => VueNoExposeAfterAwait::FIX,
             Self::VueNoImportCompilerMacros(_) => VueNoImportCompilerMacros::FIX,
             Self::VueNoLifecycleAfterAwait(_) => VueNoLifecycleAfterAwait::FIX,
             Self::VueNoMultipleSlotArgs(_) => VueNoMultipleSlotArgs::FIX,
             Self::VueNoRequiredPropWithDefault(_) => VueNoRequiredPropWithDefault::FIX,
+            Self::VueNoSharedComponentData(_) => VueNoSharedComponentData::FIX,
             Self::VueNoThisInBeforeRouteEnter(_) => VueNoThisInBeforeRouteEnter::FIX,
+            Self::VueNoWatchAfterAwait(_) => VueNoWatchAfterAwait::FIX,
             Self::VuePreferImportFromVue(_) => VuePreferImportFromVue::FIX,
             Self::VueRequireDefaultExport(_) => VueRequireDefaultExport::FIX,
+            Self::VueRequireRenderReturn(_) => VueRequireRenderReturn::FIX,
+            Self::VueRequireSlotsAsFunctions(_) => VueRequireSlotsAsFunctions::FIX,
             Self::VueRequireTypedRef(_) => VueRequireTypedRef::FIX,
             Self::VueReturnInComputedProperty(_) => VueReturnInComputedProperty::FIX,
+            Self::VueReturnInEmitsValidator(_) => VueReturnInEmitsValidator::FIX,
             Self::VueValidDefineEmits(_) => VueValidDefineEmits::FIX,
+            Self::VueValidDefineOptions(_) => VueValidDefineOptions::FIX,
             Self::VueValidDefineProps(_) => VueValidDefineProps::FIX,
+            Self::VueValidNextTick(_) => VueValidNextTick::FIX,
         }
     }
     #[cfg(feature = "ruledocs")]
@@ -6323,6 +6415,7 @@ impl RuleEnum {
             Self::EslintGroupedAccessorPairs(_) => EslintGroupedAccessorPairs::documentation(),
             Self::EslintGuardForIn(_) => EslintGuardForIn::documentation(),
             Self::EslintIdLength(_) => EslintIdLength::documentation(),
+            Self::EslintIdMatch(_) => EslintIdMatch::documentation(),
             Self::EslintInitDeclarations(_) => EslintInitDeclarations::documentation(),
             Self::EslintLogicalAssignmentOperators(_) => {
                 EslintLogicalAssignmentOperators::documentation()
@@ -6917,6 +7010,7 @@ impl RuleEnum {
             Self::UnicornEscapeCase(_) => UnicornEscapeCase::documentation(),
             Self::UnicornExplicitLengthCheck(_) => UnicornExplicitLengthCheck::documentation(),
             Self::UnicornFilenameCase(_) => UnicornFilenameCase::documentation(),
+            Self::UnicornImportStyle(_) => UnicornImportStyle::documentation(),
             Self::UnicornNewForBuiltins(_) => UnicornNewForBuiltins::documentation(),
             Self::UnicornNoAbusiveEslintDisable(_) => {
                 UnicornNoAbusiveEslintDisable::documentation()
@@ -7384,6 +7478,7 @@ impl RuleEnum {
             Self::VitestValidExpectInPromise(_) => VitestValidExpectInPromise::documentation(),
             Self::VitestValidTitle(_) => VitestValidTitle::documentation(),
             Self::VitestWarnTodo(_) => VitestWarnTodo::documentation(),
+            Self::NodeCallbackReturn(_) => NodeCallbackReturn::documentation(),
             Self::NodeGlobalRequire(_) => NodeGlobalRequire::documentation(),
             Self::NodeHandleCallbackErr(_) => NodeHandleCallbackErr::documentation(),
             Self::NodeNoExportsAssign(_) => NodeNoExportsAssign::documentation(),
@@ -7395,6 +7490,9 @@ impl RuleEnum {
             Self::VueDefinePropsDestructuring(_) => VueDefinePropsDestructuring::documentation(),
             Self::VueMaxProps(_) => VueMaxProps::documentation(),
             Self::VueNoArrowFunctionsInWatch(_) => VueNoArrowFunctionsInWatch::documentation(),
+            Self::VueNoComputedPropertiesInData(_) => {
+                VueNoComputedPropertiesInData::documentation()
+            }
             Self::VueNoDeprecatedDataObjectDeclaration(_) => {
                 VueNoDeprecatedDataObjectDeclaration::documentation()
             }
@@ -7406,21 +7504,32 @@ impl RuleEnum {
             Self::VueNoDeprecatedModelDefinition(_) => {
                 VueNoDeprecatedModelDefinition::documentation()
             }
+            Self::VueNoDeprecatedPropsDefaultThis(_) => {
+                VueNoDeprecatedPropsDefaultThis::documentation()
+            }
             Self::VueNoDeprecatedVueConfigKeycodes(_) => {
                 VueNoDeprecatedVueConfigKeycodes::documentation()
             }
             Self::VueNoExportInScriptSetup(_) => VueNoExportInScriptSetup::documentation(),
+            Self::VueNoExposeAfterAwait(_) => VueNoExposeAfterAwait::documentation(),
             Self::VueNoImportCompilerMacros(_) => VueNoImportCompilerMacros::documentation(),
             Self::VueNoLifecycleAfterAwait(_) => VueNoLifecycleAfterAwait::documentation(),
             Self::VueNoMultipleSlotArgs(_) => VueNoMultipleSlotArgs::documentation(),
             Self::VueNoRequiredPropWithDefault(_) => VueNoRequiredPropWithDefault::documentation(),
+            Self::VueNoSharedComponentData(_) => VueNoSharedComponentData::documentation(),
             Self::VueNoThisInBeforeRouteEnter(_) => VueNoThisInBeforeRouteEnter::documentation(),
+            Self::VueNoWatchAfterAwait(_) => VueNoWatchAfterAwait::documentation(),
             Self::VuePreferImportFromVue(_) => VuePreferImportFromVue::documentation(),
             Self::VueRequireDefaultExport(_) => VueRequireDefaultExport::documentation(),
+            Self::VueRequireRenderReturn(_) => VueRequireRenderReturn::documentation(),
+            Self::VueRequireSlotsAsFunctions(_) => VueRequireSlotsAsFunctions::documentation(),
             Self::VueRequireTypedRef(_) => VueRequireTypedRef::documentation(),
             Self::VueReturnInComputedProperty(_) => VueReturnInComputedProperty::documentation(),
+            Self::VueReturnInEmitsValidator(_) => VueReturnInEmitsValidator::documentation(),
             Self::VueValidDefineEmits(_) => VueValidDefineEmits::documentation(),
+            Self::VueValidDefineOptions(_) => VueValidDefineOptions::documentation(),
             Self::VueValidDefineProps(_) => VueValidDefineProps::documentation(),
+            Self::VueValidNextTick(_) => VueValidNextTick::documentation(),
         }
     }
     #[cfg(feature = "ruledocs")]
@@ -7565,6 +7674,9 @@ impl RuleEnum {
                 .or_else(|| EslintGuardForIn::schema(generator)),
             Self::EslintIdLength(_) => EslintIdLength::config_schema(generator)
                 .or_else(|| EslintIdLength::schema(generator)),
+            Self::EslintIdMatch(_) => {
+                EslintIdMatch::config_schema(generator).or_else(|| EslintIdMatch::schema(generator))
+            }
             Self::EslintInitDeclarations(_) => EslintInitDeclarations::config_schema(generator)
                 .or_else(|| EslintInitDeclarations::schema(generator)),
             Self::EslintLogicalAssignmentOperators(_) => {
@@ -8736,6 +8848,8 @@ impl RuleEnum {
             }
             Self::UnicornFilenameCase(_) => UnicornFilenameCase::config_schema(generator)
                 .or_else(|| UnicornFilenameCase::schema(generator)),
+            Self::UnicornImportStyle(_) => UnicornImportStyle::config_schema(generator)
+                .or_else(|| UnicornImportStyle::schema(generator)),
             Self::UnicornNewForBuiltins(_) => UnicornNewForBuiltins::config_schema(generator)
                 .or_else(|| UnicornNewForBuiltins::schema(generator)),
             Self::UnicornNoAbusiveEslintDisable(_) => {
@@ -9644,6 +9758,8 @@ impl RuleEnum {
                 .or_else(|| VitestValidTitle::schema(generator)),
             Self::VitestWarnTodo(_) => VitestWarnTodo::config_schema(generator)
                 .or_else(|| VitestWarnTodo::schema(generator)),
+            Self::NodeCallbackReturn(_) => NodeCallbackReturn::config_schema(generator)
+                .or_else(|| NodeCallbackReturn::schema(generator)),
             Self::NodeGlobalRequire(_) => NodeGlobalRequire::config_schema(generator)
                 .or_else(|| NodeGlobalRequire::schema(generator)),
             Self::NodeHandleCallbackErr(_) => NodeHandleCallbackErr::config_schema(generator)
@@ -9675,6 +9791,10 @@ impl RuleEnum {
                 VueNoArrowFunctionsInWatch::config_schema(generator)
                     .or_else(|| VueNoArrowFunctionsInWatch::schema(generator))
             }
+            Self::VueNoComputedPropertiesInData(_) => {
+                VueNoComputedPropertiesInData::config_schema(generator)
+                    .or_else(|| VueNoComputedPropertiesInData::schema(generator))
+            }
             Self::VueNoDeprecatedDataObjectDeclaration(_) => {
                 VueNoDeprecatedDataObjectDeclaration::config_schema(generator)
                     .or_else(|| VueNoDeprecatedDataObjectDeclaration::schema(generator))
@@ -9691,12 +9811,18 @@ impl RuleEnum {
                 VueNoDeprecatedModelDefinition::config_schema(generator)
                     .or_else(|| VueNoDeprecatedModelDefinition::schema(generator))
             }
+            Self::VueNoDeprecatedPropsDefaultThis(_) => {
+                VueNoDeprecatedPropsDefaultThis::config_schema(generator)
+                    .or_else(|| VueNoDeprecatedPropsDefaultThis::schema(generator))
+            }
             Self::VueNoDeprecatedVueConfigKeycodes(_) => {
                 VueNoDeprecatedVueConfigKeycodes::config_schema(generator)
                     .or_else(|| VueNoDeprecatedVueConfigKeycodes::schema(generator))
             }
             Self::VueNoExportInScriptSetup(_) => VueNoExportInScriptSetup::config_schema(generator)
                 .or_else(|| VueNoExportInScriptSetup::schema(generator)),
+            Self::VueNoExposeAfterAwait(_) => VueNoExposeAfterAwait::config_schema(generator)
+                .or_else(|| VueNoExposeAfterAwait::schema(generator)),
             Self::VueNoImportCompilerMacros(_) => {
                 VueNoImportCompilerMacros::config_schema(generator)
                     .or_else(|| VueNoImportCompilerMacros::schema(generator))
@@ -9709,24 +9835,42 @@ impl RuleEnum {
                 VueNoRequiredPropWithDefault::config_schema(generator)
                     .or_else(|| VueNoRequiredPropWithDefault::schema(generator))
             }
+            Self::VueNoSharedComponentData(_) => VueNoSharedComponentData::config_schema(generator)
+                .or_else(|| VueNoSharedComponentData::schema(generator)),
             Self::VueNoThisInBeforeRouteEnter(_) => {
                 VueNoThisInBeforeRouteEnter::config_schema(generator)
                     .or_else(|| VueNoThisInBeforeRouteEnter::schema(generator))
             }
+            Self::VueNoWatchAfterAwait(_) => VueNoWatchAfterAwait::config_schema(generator)
+                .or_else(|| VueNoWatchAfterAwait::schema(generator)),
             Self::VuePreferImportFromVue(_) => VuePreferImportFromVue::config_schema(generator)
                 .or_else(|| VuePreferImportFromVue::schema(generator)),
             Self::VueRequireDefaultExport(_) => VueRequireDefaultExport::config_schema(generator)
                 .or_else(|| VueRequireDefaultExport::schema(generator)),
+            Self::VueRequireRenderReturn(_) => VueRequireRenderReturn::config_schema(generator)
+                .or_else(|| VueRequireRenderReturn::schema(generator)),
+            Self::VueRequireSlotsAsFunctions(_) => {
+                VueRequireSlotsAsFunctions::config_schema(generator)
+                    .or_else(|| VueRequireSlotsAsFunctions::schema(generator))
+            }
             Self::VueRequireTypedRef(_) => VueRequireTypedRef::config_schema(generator)
                 .or_else(|| VueRequireTypedRef::schema(generator)),
             Self::VueReturnInComputedProperty(_) => {
                 VueReturnInComputedProperty::config_schema(generator)
                     .or_else(|| VueReturnInComputedProperty::schema(generator))
             }
+            Self::VueReturnInEmitsValidator(_) => {
+                VueReturnInEmitsValidator::config_schema(generator)
+                    .or_else(|| VueReturnInEmitsValidator::schema(generator))
+            }
             Self::VueValidDefineEmits(_) => VueValidDefineEmits::config_schema(generator)
                 .or_else(|| VueValidDefineEmits::schema(generator)),
+            Self::VueValidDefineOptions(_) => VueValidDefineOptions::config_schema(generator)
+                .or_else(|| VueValidDefineOptions::schema(generator)),
             Self::VueValidDefineProps(_) => VueValidDefineProps::config_schema(generator)
                 .or_else(|| VueValidDefineProps::schema(generator)),
+            Self::VueValidNextTick(_) => VueValidNextTick::config_schema(generator)
+                .or_else(|| VueValidNextTick::schema(generator)),
         }
     }
     pub fn plugin_name(&self) -> &'static str {
@@ -9785,6 +9929,7 @@ impl RuleEnum {
             Self::EslintGroupedAccessorPairs(_) => "eslint",
             Self::EslintGuardForIn(_) => "eslint",
             Self::EslintIdLength(_) => "eslint",
+            Self::EslintIdMatch(_) => "eslint",
             Self::EslintInitDeclarations(_) => "eslint",
             Self::EslintLogicalAssignmentOperators(_) => "eslint",
             Self::EslintMaxClassesPerFile(_) => "eslint",
@@ -10193,6 +10338,7 @@ impl RuleEnum {
             Self::UnicornEscapeCase(_) => "unicorn",
             Self::UnicornExplicitLengthCheck(_) => "unicorn",
             Self::UnicornFilenameCase(_) => "unicorn",
+            Self::UnicornImportStyle(_) => "unicorn",
             Self::UnicornNewForBuiltins(_) => "unicorn",
             Self::UnicornNoAbusiveEslintDisable(_) => "unicorn",
             Self::UnicornNoAccessorRecursion(_) => "unicorn",
@@ -10502,6 +10648,7 @@ impl RuleEnum {
             Self::VitestValidExpectInPromise(_) => "vitest",
             Self::VitestValidTitle(_) => "vitest",
             Self::VitestWarnTodo(_) => "vitest",
+            Self::NodeCallbackReturn(_) => "node",
             Self::NodeGlobalRequire(_) => "node",
             Self::NodeHandleCallbackErr(_) => "node",
             Self::NodeNoExportsAssign(_) => "node",
@@ -10513,24 +10660,34 @@ impl RuleEnum {
             Self::VueDefinePropsDestructuring(_) => "vue",
             Self::VueMaxProps(_) => "vue",
             Self::VueNoArrowFunctionsInWatch(_) => "vue",
+            Self::VueNoComputedPropertiesInData(_) => "vue",
             Self::VueNoDeprecatedDataObjectDeclaration(_) => "vue",
             Self::VueNoDeprecatedDeleteSet(_) => "vue",
             Self::VueNoDeprecatedDestroyedLifecycle(_) => "vue",
             Self::VueNoDeprecatedEventsApi(_) => "vue",
             Self::VueNoDeprecatedModelDefinition(_) => "vue",
+            Self::VueNoDeprecatedPropsDefaultThis(_) => "vue",
             Self::VueNoDeprecatedVueConfigKeycodes(_) => "vue",
             Self::VueNoExportInScriptSetup(_) => "vue",
+            Self::VueNoExposeAfterAwait(_) => "vue",
             Self::VueNoImportCompilerMacros(_) => "vue",
             Self::VueNoLifecycleAfterAwait(_) => "vue",
             Self::VueNoMultipleSlotArgs(_) => "vue",
             Self::VueNoRequiredPropWithDefault(_) => "vue",
+            Self::VueNoSharedComponentData(_) => "vue",
             Self::VueNoThisInBeforeRouteEnter(_) => "vue",
+            Self::VueNoWatchAfterAwait(_) => "vue",
             Self::VuePreferImportFromVue(_) => "vue",
             Self::VueRequireDefaultExport(_) => "vue",
+            Self::VueRequireRenderReturn(_) => "vue",
+            Self::VueRequireSlotsAsFunctions(_) => "vue",
             Self::VueRequireTypedRef(_) => "vue",
             Self::VueReturnInComputedProperty(_) => "vue",
+            Self::VueReturnInEmitsValidator(_) => "vue",
             Self::VueValidDefineEmits(_) => "vue",
+            Self::VueValidDefineOptions(_) => "vue",
             Self::VueValidDefineProps(_) => "vue",
+            Self::VueValidNextTick(_) => "vue",
         }
     }
     pub fn from_configuration(
@@ -10693,6 +10850,9 @@ impl RuleEnum {
             }
             Self::EslintIdLength(_) => {
                 Ok(Self::EslintIdLength(EslintIdLength::from_configuration(value)?))
+            }
+            Self::EslintIdMatch(_) => {
+                Ok(Self::EslintIdMatch(EslintIdMatch::from_configuration(value)?))
             }
             Self::EslintInitDeclarations(_) => {
                 Ok(Self::EslintInitDeclarations(EslintInitDeclarations::from_configuration(value)?))
@@ -12024,6 +12184,9 @@ impl RuleEnum {
             Self::UnicornFilenameCase(_) => {
                 Ok(Self::UnicornFilenameCase(UnicornFilenameCase::from_configuration(value)?))
             }
+            Self::UnicornImportStyle(_) => {
+                Ok(Self::UnicornImportStyle(UnicornImportStyle::from_configuration(value)?))
+            }
             Self::UnicornNewForBuiltins(_) => {
                 Ok(Self::UnicornNewForBuiltins(UnicornNewForBuiltins::from_configuration(value)?))
             }
@@ -13027,6 +13190,9 @@ impl RuleEnum {
             Self::VitestWarnTodo(_) => {
                 Ok(Self::VitestWarnTodo(VitestWarnTodo::from_configuration(value)?))
             }
+            Self::NodeCallbackReturn(_) => {
+                Ok(Self::NodeCallbackReturn(NodeCallbackReturn::from_configuration(value)?))
+            }
             Self::NodeGlobalRequire(_) => {
                 Ok(Self::NodeGlobalRequire(NodeGlobalRequire::from_configuration(value)?))
             }
@@ -13058,6 +13224,9 @@ impl RuleEnum {
             Self::VueNoArrowFunctionsInWatch(_) => Ok(Self::VueNoArrowFunctionsInWatch(
                 VueNoArrowFunctionsInWatch::from_configuration(value)?,
             )),
+            Self::VueNoComputedPropertiesInData(_) => Ok(Self::VueNoComputedPropertiesInData(
+                VueNoComputedPropertiesInData::from_configuration(value)?,
+            )),
             Self::VueNoDeprecatedDataObjectDeclaration(_) => {
                 Ok(Self::VueNoDeprecatedDataObjectDeclaration(
                     VueNoDeprecatedDataObjectDeclaration::from_configuration(value)?,
@@ -13077,6 +13246,9 @@ impl RuleEnum {
             Self::VueNoDeprecatedModelDefinition(_) => Ok(Self::VueNoDeprecatedModelDefinition(
                 VueNoDeprecatedModelDefinition::from_configuration(value)?,
             )),
+            Self::VueNoDeprecatedPropsDefaultThis(_) => Ok(Self::VueNoDeprecatedPropsDefaultThis(
+                VueNoDeprecatedPropsDefaultThis::from_configuration(value)?,
+            )),
             Self::VueNoDeprecatedVueConfigKeycodes(_) => {
                 Ok(Self::VueNoDeprecatedVueConfigKeycodes(
                     VueNoDeprecatedVueConfigKeycodes::from_configuration(value)?,
@@ -13085,6 +13257,9 @@ impl RuleEnum {
             Self::VueNoExportInScriptSetup(_) => Ok(Self::VueNoExportInScriptSetup(
                 VueNoExportInScriptSetup::from_configuration(value)?,
             )),
+            Self::VueNoExposeAfterAwait(_) => {
+                Ok(Self::VueNoExposeAfterAwait(VueNoExposeAfterAwait::from_configuration(value)?))
+            }
             Self::VueNoImportCompilerMacros(_) => Ok(Self::VueNoImportCompilerMacros(
                 VueNoImportCompilerMacros::from_configuration(value)?,
             )),
@@ -13097,14 +13272,26 @@ impl RuleEnum {
             Self::VueNoRequiredPropWithDefault(_) => Ok(Self::VueNoRequiredPropWithDefault(
                 VueNoRequiredPropWithDefault::from_configuration(value)?,
             )),
+            Self::VueNoSharedComponentData(_) => Ok(Self::VueNoSharedComponentData(
+                VueNoSharedComponentData::from_configuration(value)?,
+            )),
             Self::VueNoThisInBeforeRouteEnter(_) => Ok(Self::VueNoThisInBeforeRouteEnter(
                 VueNoThisInBeforeRouteEnter::from_configuration(value)?,
             )),
+            Self::VueNoWatchAfterAwait(_) => {
+                Ok(Self::VueNoWatchAfterAwait(VueNoWatchAfterAwait::from_configuration(value)?))
+            }
             Self::VuePreferImportFromVue(_) => {
                 Ok(Self::VuePreferImportFromVue(VuePreferImportFromVue::from_configuration(value)?))
             }
             Self::VueRequireDefaultExport(_) => Ok(Self::VueRequireDefaultExport(
                 VueRequireDefaultExport::from_configuration(value)?,
+            )),
+            Self::VueRequireRenderReturn(_) => {
+                Ok(Self::VueRequireRenderReturn(VueRequireRenderReturn::from_configuration(value)?))
+            }
+            Self::VueRequireSlotsAsFunctions(_) => Ok(Self::VueRequireSlotsAsFunctions(
+                VueRequireSlotsAsFunctions::from_configuration(value)?,
             )),
             Self::VueRequireTypedRef(_) => {
                 Ok(Self::VueRequireTypedRef(VueRequireTypedRef::from_configuration(value)?))
@@ -13112,11 +13299,20 @@ impl RuleEnum {
             Self::VueReturnInComputedProperty(_) => Ok(Self::VueReturnInComputedProperty(
                 VueReturnInComputedProperty::from_configuration(value)?,
             )),
+            Self::VueReturnInEmitsValidator(_) => Ok(Self::VueReturnInEmitsValidator(
+                VueReturnInEmitsValidator::from_configuration(value)?,
+            )),
             Self::VueValidDefineEmits(_) => {
                 Ok(Self::VueValidDefineEmits(VueValidDefineEmits::from_configuration(value)?))
             }
+            Self::VueValidDefineOptions(_) => {
+                Ok(Self::VueValidDefineOptions(VueValidDefineOptions::from_configuration(value)?))
+            }
             Self::VueValidDefineProps(_) => {
                 Ok(Self::VueValidDefineProps(VueValidDefineProps::from_configuration(value)?))
+            }
+            Self::VueValidNextTick(_) => {
+                Ok(Self::VueValidNextTick(VueValidNextTick::from_configuration(value)?))
             }
         }
     }
@@ -13176,6 +13372,7 @@ impl RuleEnum {
             Self::EslintGroupedAccessorPairs(rule) => rule.to_configuration(),
             Self::EslintGuardForIn(rule) => rule.to_configuration(),
             Self::EslintIdLength(rule) => rule.to_configuration(),
+            Self::EslintIdMatch(rule) => rule.to_configuration(),
             Self::EslintInitDeclarations(rule) => rule.to_configuration(),
             Self::EslintLogicalAssignmentOperators(rule) => rule.to_configuration(),
             Self::EslintMaxClassesPerFile(rule) => rule.to_configuration(),
@@ -13586,6 +13783,7 @@ impl RuleEnum {
             Self::UnicornEscapeCase(rule) => rule.to_configuration(),
             Self::UnicornExplicitLengthCheck(rule) => rule.to_configuration(),
             Self::UnicornFilenameCase(rule) => rule.to_configuration(),
+            Self::UnicornImportStyle(rule) => rule.to_configuration(),
             Self::UnicornNewForBuiltins(rule) => rule.to_configuration(),
             Self::UnicornNoAbusiveEslintDisable(rule) => rule.to_configuration(),
             Self::UnicornNoAccessorRecursion(rule) => rule.to_configuration(),
@@ -13897,6 +14095,7 @@ impl RuleEnum {
             Self::VitestValidExpectInPromise(rule) => rule.to_configuration(),
             Self::VitestValidTitle(rule) => rule.to_configuration(),
             Self::VitestWarnTodo(rule) => rule.to_configuration(),
+            Self::NodeCallbackReturn(rule) => rule.to_configuration(),
             Self::NodeGlobalRequire(rule) => rule.to_configuration(),
             Self::NodeHandleCallbackErr(rule) => rule.to_configuration(),
             Self::NodeNoExportsAssign(rule) => rule.to_configuration(),
@@ -13908,24 +14107,34 @@ impl RuleEnum {
             Self::VueDefinePropsDestructuring(rule) => rule.to_configuration(),
             Self::VueMaxProps(rule) => rule.to_configuration(),
             Self::VueNoArrowFunctionsInWatch(rule) => rule.to_configuration(),
+            Self::VueNoComputedPropertiesInData(rule) => rule.to_configuration(),
             Self::VueNoDeprecatedDataObjectDeclaration(rule) => rule.to_configuration(),
             Self::VueNoDeprecatedDeleteSet(rule) => rule.to_configuration(),
             Self::VueNoDeprecatedDestroyedLifecycle(rule) => rule.to_configuration(),
             Self::VueNoDeprecatedEventsApi(rule) => rule.to_configuration(),
             Self::VueNoDeprecatedModelDefinition(rule) => rule.to_configuration(),
+            Self::VueNoDeprecatedPropsDefaultThis(rule) => rule.to_configuration(),
             Self::VueNoDeprecatedVueConfigKeycodes(rule) => rule.to_configuration(),
             Self::VueNoExportInScriptSetup(rule) => rule.to_configuration(),
+            Self::VueNoExposeAfterAwait(rule) => rule.to_configuration(),
             Self::VueNoImportCompilerMacros(rule) => rule.to_configuration(),
             Self::VueNoLifecycleAfterAwait(rule) => rule.to_configuration(),
             Self::VueNoMultipleSlotArgs(rule) => rule.to_configuration(),
             Self::VueNoRequiredPropWithDefault(rule) => rule.to_configuration(),
+            Self::VueNoSharedComponentData(rule) => rule.to_configuration(),
             Self::VueNoThisInBeforeRouteEnter(rule) => rule.to_configuration(),
+            Self::VueNoWatchAfterAwait(rule) => rule.to_configuration(),
             Self::VuePreferImportFromVue(rule) => rule.to_configuration(),
             Self::VueRequireDefaultExport(rule) => rule.to_configuration(),
+            Self::VueRequireRenderReturn(rule) => rule.to_configuration(),
+            Self::VueRequireSlotsAsFunctions(rule) => rule.to_configuration(),
             Self::VueRequireTypedRef(rule) => rule.to_configuration(),
             Self::VueReturnInComputedProperty(rule) => rule.to_configuration(),
+            Self::VueReturnInEmitsValidator(rule) => rule.to_configuration(),
             Self::VueValidDefineEmits(rule) => rule.to_configuration(),
+            Self::VueValidDefineOptions(rule) => rule.to_configuration(),
             Self::VueValidDefineProps(rule) => rule.to_configuration(),
+            Self::VueValidNextTick(rule) => rule.to_configuration(),
         }
     }
     pub(crate) fn run<'a, const TIMINGS: bool>(
@@ -13990,6 +14199,7 @@ impl RuleEnum {
                 Self::EslintGroupedAccessorPairs(rule) => rule.run(node, ctx),
                 Self::EslintGuardForIn(rule) => rule.run(node, ctx),
                 Self::EslintIdLength(rule) => rule.run(node, ctx),
+                Self::EslintIdMatch(rule) => rule.run(node, ctx),
                 Self::EslintInitDeclarations(rule) => rule.run(node, ctx),
                 Self::EslintLogicalAssignmentOperators(rule) => rule.run(node, ctx),
                 Self::EslintMaxClassesPerFile(rule) => rule.run(node, ctx),
@@ -14400,6 +14610,7 @@ impl RuleEnum {
                 Self::UnicornEscapeCase(rule) => rule.run(node, ctx),
                 Self::UnicornExplicitLengthCheck(rule) => rule.run(node, ctx),
                 Self::UnicornFilenameCase(rule) => rule.run(node, ctx),
+                Self::UnicornImportStyle(rule) => rule.run(node, ctx),
                 Self::UnicornNewForBuiltins(rule) => rule.run(node, ctx),
                 Self::UnicornNoAbusiveEslintDisable(rule) => rule.run(node, ctx),
                 Self::UnicornNoAccessorRecursion(rule) => rule.run(node, ctx),
@@ -14711,6 +14922,7 @@ impl RuleEnum {
                 Self::VitestValidExpectInPromise(rule) => rule.run(node, ctx),
                 Self::VitestValidTitle(rule) => rule.run(node, ctx),
                 Self::VitestWarnTodo(rule) => rule.run(node, ctx),
+                Self::NodeCallbackReturn(rule) => rule.run(node, ctx),
                 Self::NodeGlobalRequire(rule) => rule.run(node, ctx),
                 Self::NodeHandleCallbackErr(rule) => rule.run(node, ctx),
                 Self::NodeNoExportsAssign(rule) => rule.run(node, ctx),
@@ -14722,24 +14934,34 @@ impl RuleEnum {
                 Self::VueDefinePropsDestructuring(rule) => rule.run(node, ctx),
                 Self::VueMaxProps(rule) => rule.run(node, ctx),
                 Self::VueNoArrowFunctionsInWatch(rule) => rule.run(node, ctx),
+                Self::VueNoComputedPropertiesInData(rule) => rule.run(node, ctx),
                 Self::VueNoDeprecatedDataObjectDeclaration(rule) => rule.run(node, ctx),
                 Self::VueNoDeprecatedDeleteSet(rule) => rule.run(node, ctx),
                 Self::VueNoDeprecatedDestroyedLifecycle(rule) => rule.run(node, ctx),
                 Self::VueNoDeprecatedEventsApi(rule) => rule.run(node, ctx),
                 Self::VueNoDeprecatedModelDefinition(rule) => rule.run(node, ctx),
+                Self::VueNoDeprecatedPropsDefaultThis(rule) => rule.run(node, ctx),
                 Self::VueNoDeprecatedVueConfigKeycodes(rule) => rule.run(node, ctx),
                 Self::VueNoExportInScriptSetup(rule) => rule.run(node, ctx),
+                Self::VueNoExposeAfterAwait(rule) => rule.run(node, ctx),
                 Self::VueNoImportCompilerMacros(rule) => rule.run(node, ctx),
                 Self::VueNoLifecycleAfterAwait(rule) => rule.run(node, ctx),
                 Self::VueNoMultipleSlotArgs(rule) => rule.run(node, ctx),
                 Self::VueNoRequiredPropWithDefault(rule) => rule.run(node, ctx),
+                Self::VueNoSharedComponentData(rule) => rule.run(node, ctx),
                 Self::VueNoThisInBeforeRouteEnter(rule) => rule.run(node, ctx),
+                Self::VueNoWatchAfterAwait(rule) => rule.run(node, ctx),
                 Self::VuePreferImportFromVue(rule) => rule.run(node, ctx),
                 Self::VueRequireDefaultExport(rule) => rule.run(node, ctx),
+                Self::VueRequireRenderReturn(rule) => rule.run(node, ctx),
+                Self::VueRequireSlotsAsFunctions(rule) => rule.run(node, ctx),
                 Self::VueRequireTypedRef(rule) => rule.run(node, ctx),
                 Self::VueReturnInComputedProperty(rule) => rule.run(node, ctx),
+                Self::VueReturnInEmitsValidator(rule) => rule.run(node, ctx),
                 Self::VueValidDefineEmits(rule) => rule.run(node, ctx),
+                Self::VueValidDefineOptions(rule) => rule.run(node, ctx),
                 Self::VueValidDefineProps(rule) => rule.run(node, ctx),
+                Self::VueValidNextTick(rule) => rule.run(node, ctx),
             });
         } else {
             match self {
@@ -14797,6 +15019,7 @@ impl RuleEnum {
                 Self::EslintGroupedAccessorPairs(rule) => rule.run(node, ctx),
                 Self::EslintGuardForIn(rule) => rule.run(node, ctx),
                 Self::EslintIdLength(rule) => rule.run(node, ctx),
+                Self::EslintIdMatch(rule) => rule.run(node, ctx),
                 Self::EslintInitDeclarations(rule) => rule.run(node, ctx),
                 Self::EslintLogicalAssignmentOperators(rule) => rule.run(node, ctx),
                 Self::EslintMaxClassesPerFile(rule) => rule.run(node, ctx),
@@ -15207,6 +15430,7 @@ impl RuleEnum {
                 Self::UnicornEscapeCase(rule) => rule.run(node, ctx),
                 Self::UnicornExplicitLengthCheck(rule) => rule.run(node, ctx),
                 Self::UnicornFilenameCase(rule) => rule.run(node, ctx),
+                Self::UnicornImportStyle(rule) => rule.run(node, ctx),
                 Self::UnicornNewForBuiltins(rule) => rule.run(node, ctx),
                 Self::UnicornNoAbusiveEslintDisable(rule) => rule.run(node, ctx),
                 Self::UnicornNoAccessorRecursion(rule) => rule.run(node, ctx),
@@ -15518,6 +15742,7 @@ impl RuleEnum {
                 Self::VitestValidExpectInPromise(rule) => rule.run(node, ctx),
                 Self::VitestValidTitle(rule) => rule.run(node, ctx),
                 Self::VitestWarnTodo(rule) => rule.run(node, ctx),
+                Self::NodeCallbackReturn(rule) => rule.run(node, ctx),
                 Self::NodeGlobalRequire(rule) => rule.run(node, ctx),
                 Self::NodeHandleCallbackErr(rule) => rule.run(node, ctx),
                 Self::NodeNoExportsAssign(rule) => rule.run(node, ctx),
@@ -15529,24 +15754,34 @@ impl RuleEnum {
                 Self::VueDefinePropsDestructuring(rule) => rule.run(node, ctx),
                 Self::VueMaxProps(rule) => rule.run(node, ctx),
                 Self::VueNoArrowFunctionsInWatch(rule) => rule.run(node, ctx),
+                Self::VueNoComputedPropertiesInData(rule) => rule.run(node, ctx),
                 Self::VueNoDeprecatedDataObjectDeclaration(rule) => rule.run(node, ctx),
                 Self::VueNoDeprecatedDeleteSet(rule) => rule.run(node, ctx),
                 Self::VueNoDeprecatedDestroyedLifecycle(rule) => rule.run(node, ctx),
                 Self::VueNoDeprecatedEventsApi(rule) => rule.run(node, ctx),
                 Self::VueNoDeprecatedModelDefinition(rule) => rule.run(node, ctx),
+                Self::VueNoDeprecatedPropsDefaultThis(rule) => rule.run(node, ctx),
                 Self::VueNoDeprecatedVueConfigKeycodes(rule) => rule.run(node, ctx),
                 Self::VueNoExportInScriptSetup(rule) => rule.run(node, ctx),
+                Self::VueNoExposeAfterAwait(rule) => rule.run(node, ctx),
                 Self::VueNoImportCompilerMacros(rule) => rule.run(node, ctx),
                 Self::VueNoLifecycleAfterAwait(rule) => rule.run(node, ctx),
                 Self::VueNoMultipleSlotArgs(rule) => rule.run(node, ctx),
                 Self::VueNoRequiredPropWithDefault(rule) => rule.run(node, ctx),
+                Self::VueNoSharedComponentData(rule) => rule.run(node, ctx),
                 Self::VueNoThisInBeforeRouteEnter(rule) => rule.run(node, ctx),
+                Self::VueNoWatchAfterAwait(rule) => rule.run(node, ctx),
                 Self::VuePreferImportFromVue(rule) => rule.run(node, ctx),
                 Self::VueRequireDefaultExport(rule) => rule.run(node, ctx),
+                Self::VueRequireRenderReturn(rule) => rule.run(node, ctx),
+                Self::VueRequireSlotsAsFunctions(rule) => rule.run(node, ctx),
                 Self::VueRequireTypedRef(rule) => rule.run(node, ctx),
                 Self::VueReturnInComputedProperty(rule) => rule.run(node, ctx),
+                Self::VueReturnInEmitsValidator(rule) => rule.run(node, ctx),
                 Self::VueValidDefineEmits(rule) => rule.run(node, ctx),
+                Self::VueValidDefineOptions(rule) => rule.run(node, ctx),
                 Self::VueValidDefineProps(rule) => rule.run(node, ctx),
+                Self::VueValidNextTick(rule) => rule.run(node, ctx),
             }
         }
     }
@@ -15611,6 +15846,7 @@ impl RuleEnum {
                 Self::EslintGroupedAccessorPairs(rule) => rule.run_once(ctx),
                 Self::EslintGuardForIn(rule) => rule.run_once(ctx),
                 Self::EslintIdLength(rule) => rule.run_once(ctx),
+                Self::EslintIdMatch(rule) => rule.run_once(ctx),
                 Self::EslintInitDeclarations(rule) => rule.run_once(ctx),
                 Self::EslintLogicalAssignmentOperators(rule) => rule.run_once(ctx),
                 Self::EslintMaxClassesPerFile(rule) => rule.run_once(ctx),
@@ -16021,6 +16257,7 @@ impl RuleEnum {
                 Self::UnicornEscapeCase(rule) => rule.run_once(ctx),
                 Self::UnicornExplicitLengthCheck(rule) => rule.run_once(ctx),
                 Self::UnicornFilenameCase(rule) => rule.run_once(ctx),
+                Self::UnicornImportStyle(rule) => rule.run_once(ctx),
                 Self::UnicornNewForBuiltins(rule) => rule.run_once(ctx),
                 Self::UnicornNoAbusiveEslintDisable(rule) => rule.run_once(ctx),
                 Self::UnicornNoAccessorRecursion(rule) => rule.run_once(ctx),
@@ -16332,6 +16569,7 @@ impl RuleEnum {
                 Self::VitestValidExpectInPromise(rule) => rule.run_once(ctx),
                 Self::VitestValidTitle(rule) => rule.run_once(ctx),
                 Self::VitestWarnTodo(rule) => rule.run_once(ctx),
+                Self::NodeCallbackReturn(rule) => rule.run_once(ctx),
                 Self::NodeGlobalRequire(rule) => rule.run_once(ctx),
                 Self::NodeHandleCallbackErr(rule) => rule.run_once(ctx),
                 Self::NodeNoExportsAssign(rule) => rule.run_once(ctx),
@@ -16343,24 +16581,34 @@ impl RuleEnum {
                 Self::VueDefinePropsDestructuring(rule) => rule.run_once(ctx),
                 Self::VueMaxProps(rule) => rule.run_once(ctx),
                 Self::VueNoArrowFunctionsInWatch(rule) => rule.run_once(ctx),
+                Self::VueNoComputedPropertiesInData(rule) => rule.run_once(ctx),
                 Self::VueNoDeprecatedDataObjectDeclaration(rule) => rule.run_once(ctx),
                 Self::VueNoDeprecatedDeleteSet(rule) => rule.run_once(ctx),
                 Self::VueNoDeprecatedDestroyedLifecycle(rule) => rule.run_once(ctx),
                 Self::VueNoDeprecatedEventsApi(rule) => rule.run_once(ctx),
                 Self::VueNoDeprecatedModelDefinition(rule) => rule.run_once(ctx),
+                Self::VueNoDeprecatedPropsDefaultThis(rule) => rule.run_once(ctx),
                 Self::VueNoDeprecatedVueConfigKeycodes(rule) => rule.run_once(ctx),
                 Self::VueNoExportInScriptSetup(rule) => rule.run_once(ctx),
+                Self::VueNoExposeAfterAwait(rule) => rule.run_once(ctx),
                 Self::VueNoImportCompilerMacros(rule) => rule.run_once(ctx),
                 Self::VueNoLifecycleAfterAwait(rule) => rule.run_once(ctx),
                 Self::VueNoMultipleSlotArgs(rule) => rule.run_once(ctx),
                 Self::VueNoRequiredPropWithDefault(rule) => rule.run_once(ctx),
+                Self::VueNoSharedComponentData(rule) => rule.run_once(ctx),
                 Self::VueNoThisInBeforeRouteEnter(rule) => rule.run_once(ctx),
+                Self::VueNoWatchAfterAwait(rule) => rule.run_once(ctx),
                 Self::VuePreferImportFromVue(rule) => rule.run_once(ctx),
                 Self::VueRequireDefaultExport(rule) => rule.run_once(ctx),
+                Self::VueRequireRenderReturn(rule) => rule.run_once(ctx),
+                Self::VueRequireSlotsAsFunctions(rule) => rule.run_once(ctx),
                 Self::VueRequireTypedRef(rule) => rule.run_once(ctx),
                 Self::VueReturnInComputedProperty(rule) => rule.run_once(ctx),
+                Self::VueReturnInEmitsValidator(rule) => rule.run_once(ctx),
                 Self::VueValidDefineEmits(rule) => rule.run_once(ctx),
+                Self::VueValidDefineOptions(rule) => rule.run_once(ctx),
                 Self::VueValidDefineProps(rule) => rule.run_once(ctx),
+                Self::VueValidNextTick(rule) => rule.run_once(ctx),
             });
         } else {
             match self {
@@ -16418,6 +16666,7 @@ impl RuleEnum {
                 Self::EslintGroupedAccessorPairs(rule) => rule.run_once(ctx),
                 Self::EslintGuardForIn(rule) => rule.run_once(ctx),
                 Self::EslintIdLength(rule) => rule.run_once(ctx),
+                Self::EslintIdMatch(rule) => rule.run_once(ctx),
                 Self::EslintInitDeclarations(rule) => rule.run_once(ctx),
                 Self::EslintLogicalAssignmentOperators(rule) => rule.run_once(ctx),
                 Self::EslintMaxClassesPerFile(rule) => rule.run_once(ctx),
@@ -16828,6 +17077,7 @@ impl RuleEnum {
                 Self::UnicornEscapeCase(rule) => rule.run_once(ctx),
                 Self::UnicornExplicitLengthCheck(rule) => rule.run_once(ctx),
                 Self::UnicornFilenameCase(rule) => rule.run_once(ctx),
+                Self::UnicornImportStyle(rule) => rule.run_once(ctx),
                 Self::UnicornNewForBuiltins(rule) => rule.run_once(ctx),
                 Self::UnicornNoAbusiveEslintDisable(rule) => rule.run_once(ctx),
                 Self::UnicornNoAccessorRecursion(rule) => rule.run_once(ctx),
@@ -17139,6 +17389,7 @@ impl RuleEnum {
                 Self::VitestValidExpectInPromise(rule) => rule.run_once(ctx),
                 Self::VitestValidTitle(rule) => rule.run_once(ctx),
                 Self::VitestWarnTodo(rule) => rule.run_once(ctx),
+                Self::NodeCallbackReturn(rule) => rule.run_once(ctx),
                 Self::NodeGlobalRequire(rule) => rule.run_once(ctx),
                 Self::NodeHandleCallbackErr(rule) => rule.run_once(ctx),
                 Self::NodeNoExportsAssign(rule) => rule.run_once(ctx),
@@ -17150,24 +17401,34 @@ impl RuleEnum {
                 Self::VueDefinePropsDestructuring(rule) => rule.run_once(ctx),
                 Self::VueMaxProps(rule) => rule.run_once(ctx),
                 Self::VueNoArrowFunctionsInWatch(rule) => rule.run_once(ctx),
+                Self::VueNoComputedPropertiesInData(rule) => rule.run_once(ctx),
                 Self::VueNoDeprecatedDataObjectDeclaration(rule) => rule.run_once(ctx),
                 Self::VueNoDeprecatedDeleteSet(rule) => rule.run_once(ctx),
                 Self::VueNoDeprecatedDestroyedLifecycle(rule) => rule.run_once(ctx),
                 Self::VueNoDeprecatedEventsApi(rule) => rule.run_once(ctx),
                 Self::VueNoDeprecatedModelDefinition(rule) => rule.run_once(ctx),
+                Self::VueNoDeprecatedPropsDefaultThis(rule) => rule.run_once(ctx),
                 Self::VueNoDeprecatedVueConfigKeycodes(rule) => rule.run_once(ctx),
                 Self::VueNoExportInScriptSetup(rule) => rule.run_once(ctx),
+                Self::VueNoExposeAfterAwait(rule) => rule.run_once(ctx),
                 Self::VueNoImportCompilerMacros(rule) => rule.run_once(ctx),
                 Self::VueNoLifecycleAfterAwait(rule) => rule.run_once(ctx),
                 Self::VueNoMultipleSlotArgs(rule) => rule.run_once(ctx),
                 Self::VueNoRequiredPropWithDefault(rule) => rule.run_once(ctx),
+                Self::VueNoSharedComponentData(rule) => rule.run_once(ctx),
                 Self::VueNoThisInBeforeRouteEnter(rule) => rule.run_once(ctx),
+                Self::VueNoWatchAfterAwait(rule) => rule.run_once(ctx),
                 Self::VuePreferImportFromVue(rule) => rule.run_once(ctx),
                 Self::VueRequireDefaultExport(rule) => rule.run_once(ctx),
+                Self::VueRequireRenderReturn(rule) => rule.run_once(ctx),
+                Self::VueRequireSlotsAsFunctions(rule) => rule.run_once(ctx),
                 Self::VueRequireTypedRef(rule) => rule.run_once(ctx),
                 Self::VueReturnInComputedProperty(rule) => rule.run_once(ctx),
+                Self::VueReturnInEmitsValidator(rule) => rule.run_once(ctx),
                 Self::VueValidDefineEmits(rule) => rule.run_once(ctx),
+                Self::VueValidDefineOptions(rule) => rule.run_once(ctx),
                 Self::VueValidDefineProps(rule) => rule.run_once(ctx),
+                Self::VueValidNextTick(rule) => rule.run_once(ctx),
             }
         }
     }
@@ -17235,6 +17496,7 @@ impl RuleEnum {
                 Self::EslintGroupedAccessorPairs(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::EslintGuardForIn(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::EslintIdLength(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::EslintIdMatch(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::EslintInitDeclarations(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::EslintLogicalAssignmentOperators(rule) => {
                     rule.run_on_jest_node(jest_node, ctx)
@@ -17783,6 +18045,7 @@ impl RuleEnum {
                 Self::UnicornEscapeCase(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::UnicornExplicitLengthCheck(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::UnicornFilenameCase(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::UnicornImportStyle(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::UnicornNewForBuiltins(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::UnicornNoAbusiveEslintDisable(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::UnicornNoAccessorRecursion(rule) => rule.run_on_jest_node(jest_node, ctx),
@@ -18200,6 +18463,7 @@ impl RuleEnum {
                 Self::VitestValidExpectInPromise(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VitestValidTitle(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VitestWarnTodo(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::NodeCallbackReturn(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::NodeGlobalRequire(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::NodeHandleCallbackErr(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::NodeNoExportsAssign(rule) => rule.run_on_jest_node(jest_node, ctx),
@@ -18211,6 +18475,7 @@ impl RuleEnum {
                 Self::VueDefinePropsDestructuring(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueMaxProps(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoArrowFunctionsInWatch(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueNoComputedPropertiesInData(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoDeprecatedDataObjectDeclaration(rule) => {
                     rule.run_on_jest_node(jest_node, ctx)
                 }
@@ -18220,21 +18485,32 @@ impl RuleEnum {
                 }
                 Self::VueNoDeprecatedEventsApi(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoDeprecatedModelDefinition(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueNoDeprecatedPropsDefaultThis(rule) => {
+                    rule.run_on_jest_node(jest_node, ctx)
+                }
                 Self::VueNoDeprecatedVueConfigKeycodes(rule) => {
                     rule.run_on_jest_node(jest_node, ctx)
                 }
                 Self::VueNoExportInScriptSetup(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueNoExposeAfterAwait(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoImportCompilerMacros(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoLifecycleAfterAwait(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoMultipleSlotArgs(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoRequiredPropWithDefault(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueNoSharedComponentData(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoThisInBeforeRouteEnter(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueNoWatchAfterAwait(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VuePreferImportFromVue(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueRequireDefaultExport(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueRequireRenderReturn(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueRequireSlotsAsFunctions(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueRequireTypedRef(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueReturnInComputedProperty(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueReturnInEmitsValidator(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueValidDefineEmits(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueValidDefineOptions(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueValidDefineProps(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueValidNextTick(rule) => rule.run_on_jest_node(jest_node, ctx),
             });
         } else {
             match self {
@@ -18294,6 +18570,7 @@ impl RuleEnum {
                 Self::EslintGroupedAccessorPairs(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::EslintGuardForIn(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::EslintIdLength(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::EslintIdMatch(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::EslintInitDeclarations(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::EslintLogicalAssignmentOperators(rule) => {
                     rule.run_on_jest_node(jest_node, ctx)
@@ -18842,6 +19119,7 @@ impl RuleEnum {
                 Self::UnicornEscapeCase(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::UnicornExplicitLengthCheck(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::UnicornFilenameCase(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::UnicornImportStyle(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::UnicornNewForBuiltins(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::UnicornNoAbusiveEslintDisable(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::UnicornNoAccessorRecursion(rule) => rule.run_on_jest_node(jest_node, ctx),
@@ -19259,6 +19537,7 @@ impl RuleEnum {
                 Self::VitestValidExpectInPromise(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VitestValidTitle(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VitestWarnTodo(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::NodeCallbackReturn(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::NodeGlobalRequire(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::NodeHandleCallbackErr(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::NodeNoExportsAssign(rule) => rule.run_on_jest_node(jest_node, ctx),
@@ -19270,6 +19549,7 @@ impl RuleEnum {
                 Self::VueDefinePropsDestructuring(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueMaxProps(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoArrowFunctionsInWatch(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueNoComputedPropertiesInData(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoDeprecatedDataObjectDeclaration(rule) => {
                     rule.run_on_jest_node(jest_node, ctx)
                 }
@@ -19279,21 +19559,32 @@ impl RuleEnum {
                 }
                 Self::VueNoDeprecatedEventsApi(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoDeprecatedModelDefinition(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueNoDeprecatedPropsDefaultThis(rule) => {
+                    rule.run_on_jest_node(jest_node, ctx)
+                }
                 Self::VueNoDeprecatedVueConfigKeycodes(rule) => {
                     rule.run_on_jest_node(jest_node, ctx)
                 }
                 Self::VueNoExportInScriptSetup(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueNoExposeAfterAwait(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoImportCompilerMacros(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoLifecycleAfterAwait(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoMultipleSlotArgs(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoRequiredPropWithDefault(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueNoSharedComponentData(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueNoThisInBeforeRouteEnter(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueNoWatchAfterAwait(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VuePreferImportFromVue(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueRequireDefaultExport(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueRequireRenderReturn(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueRequireSlotsAsFunctions(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueRequireTypedRef(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueReturnInComputedProperty(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueReturnInEmitsValidator(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueValidDefineEmits(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueValidDefineOptions(rule) => rule.run_on_jest_node(jest_node, ctx),
                 Self::VueValidDefineProps(rule) => rule.run_on_jest_node(jest_node, ctx),
+                Self::VueValidNextTick(rule) => rule.run_on_jest_node(jest_node, ctx),
             }
         }
     }
@@ -19353,6 +19644,7 @@ impl RuleEnum {
             Self::EslintGroupedAccessorPairs(rule) => rule.should_run(ctx),
             Self::EslintGuardForIn(rule) => rule.should_run(ctx),
             Self::EslintIdLength(rule) => rule.should_run(ctx),
+            Self::EslintIdMatch(rule) => rule.should_run(ctx),
             Self::EslintInitDeclarations(rule) => rule.should_run(ctx),
             Self::EslintLogicalAssignmentOperators(rule) => rule.should_run(ctx),
             Self::EslintMaxClassesPerFile(rule) => rule.should_run(ctx),
@@ -19761,6 +20053,7 @@ impl RuleEnum {
             Self::UnicornEscapeCase(rule) => rule.should_run(ctx),
             Self::UnicornExplicitLengthCheck(rule) => rule.should_run(ctx),
             Self::UnicornFilenameCase(rule) => rule.should_run(ctx),
+            Self::UnicornImportStyle(rule) => rule.should_run(ctx),
             Self::UnicornNewForBuiltins(rule) => rule.should_run(ctx),
             Self::UnicornNoAbusiveEslintDisable(rule) => rule.should_run(ctx),
             Self::UnicornNoAccessorRecursion(rule) => rule.should_run(ctx),
@@ -20070,6 +20363,7 @@ impl RuleEnum {
             Self::VitestValidExpectInPromise(rule) => rule.should_run(ctx),
             Self::VitestValidTitle(rule) => rule.should_run(ctx),
             Self::VitestWarnTodo(rule) => rule.should_run(ctx),
+            Self::NodeCallbackReturn(rule) => rule.should_run(ctx),
             Self::NodeGlobalRequire(rule) => rule.should_run(ctx),
             Self::NodeHandleCallbackErr(rule) => rule.should_run(ctx),
             Self::NodeNoExportsAssign(rule) => rule.should_run(ctx),
@@ -20081,24 +20375,34 @@ impl RuleEnum {
             Self::VueDefinePropsDestructuring(rule) => rule.should_run(ctx),
             Self::VueMaxProps(rule) => rule.should_run(ctx),
             Self::VueNoArrowFunctionsInWatch(rule) => rule.should_run(ctx),
+            Self::VueNoComputedPropertiesInData(rule) => rule.should_run(ctx),
             Self::VueNoDeprecatedDataObjectDeclaration(rule) => rule.should_run(ctx),
             Self::VueNoDeprecatedDeleteSet(rule) => rule.should_run(ctx),
             Self::VueNoDeprecatedDestroyedLifecycle(rule) => rule.should_run(ctx),
             Self::VueNoDeprecatedEventsApi(rule) => rule.should_run(ctx),
             Self::VueNoDeprecatedModelDefinition(rule) => rule.should_run(ctx),
+            Self::VueNoDeprecatedPropsDefaultThis(rule) => rule.should_run(ctx),
             Self::VueNoDeprecatedVueConfigKeycodes(rule) => rule.should_run(ctx),
             Self::VueNoExportInScriptSetup(rule) => rule.should_run(ctx),
+            Self::VueNoExposeAfterAwait(rule) => rule.should_run(ctx),
             Self::VueNoImportCompilerMacros(rule) => rule.should_run(ctx),
             Self::VueNoLifecycleAfterAwait(rule) => rule.should_run(ctx),
             Self::VueNoMultipleSlotArgs(rule) => rule.should_run(ctx),
             Self::VueNoRequiredPropWithDefault(rule) => rule.should_run(ctx),
+            Self::VueNoSharedComponentData(rule) => rule.should_run(ctx),
             Self::VueNoThisInBeforeRouteEnter(rule) => rule.should_run(ctx),
+            Self::VueNoWatchAfterAwait(rule) => rule.should_run(ctx),
             Self::VuePreferImportFromVue(rule) => rule.should_run(ctx),
             Self::VueRequireDefaultExport(rule) => rule.should_run(ctx),
+            Self::VueRequireRenderReturn(rule) => rule.should_run(ctx),
+            Self::VueRequireSlotsAsFunctions(rule) => rule.should_run(ctx),
             Self::VueRequireTypedRef(rule) => rule.should_run(ctx),
             Self::VueReturnInComputedProperty(rule) => rule.should_run(ctx),
+            Self::VueReturnInEmitsValidator(rule) => rule.should_run(ctx),
             Self::VueValidDefineEmits(rule) => rule.should_run(ctx),
+            Self::VueValidDefineOptions(rule) => rule.should_run(ctx),
             Self::VueValidDefineProps(rule) => rule.should_run(ctx),
+            Self::VueValidNextTick(rule) => rule.should_run(ctx),
         }
     }
     pub fn is_tsgolint_rule(&self) -> bool {
@@ -20163,6 +20467,7 @@ impl RuleEnum {
             Self::EslintGroupedAccessorPairs(_) => EslintGroupedAccessorPairs::IS_TSGOLINT_RULE,
             Self::EslintGuardForIn(_) => EslintGuardForIn::IS_TSGOLINT_RULE,
             Self::EslintIdLength(_) => EslintIdLength::IS_TSGOLINT_RULE,
+            Self::EslintIdMatch(_) => EslintIdMatch::IS_TSGOLINT_RULE,
             Self::EslintInitDeclarations(_) => EslintInitDeclarations::IS_TSGOLINT_RULE,
             Self::EslintLogicalAssignmentOperators(_) => {
                 EslintLogicalAssignmentOperators::IS_TSGOLINT_RULE
@@ -20757,6 +21062,7 @@ impl RuleEnum {
             Self::UnicornEscapeCase(_) => UnicornEscapeCase::IS_TSGOLINT_RULE,
             Self::UnicornExplicitLengthCheck(_) => UnicornExplicitLengthCheck::IS_TSGOLINT_RULE,
             Self::UnicornFilenameCase(_) => UnicornFilenameCase::IS_TSGOLINT_RULE,
+            Self::UnicornImportStyle(_) => UnicornImportStyle::IS_TSGOLINT_RULE,
             Self::UnicornNewForBuiltins(_) => UnicornNewForBuiltins::IS_TSGOLINT_RULE,
             Self::UnicornNoAbusiveEslintDisable(_) => {
                 UnicornNoAbusiveEslintDisable::IS_TSGOLINT_RULE
@@ -21224,6 +21530,7 @@ impl RuleEnum {
             Self::VitestValidExpectInPromise(_) => VitestValidExpectInPromise::IS_TSGOLINT_RULE,
             Self::VitestValidTitle(_) => VitestValidTitle::IS_TSGOLINT_RULE,
             Self::VitestWarnTodo(_) => VitestWarnTodo::IS_TSGOLINT_RULE,
+            Self::NodeCallbackReturn(_) => NodeCallbackReturn::IS_TSGOLINT_RULE,
             Self::NodeGlobalRequire(_) => NodeGlobalRequire::IS_TSGOLINT_RULE,
             Self::NodeHandleCallbackErr(_) => NodeHandleCallbackErr::IS_TSGOLINT_RULE,
             Self::NodeNoExportsAssign(_) => NodeNoExportsAssign::IS_TSGOLINT_RULE,
@@ -21235,6 +21542,9 @@ impl RuleEnum {
             Self::VueDefinePropsDestructuring(_) => VueDefinePropsDestructuring::IS_TSGOLINT_RULE,
             Self::VueMaxProps(_) => VueMaxProps::IS_TSGOLINT_RULE,
             Self::VueNoArrowFunctionsInWatch(_) => VueNoArrowFunctionsInWatch::IS_TSGOLINT_RULE,
+            Self::VueNoComputedPropertiesInData(_) => {
+                VueNoComputedPropertiesInData::IS_TSGOLINT_RULE
+            }
             Self::VueNoDeprecatedDataObjectDeclaration(_) => {
                 VueNoDeprecatedDataObjectDeclaration::IS_TSGOLINT_RULE
             }
@@ -21246,21 +21556,32 @@ impl RuleEnum {
             Self::VueNoDeprecatedModelDefinition(_) => {
                 VueNoDeprecatedModelDefinition::IS_TSGOLINT_RULE
             }
+            Self::VueNoDeprecatedPropsDefaultThis(_) => {
+                VueNoDeprecatedPropsDefaultThis::IS_TSGOLINT_RULE
+            }
             Self::VueNoDeprecatedVueConfigKeycodes(_) => {
                 VueNoDeprecatedVueConfigKeycodes::IS_TSGOLINT_RULE
             }
             Self::VueNoExportInScriptSetup(_) => VueNoExportInScriptSetup::IS_TSGOLINT_RULE,
+            Self::VueNoExposeAfterAwait(_) => VueNoExposeAfterAwait::IS_TSGOLINT_RULE,
             Self::VueNoImportCompilerMacros(_) => VueNoImportCompilerMacros::IS_TSGOLINT_RULE,
             Self::VueNoLifecycleAfterAwait(_) => VueNoLifecycleAfterAwait::IS_TSGOLINT_RULE,
             Self::VueNoMultipleSlotArgs(_) => VueNoMultipleSlotArgs::IS_TSGOLINT_RULE,
             Self::VueNoRequiredPropWithDefault(_) => VueNoRequiredPropWithDefault::IS_TSGOLINT_RULE,
+            Self::VueNoSharedComponentData(_) => VueNoSharedComponentData::IS_TSGOLINT_RULE,
             Self::VueNoThisInBeforeRouteEnter(_) => VueNoThisInBeforeRouteEnter::IS_TSGOLINT_RULE,
+            Self::VueNoWatchAfterAwait(_) => VueNoWatchAfterAwait::IS_TSGOLINT_RULE,
             Self::VuePreferImportFromVue(_) => VuePreferImportFromVue::IS_TSGOLINT_RULE,
             Self::VueRequireDefaultExport(_) => VueRequireDefaultExport::IS_TSGOLINT_RULE,
+            Self::VueRequireRenderReturn(_) => VueRequireRenderReturn::IS_TSGOLINT_RULE,
+            Self::VueRequireSlotsAsFunctions(_) => VueRequireSlotsAsFunctions::IS_TSGOLINT_RULE,
             Self::VueRequireTypedRef(_) => VueRequireTypedRef::IS_TSGOLINT_RULE,
             Self::VueReturnInComputedProperty(_) => VueReturnInComputedProperty::IS_TSGOLINT_RULE,
+            Self::VueReturnInEmitsValidator(_) => VueReturnInEmitsValidator::IS_TSGOLINT_RULE,
             Self::VueValidDefineEmits(_) => VueValidDefineEmits::IS_TSGOLINT_RULE,
+            Self::VueValidDefineOptions(_) => VueValidDefineOptions::IS_TSGOLINT_RULE,
             Self::VueValidDefineProps(_) => VueValidDefineProps::IS_TSGOLINT_RULE,
+            Self::VueValidNextTick(_) => VueValidNextTick::IS_TSGOLINT_RULE,
         }
     }
     #[doc = r" The version of oxlint in which this rule was first available."]
@@ -21323,6 +21644,7 @@ impl RuleEnum {
             Self::EslintGroupedAccessorPairs(_) => EslintGroupedAccessorPairs::VERSION,
             Self::EslintGuardForIn(_) => EslintGuardForIn::VERSION,
             Self::EslintIdLength(_) => EslintIdLength::VERSION,
+            Self::EslintIdMatch(_) => EslintIdMatch::VERSION,
             Self::EslintInitDeclarations(_) => EslintInitDeclarations::VERSION,
             Self::EslintLogicalAssignmentOperators(_) => EslintLogicalAssignmentOperators::VERSION,
             Self::EslintMaxClassesPerFile(_) => EslintMaxClassesPerFile::VERSION,
@@ -21831,6 +22153,7 @@ impl RuleEnum {
             Self::UnicornEscapeCase(_) => UnicornEscapeCase::VERSION,
             Self::UnicornExplicitLengthCheck(_) => UnicornExplicitLengthCheck::VERSION,
             Self::UnicornFilenameCase(_) => UnicornFilenameCase::VERSION,
+            Self::UnicornImportStyle(_) => UnicornImportStyle::VERSION,
             Self::UnicornNewForBuiltins(_) => UnicornNewForBuiltins::VERSION,
             Self::UnicornNoAbusiveEslintDisable(_) => UnicornNoAbusiveEslintDisable::VERSION,
             Self::UnicornNoAccessorRecursion(_) => UnicornNoAccessorRecursion::VERSION,
@@ -22202,6 +22525,7 @@ impl RuleEnum {
             Self::VitestValidExpectInPromise(_) => VitestValidExpectInPromise::VERSION,
             Self::VitestValidTitle(_) => VitestValidTitle::VERSION,
             Self::VitestWarnTodo(_) => VitestWarnTodo::VERSION,
+            Self::NodeCallbackReturn(_) => NodeCallbackReturn::VERSION,
             Self::NodeGlobalRequire(_) => NodeGlobalRequire::VERSION,
             Self::NodeHandleCallbackErr(_) => NodeHandleCallbackErr::VERSION,
             Self::NodeNoExportsAssign(_) => NodeNoExportsAssign::VERSION,
@@ -22213,6 +22537,7 @@ impl RuleEnum {
             Self::VueDefinePropsDestructuring(_) => VueDefinePropsDestructuring::VERSION,
             Self::VueMaxProps(_) => VueMaxProps::VERSION,
             Self::VueNoArrowFunctionsInWatch(_) => VueNoArrowFunctionsInWatch::VERSION,
+            Self::VueNoComputedPropertiesInData(_) => VueNoComputedPropertiesInData::VERSION,
             Self::VueNoDeprecatedDataObjectDeclaration(_) => {
                 VueNoDeprecatedDataObjectDeclaration::VERSION
             }
@@ -22222,19 +22547,28 @@ impl RuleEnum {
             }
             Self::VueNoDeprecatedEventsApi(_) => VueNoDeprecatedEventsApi::VERSION,
             Self::VueNoDeprecatedModelDefinition(_) => VueNoDeprecatedModelDefinition::VERSION,
+            Self::VueNoDeprecatedPropsDefaultThis(_) => VueNoDeprecatedPropsDefaultThis::VERSION,
             Self::VueNoDeprecatedVueConfigKeycodes(_) => VueNoDeprecatedVueConfigKeycodes::VERSION,
             Self::VueNoExportInScriptSetup(_) => VueNoExportInScriptSetup::VERSION,
+            Self::VueNoExposeAfterAwait(_) => VueNoExposeAfterAwait::VERSION,
             Self::VueNoImportCompilerMacros(_) => VueNoImportCompilerMacros::VERSION,
             Self::VueNoLifecycleAfterAwait(_) => VueNoLifecycleAfterAwait::VERSION,
             Self::VueNoMultipleSlotArgs(_) => VueNoMultipleSlotArgs::VERSION,
             Self::VueNoRequiredPropWithDefault(_) => VueNoRequiredPropWithDefault::VERSION,
+            Self::VueNoSharedComponentData(_) => VueNoSharedComponentData::VERSION,
             Self::VueNoThisInBeforeRouteEnter(_) => VueNoThisInBeforeRouteEnter::VERSION,
+            Self::VueNoWatchAfterAwait(_) => VueNoWatchAfterAwait::VERSION,
             Self::VuePreferImportFromVue(_) => VuePreferImportFromVue::VERSION,
             Self::VueRequireDefaultExport(_) => VueRequireDefaultExport::VERSION,
+            Self::VueRequireRenderReturn(_) => VueRequireRenderReturn::VERSION,
+            Self::VueRequireSlotsAsFunctions(_) => VueRequireSlotsAsFunctions::VERSION,
             Self::VueRequireTypedRef(_) => VueRequireTypedRef::VERSION,
             Self::VueReturnInComputedProperty(_) => VueReturnInComputedProperty::VERSION,
+            Self::VueReturnInEmitsValidator(_) => VueReturnInEmitsValidator::VERSION,
             Self::VueValidDefineEmits(_) => VueValidDefineEmits::VERSION,
+            Self::VueValidDefineOptions(_) => VueValidDefineOptions::VERSION,
             Self::VueValidDefineProps(_) => VueValidDefineProps::VERSION,
+            Self::VueValidNextTick(_) => VueValidNextTick::VERSION,
         }
     }
     #[doc = r" Whether this rule declares a configuration type."]
@@ -22296,6 +22630,7 @@ impl RuleEnum {
             Self::EslintGroupedAccessorPairs(_) => EslintGroupedAccessorPairs::HAS_CONFIG,
             Self::EslintGuardForIn(_) => EslintGuardForIn::HAS_CONFIG,
             Self::EslintIdLength(_) => EslintIdLength::HAS_CONFIG,
+            Self::EslintIdMatch(_) => EslintIdMatch::HAS_CONFIG,
             Self::EslintInitDeclarations(_) => EslintInitDeclarations::HAS_CONFIG,
             Self::EslintLogicalAssignmentOperators(_) => {
                 EslintLogicalAssignmentOperators::HAS_CONFIG
@@ -22822,6 +23157,7 @@ impl RuleEnum {
             Self::UnicornEscapeCase(_) => UnicornEscapeCase::HAS_CONFIG,
             Self::UnicornExplicitLengthCheck(_) => UnicornExplicitLengthCheck::HAS_CONFIG,
             Self::UnicornFilenameCase(_) => UnicornFilenameCase::HAS_CONFIG,
+            Self::UnicornImportStyle(_) => UnicornImportStyle::HAS_CONFIG,
             Self::UnicornNewForBuiltins(_) => UnicornNewForBuiltins::HAS_CONFIG,
             Self::UnicornNoAbusiveEslintDisable(_) => UnicornNoAbusiveEslintDisable::HAS_CONFIG,
             Self::UnicornNoAccessorRecursion(_) => UnicornNoAccessorRecursion::HAS_CONFIG,
@@ -23209,6 +23545,7 @@ impl RuleEnum {
             Self::VitestValidExpectInPromise(_) => VitestValidExpectInPromise::HAS_CONFIG,
             Self::VitestValidTitle(_) => VitestValidTitle::HAS_CONFIG,
             Self::VitestWarnTodo(_) => VitestWarnTodo::HAS_CONFIG,
+            Self::NodeCallbackReturn(_) => NodeCallbackReturn::HAS_CONFIG,
             Self::NodeGlobalRequire(_) => NodeGlobalRequire::HAS_CONFIG,
             Self::NodeHandleCallbackErr(_) => NodeHandleCallbackErr::HAS_CONFIG,
             Self::NodeNoExportsAssign(_) => NodeNoExportsAssign::HAS_CONFIG,
@@ -23220,6 +23557,7 @@ impl RuleEnum {
             Self::VueDefinePropsDestructuring(_) => VueDefinePropsDestructuring::HAS_CONFIG,
             Self::VueMaxProps(_) => VueMaxProps::HAS_CONFIG,
             Self::VueNoArrowFunctionsInWatch(_) => VueNoArrowFunctionsInWatch::HAS_CONFIG,
+            Self::VueNoComputedPropertiesInData(_) => VueNoComputedPropertiesInData::HAS_CONFIG,
             Self::VueNoDeprecatedDataObjectDeclaration(_) => {
                 VueNoDeprecatedDataObjectDeclaration::HAS_CONFIG
             }
@@ -23229,21 +23567,30 @@ impl RuleEnum {
             }
             Self::VueNoDeprecatedEventsApi(_) => VueNoDeprecatedEventsApi::HAS_CONFIG,
             Self::VueNoDeprecatedModelDefinition(_) => VueNoDeprecatedModelDefinition::HAS_CONFIG,
+            Self::VueNoDeprecatedPropsDefaultThis(_) => VueNoDeprecatedPropsDefaultThis::HAS_CONFIG,
             Self::VueNoDeprecatedVueConfigKeycodes(_) => {
                 VueNoDeprecatedVueConfigKeycodes::HAS_CONFIG
             }
             Self::VueNoExportInScriptSetup(_) => VueNoExportInScriptSetup::HAS_CONFIG,
+            Self::VueNoExposeAfterAwait(_) => VueNoExposeAfterAwait::HAS_CONFIG,
             Self::VueNoImportCompilerMacros(_) => VueNoImportCompilerMacros::HAS_CONFIG,
             Self::VueNoLifecycleAfterAwait(_) => VueNoLifecycleAfterAwait::HAS_CONFIG,
             Self::VueNoMultipleSlotArgs(_) => VueNoMultipleSlotArgs::HAS_CONFIG,
             Self::VueNoRequiredPropWithDefault(_) => VueNoRequiredPropWithDefault::HAS_CONFIG,
+            Self::VueNoSharedComponentData(_) => VueNoSharedComponentData::HAS_CONFIG,
             Self::VueNoThisInBeforeRouteEnter(_) => VueNoThisInBeforeRouteEnter::HAS_CONFIG,
+            Self::VueNoWatchAfterAwait(_) => VueNoWatchAfterAwait::HAS_CONFIG,
             Self::VuePreferImportFromVue(_) => VuePreferImportFromVue::HAS_CONFIG,
             Self::VueRequireDefaultExport(_) => VueRequireDefaultExport::HAS_CONFIG,
+            Self::VueRequireRenderReturn(_) => VueRequireRenderReturn::HAS_CONFIG,
+            Self::VueRequireSlotsAsFunctions(_) => VueRequireSlotsAsFunctions::HAS_CONFIG,
             Self::VueRequireTypedRef(_) => VueRequireTypedRef::HAS_CONFIG,
             Self::VueReturnInComputedProperty(_) => VueReturnInComputedProperty::HAS_CONFIG,
+            Self::VueReturnInEmitsValidator(_) => VueReturnInEmitsValidator::HAS_CONFIG,
             Self::VueValidDefineEmits(_) => VueValidDefineEmits::HAS_CONFIG,
+            Self::VueValidDefineOptions(_) => VueValidDefineOptions::HAS_CONFIG,
             Self::VueValidDefineProps(_) => VueValidDefineProps::HAS_CONFIG,
+            Self::VueValidNextTick(_) => VueValidNextTick::HAS_CONFIG,
         }
     }
     pub fn types_info(&self) -> Option<&'static AstTypesBitset> {
@@ -23302,6 +23649,7 @@ impl RuleEnum {
             Self::EslintGroupedAccessorPairs(rule) => rule.types_info(),
             Self::EslintGuardForIn(rule) => rule.types_info(),
             Self::EslintIdLength(rule) => rule.types_info(),
+            Self::EslintIdMatch(rule) => rule.types_info(),
             Self::EslintInitDeclarations(rule) => rule.types_info(),
             Self::EslintLogicalAssignmentOperators(rule) => rule.types_info(),
             Self::EslintMaxClassesPerFile(rule) => rule.types_info(),
@@ -23710,6 +24058,7 @@ impl RuleEnum {
             Self::UnicornEscapeCase(rule) => rule.types_info(),
             Self::UnicornExplicitLengthCheck(rule) => rule.types_info(),
             Self::UnicornFilenameCase(rule) => rule.types_info(),
+            Self::UnicornImportStyle(rule) => rule.types_info(),
             Self::UnicornNewForBuiltins(rule) => rule.types_info(),
             Self::UnicornNoAbusiveEslintDisable(rule) => rule.types_info(),
             Self::UnicornNoAccessorRecursion(rule) => rule.types_info(),
@@ -24019,6 +24368,7 @@ impl RuleEnum {
             Self::VitestValidExpectInPromise(rule) => rule.types_info(),
             Self::VitestValidTitle(rule) => rule.types_info(),
             Self::VitestWarnTodo(rule) => rule.types_info(),
+            Self::NodeCallbackReturn(rule) => rule.types_info(),
             Self::NodeGlobalRequire(rule) => rule.types_info(),
             Self::NodeHandleCallbackErr(rule) => rule.types_info(),
             Self::NodeNoExportsAssign(rule) => rule.types_info(),
@@ -24030,24 +24380,34 @@ impl RuleEnum {
             Self::VueDefinePropsDestructuring(rule) => rule.types_info(),
             Self::VueMaxProps(rule) => rule.types_info(),
             Self::VueNoArrowFunctionsInWatch(rule) => rule.types_info(),
+            Self::VueNoComputedPropertiesInData(rule) => rule.types_info(),
             Self::VueNoDeprecatedDataObjectDeclaration(rule) => rule.types_info(),
             Self::VueNoDeprecatedDeleteSet(rule) => rule.types_info(),
             Self::VueNoDeprecatedDestroyedLifecycle(rule) => rule.types_info(),
             Self::VueNoDeprecatedEventsApi(rule) => rule.types_info(),
             Self::VueNoDeprecatedModelDefinition(rule) => rule.types_info(),
+            Self::VueNoDeprecatedPropsDefaultThis(rule) => rule.types_info(),
             Self::VueNoDeprecatedVueConfigKeycodes(rule) => rule.types_info(),
             Self::VueNoExportInScriptSetup(rule) => rule.types_info(),
+            Self::VueNoExposeAfterAwait(rule) => rule.types_info(),
             Self::VueNoImportCompilerMacros(rule) => rule.types_info(),
             Self::VueNoLifecycleAfterAwait(rule) => rule.types_info(),
             Self::VueNoMultipleSlotArgs(rule) => rule.types_info(),
             Self::VueNoRequiredPropWithDefault(rule) => rule.types_info(),
+            Self::VueNoSharedComponentData(rule) => rule.types_info(),
             Self::VueNoThisInBeforeRouteEnter(rule) => rule.types_info(),
+            Self::VueNoWatchAfterAwait(rule) => rule.types_info(),
             Self::VuePreferImportFromVue(rule) => rule.types_info(),
             Self::VueRequireDefaultExport(rule) => rule.types_info(),
+            Self::VueRequireRenderReturn(rule) => rule.types_info(),
+            Self::VueRequireSlotsAsFunctions(rule) => rule.types_info(),
             Self::VueRequireTypedRef(rule) => rule.types_info(),
             Self::VueReturnInComputedProperty(rule) => rule.types_info(),
+            Self::VueReturnInEmitsValidator(rule) => rule.types_info(),
             Self::VueValidDefineEmits(rule) => rule.types_info(),
+            Self::VueValidDefineOptions(rule) => rule.types_info(),
             Self::VueValidDefineProps(rule) => rule.types_info(),
+            Self::VueValidNextTick(rule) => rule.types_info(),
         }
     }
     pub fn run_info(&self) -> RuleRunFunctionsImplemented {
@@ -24106,6 +24466,7 @@ impl RuleEnum {
             Self::EslintGroupedAccessorPairs(rule) => rule.run_info(),
             Self::EslintGuardForIn(rule) => rule.run_info(),
             Self::EslintIdLength(rule) => rule.run_info(),
+            Self::EslintIdMatch(rule) => rule.run_info(),
             Self::EslintInitDeclarations(rule) => rule.run_info(),
             Self::EslintLogicalAssignmentOperators(rule) => rule.run_info(),
             Self::EslintMaxClassesPerFile(rule) => rule.run_info(),
@@ -24514,6 +24875,7 @@ impl RuleEnum {
             Self::UnicornEscapeCase(rule) => rule.run_info(),
             Self::UnicornExplicitLengthCheck(rule) => rule.run_info(),
             Self::UnicornFilenameCase(rule) => rule.run_info(),
+            Self::UnicornImportStyle(rule) => rule.run_info(),
             Self::UnicornNewForBuiltins(rule) => rule.run_info(),
             Self::UnicornNoAbusiveEslintDisable(rule) => rule.run_info(),
             Self::UnicornNoAccessorRecursion(rule) => rule.run_info(),
@@ -24823,6 +25185,7 @@ impl RuleEnum {
             Self::VitestValidExpectInPromise(rule) => rule.run_info(),
             Self::VitestValidTitle(rule) => rule.run_info(),
             Self::VitestWarnTodo(rule) => rule.run_info(),
+            Self::NodeCallbackReturn(rule) => rule.run_info(),
             Self::NodeGlobalRequire(rule) => rule.run_info(),
             Self::NodeHandleCallbackErr(rule) => rule.run_info(),
             Self::NodeNoExportsAssign(rule) => rule.run_info(),
@@ -24834,24 +25197,34 @@ impl RuleEnum {
             Self::VueDefinePropsDestructuring(rule) => rule.run_info(),
             Self::VueMaxProps(rule) => rule.run_info(),
             Self::VueNoArrowFunctionsInWatch(rule) => rule.run_info(),
+            Self::VueNoComputedPropertiesInData(rule) => rule.run_info(),
             Self::VueNoDeprecatedDataObjectDeclaration(rule) => rule.run_info(),
             Self::VueNoDeprecatedDeleteSet(rule) => rule.run_info(),
             Self::VueNoDeprecatedDestroyedLifecycle(rule) => rule.run_info(),
             Self::VueNoDeprecatedEventsApi(rule) => rule.run_info(),
             Self::VueNoDeprecatedModelDefinition(rule) => rule.run_info(),
+            Self::VueNoDeprecatedPropsDefaultThis(rule) => rule.run_info(),
             Self::VueNoDeprecatedVueConfigKeycodes(rule) => rule.run_info(),
             Self::VueNoExportInScriptSetup(rule) => rule.run_info(),
+            Self::VueNoExposeAfterAwait(rule) => rule.run_info(),
             Self::VueNoImportCompilerMacros(rule) => rule.run_info(),
             Self::VueNoLifecycleAfterAwait(rule) => rule.run_info(),
             Self::VueNoMultipleSlotArgs(rule) => rule.run_info(),
             Self::VueNoRequiredPropWithDefault(rule) => rule.run_info(),
+            Self::VueNoSharedComponentData(rule) => rule.run_info(),
             Self::VueNoThisInBeforeRouteEnter(rule) => rule.run_info(),
+            Self::VueNoWatchAfterAwait(rule) => rule.run_info(),
             Self::VuePreferImportFromVue(rule) => rule.run_info(),
             Self::VueRequireDefaultExport(rule) => rule.run_info(),
+            Self::VueRequireRenderReturn(rule) => rule.run_info(),
+            Self::VueRequireSlotsAsFunctions(rule) => rule.run_info(),
             Self::VueRequireTypedRef(rule) => rule.run_info(),
             Self::VueReturnInComputedProperty(rule) => rule.run_info(),
+            Self::VueReturnInEmitsValidator(rule) => rule.run_info(),
             Self::VueValidDefineEmits(rule) => rule.run_info(),
+            Self::VueValidDefineOptions(rule) => rule.run_info(),
             Self::VueValidDefineProps(rule) => rule.run_info(),
+            Self::VueValidNextTick(rule) => rule.run_info(),
         }
     }
 }
@@ -24932,6 +25305,7 @@ pub static RULES: std::sync::LazyLock<Vec<RuleEnum>> = std::sync::LazyLock::new(
         RuleEnum::EslintGroupedAccessorPairs(EslintGroupedAccessorPairs::default()),
         RuleEnum::EslintGuardForIn(EslintGuardForIn::default()),
         RuleEnum::EslintIdLength(EslintIdLength::default()),
+        RuleEnum::EslintIdMatch(EslintIdMatch::default()),
         RuleEnum::EslintInitDeclarations(EslintInitDeclarations::default()),
         RuleEnum::EslintLogicalAssignmentOperators(EslintLogicalAssignmentOperators::default()),
         RuleEnum::EslintMaxClassesPerFile(EslintMaxClassesPerFile::default()),
@@ -25414,6 +25788,7 @@ pub static RULES: std::sync::LazyLock<Vec<RuleEnum>> = std::sync::LazyLock::new(
         RuleEnum::UnicornEscapeCase(UnicornEscapeCase::default()),
         RuleEnum::UnicornExplicitLengthCheck(UnicornExplicitLengthCheck::default()),
         RuleEnum::UnicornFilenameCase(UnicornFilenameCase::default()),
+        RuleEnum::UnicornImportStyle(UnicornImportStyle::default()),
         RuleEnum::UnicornNewForBuiltins(UnicornNewForBuiltins::default()),
         RuleEnum::UnicornNoAbusiveEslintDisable(UnicornNoAbusiveEslintDisable::default()),
         RuleEnum::UnicornNoAccessorRecursion(UnicornNoAccessorRecursion::default()),
@@ -25757,6 +26132,7 @@ pub static RULES: std::sync::LazyLock<Vec<RuleEnum>> = std::sync::LazyLock::new(
         RuleEnum::VitestValidExpectInPromise(VitestValidExpectInPromise::default()),
         RuleEnum::VitestValidTitle(VitestValidTitle::default()),
         RuleEnum::VitestWarnTodo(VitestWarnTodo::default()),
+        RuleEnum::NodeCallbackReturn(NodeCallbackReturn::default()),
         RuleEnum::NodeGlobalRequire(NodeGlobalRequire::default()),
         RuleEnum::NodeHandleCallbackErr(NodeHandleCallbackErr::default()),
         RuleEnum::NodeNoExportsAssign(NodeNoExportsAssign::default()),
@@ -25768,6 +26144,7 @@ pub static RULES: std::sync::LazyLock<Vec<RuleEnum>> = std::sync::LazyLock::new(
         RuleEnum::VueDefinePropsDestructuring(VueDefinePropsDestructuring::default()),
         RuleEnum::VueMaxProps(VueMaxProps::default()),
         RuleEnum::VueNoArrowFunctionsInWatch(VueNoArrowFunctionsInWatch::default()),
+        RuleEnum::VueNoComputedPropertiesInData(VueNoComputedPropertiesInData::default()),
         RuleEnum::VueNoDeprecatedDataObjectDeclaration(
             VueNoDeprecatedDataObjectDeclaration::default(),
         ),
@@ -25775,18 +26152,27 @@ pub static RULES: std::sync::LazyLock<Vec<RuleEnum>> = std::sync::LazyLock::new(
         RuleEnum::VueNoDeprecatedDestroyedLifecycle(VueNoDeprecatedDestroyedLifecycle::default()),
         RuleEnum::VueNoDeprecatedEventsApi(VueNoDeprecatedEventsApi::default()),
         RuleEnum::VueNoDeprecatedModelDefinition(VueNoDeprecatedModelDefinition::default()),
+        RuleEnum::VueNoDeprecatedPropsDefaultThis(VueNoDeprecatedPropsDefaultThis::default()),
         RuleEnum::VueNoDeprecatedVueConfigKeycodes(VueNoDeprecatedVueConfigKeycodes::default()),
         RuleEnum::VueNoExportInScriptSetup(VueNoExportInScriptSetup::default()),
+        RuleEnum::VueNoExposeAfterAwait(VueNoExposeAfterAwait::default()),
         RuleEnum::VueNoImportCompilerMacros(VueNoImportCompilerMacros::default()),
         RuleEnum::VueNoLifecycleAfterAwait(VueNoLifecycleAfterAwait::default()),
         RuleEnum::VueNoMultipleSlotArgs(VueNoMultipleSlotArgs::default()),
         RuleEnum::VueNoRequiredPropWithDefault(VueNoRequiredPropWithDefault::default()),
+        RuleEnum::VueNoSharedComponentData(VueNoSharedComponentData::default()),
         RuleEnum::VueNoThisInBeforeRouteEnter(VueNoThisInBeforeRouteEnter::default()),
+        RuleEnum::VueNoWatchAfterAwait(VueNoWatchAfterAwait::default()),
         RuleEnum::VuePreferImportFromVue(VuePreferImportFromVue::default()),
         RuleEnum::VueRequireDefaultExport(VueRequireDefaultExport::default()),
+        RuleEnum::VueRequireRenderReturn(VueRequireRenderReturn::default()),
+        RuleEnum::VueRequireSlotsAsFunctions(VueRequireSlotsAsFunctions::default()),
         RuleEnum::VueRequireTypedRef(VueRequireTypedRef::default()),
         RuleEnum::VueReturnInComputedProperty(VueReturnInComputedProperty::default()),
+        RuleEnum::VueReturnInEmitsValidator(VueReturnInEmitsValidator::default()),
         RuleEnum::VueValidDefineEmits(VueValidDefineEmits::default()),
+        RuleEnum::VueValidDefineOptions(VueValidDefineOptions::default()),
         RuleEnum::VueValidDefineProps(VueValidDefineProps::default()),
+        RuleEnum::VueValidNextTick(VueValidNextTick::default()),
     ]
 });

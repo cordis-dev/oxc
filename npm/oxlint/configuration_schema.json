@@ -304,6 +304,9 @@
         "id-length": {
           "$ref": "#/definitions/DummyRule"
         },
+        "id-match": {
+          "$ref": "#/definitions/DummyRule"
+        },
         "import/consistent-type-specifier-style": {
           "$ref": "#/definitions/DummyRule"
         },
@@ -1216,6 +1219,9 @@
         "no-with": {
           "$ref": "#/definitions/DummyRule"
         },
+        "node/callback-return": {
+          "$ref": "#/definitions/DummyRule"
+        },
         "node/global-require": {
           "$ref": "#/definitions/DummyRule"
         },
@@ -1993,6 +1999,9 @@
         "unicorn/filename-case": {
           "$ref": "#/definitions/DummyRule"
         },
+        "unicorn/import-style": {
+          "$ref": "#/definitions/DummyRule"
+        },
         "unicorn/new-for-builtins": {
           "$ref": "#/definitions/DummyRule"
         },
@@ -2584,6 +2593,9 @@
         "vue/no-arrow-functions-in-watch": {
           "$ref": "#/definitions/DummyRule"
         },
+        "vue/no-computed-properties-in-data": {
+          "$ref": "#/definitions/DummyRule"
+        },
         "vue/no-deprecated-data-object-declaration": {
           "$ref": "#/definitions/DummyRule"
         },
@@ -2599,10 +2611,16 @@
         "vue/no-deprecated-model-definition": {
           "$ref": "#/definitions/DummyRule"
         },
+        "vue/no-deprecated-props-default-this": {
+          "$ref": "#/definitions/DummyRule"
+        },
         "vue/no-deprecated-vue-config-keycodes": {
           "$ref": "#/definitions/DummyRule"
         },
         "vue/no-export-in-script-setup": {
+          "$ref": "#/definitions/DummyRule"
+        },
+        "vue/no-expose-after-await": {
           "$ref": "#/definitions/DummyRule"
         },
         "vue/no-import-compiler-macros": {
@@ -2617,7 +2635,13 @@
         "vue/no-required-prop-with-default": {
           "$ref": "#/definitions/DummyRule"
         },
+        "vue/no-shared-component-data": {
+          "$ref": "#/definitions/DummyRule"
+        },
         "vue/no-this-in-before-route-enter": {
+          "$ref": "#/definitions/DummyRule"
+        },
+        "vue/no-watch-after-await": {
           "$ref": "#/definitions/DummyRule"
         },
         "vue/prefer-import-from-vue": {
@@ -2626,16 +2650,31 @@
         "vue/require-default-export": {
           "$ref": "#/definitions/DummyRule"
         },
+        "vue/require-render-return": {
+          "$ref": "#/definitions/DummyRule"
+        },
+        "vue/require-slots-as-functions": {
+          "$ref": "#/definitions/DummyRule"
+        },
         "vue/require-typed-ref": {
           "$ref": "#/definitions/DummyRule"
         },
         "vue/return-in-computed-property": {
           "$ref": "#/definitions/DummyRule"
         },
+        "vue/return-in-emits-validator": {
+          "$ref": "#/definitions/DummyRule"
+        },
         "vue/valid-define-emits": {
           "$ref": "#/definitions/DummyRule"
         },
+        "vue/valid-define-options": {
+          "$ref": "#/definitions/DummyRule"
+        },
         "vue/valid-define-props": {
+          "$ref": "#/definitions/DummyRule"
+        },
+        "vue/valid-next-tick": {
           "$ref": "#/definitions/DummyRule"
         },
         "yoda": {
