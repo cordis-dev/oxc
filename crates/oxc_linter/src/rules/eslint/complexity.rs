@@ -36,7 +36,7 @@ impl Default for ComplexityVariant {
 /// The perceived complexity rule. It reports a warning if a function’s
 /// complexity (i.e. number of independent paths) exceeds the allowed maximum.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase", default)]
+#[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct ComplexityConfig {
     /// Maximum allowed perceived complexity.
     #[serde(alias = "maximum")]
