@@ -151,7 +151,13 @@ impl<'a, C: Config> ParserImpl<'a, C> {
     pub(crate) fn parse_ts_type_parameters(
         &mut self,
     ) -> Option<Box<'a, TSTypeParameterDeclaration<'a>>> {
-        self.parse_ts_type_parameters_impl().0
+        self.parse_ts_type_parameters_impl(false).0
+    }
+
+    pub(crate) fn parse_ts_type_parameters_with_variance(
+        &mut self,
+    ) -> Option<Box<'a, TSTypeParameterDeclaration<'a>>> {
+        self.parse_ts_type_parameters_impl(true).0
     }
 
     /// Parse TypeScript type parameters and return whether there was a trailing comma.
@@ -159,11 +165,12 @@ impl<'a, C: Config> ParserImpl<'a, C> {
     pub(crate) fn parse_ts_type_parameters_with_trailing_comma(
         &mut self,
     ) -> (Option<Box<'a, TSTypeParameterDeclaration<'a>>>, bool) {
-        self.parse_ts_type_parameters_impl()
+        self.parse_ts_type_parameters_impl(false)
     }
 
     fn parse_ts_type_parameters_impl(
         &mut self,
+        allow_variance: bool,
     ) -> (Option<Box<'a, TSTypeParameterDeclaration<'a>>>, bool) {
         if !self.is_ts {
             return (None, false);
@@ -174,12 +181,10 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         let span = self.start_span();
         let opening_span = self.cur_token().span();
         self.expect(Kind::LAngle);
-        let (params, trailing_comma) = self.parse_delimited_list(
-            Kind::RAngle,
-            Kind::Comma,
-            opening_span,
-            Self::parse_ts_type_parameter,
-        );
+        let (params, trailing_comma) =
+            self.parse_delimited_list(Kind::RAngle, Kind::Comma, opening_span, |p| {
+                p.parse_ts_type_parameter(allow_variance)
+            });
         self.expect(Kind::RAngle);
         let span = self.end_span(span);
         if params.is_empty() {
@@ -198,15 +203,28 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         implements
     }
 
-    pub(crate) fn parse_ts_type_parameter(&mut self) -> TSTypeParameter<'a> {
+    fn parse_ts_type_parameter(&mut self, allow_variance: bool) -> TSTypeParameter<'a> {
         let span = self.start_span();
 
         let modifiers = self.parse_modifiers(true, false);
+        let allowed_modifiers = if allow_variance {
+            ModifierKinds::new([ModifierKind::In, ModifierKind::Out, ModifierKind::Const])
+        } else {
+            ModifierKinds::new([ModifierKind::Const])
+        };
         self.verify_modifiers(
             &modifiers,
-            ModifierKinds::new([ModifierKind::In, ModifierKind::Out, ModifierKind::Const]),
-            false, // `in` and `out` are only allowed on a type parameter of a class, interface or type alias
-            diagnostics::cannot_appear_on_a_type_parameter,
+            allowed_modifiers,
+            false,
+            |modifier, allowed| match modifier.kind {
+                ModifierKind::In | ModifierKind::Out => {
+                    diagnostics::can_only_appear_on_a_type_parameter_of_a_class_interface_or_type_alias(
+                        modifier.kind,
+                        modifier.span(),
+                    )
+                }
+                _ => diagnostics::cannot_appear_on_a_type_parameter(modifier, allowed),
+            },
         );
 
         let name = self.parse_binding_identifier();
@@ -1175,14 +1193,13 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         let key_name = self.cur_string();
         let with_key_span = self.start_span();
         self.bump_any();
-        let with_key = self.ast.identifier_name(self.end_span(with_key_span), key_name);
+        let with_key = self.ast.alloc_identifier_name(self.end_span(with_key_span), key_name);
 
         self.expect(Kind::Colon);
 
         // Parse the value - if it's an object literal, validate it
         let value = if self.at(Kind::LCurly) {
-            let inner_object = self.parse_ts_import_type_attributes();
-            Expression::ObjectExpression(self.alloc(inner_object))
+            Expression::ObjectExpression(self.parse_ts_import_type_attributes())
         } else {
             // Allow any expression (e.g., super.foo)
             self.parse_assignment_expression_or_higher()
@@ -1192,7 +1209,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         let with_property = self.ast.alloc_object_property(
             self.end_span(with_key_span),
             PropertyKind::Init,
-            PropertyKey::StaticIdentifier(self.alloc(with_key)),
+            PropertyKey::StaticIdentifier(with_key),
             value,
             false,
             false,
@@ -1210,7 +1227,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
 
     /// Parse TypeScript import type attributes object: `{ type: "json" }`
     /// Only allows static key-value pairs (no computed keys, no spread elements).
-    fn parse_ts_import_type_attributes(&mut self) -> ObjectExpression<'a> {
+    fn parse_ts_import_type_attributes(&mut self) -> Box<'a, ObjectExpression<'a>> {
         let span = self.start_span();
         self.expect(Kind::LCurly);
 
@@ -1248,11 +1265,11 @@ impl<'a, C: Config> ParserImpl<'a, C> {
                 self.expect(Kind::RBrack);
                 self.expect(Kind::Colon);
                 let value = self.parse_assignment_expression_or_higher();
-                let key = PropertyKey::StringLiteral(self.alloc(self.ast.string_literal(
+                let key = PropertyKey::StringLiteral(self.ast.alloc_string_literal(
                     bracket_span,
                     "",
                     None,
-                )));
+                ));
                 properties.push(ObjectPropertyKind::ObjectProperty(
                     self.ast.alloc_object_property(
                         self.end_span(prop_span),
@@ -1291,7 +1308,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         }
 
         self.expect(Kind::RCurly);
-        self.ast.object_expression(self.end_span(span), properties)
+        self.ast.alloc_object_expression(self.end_span(span), properties)
     }
 
     pub(crate) fn parse_ts_return_type_annotation(

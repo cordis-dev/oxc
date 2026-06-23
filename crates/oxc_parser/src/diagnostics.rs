@@ -859,6 +859,13 @@ pub fn jsx_fragment_no_match(opening_span: Span, closing_span: Span) -> OxcDiagn
 }
 
 #[cold]
+pub fn adjacent_jsx_elements(span: Span) -> OxcDiagnostic {
+    OxcDiagnostic::error("Adjacent JSX elements must be wrapped in an enclosing tag.")
+        .with_help("Did you want a JSX fragment `<>...</>`?")
+        .with_label(span)
+}
+
+#[cold]
 pub fn cover_initialized_name(span: Span) -> OxcDiagnostic {
     OxcDiagnostic::error("Invalid assignment in object literal")
 .with_help("Did you mean to use a ':'? An '=' can only follow a property name when the containing object literal is part of a destructuring pattern.")
@@ -939,6 +946,11 @@ pub fn rest_element_property_name(span: Span) -> OxcDiagnostic {
 #[cold]
 pub fn a_rest_element_cannot_have_an_initializer(span: Span) -> OxcDiagnostic {
     OxcDiagnostic::error("A rest element cannot have an initializer.").with_label(span)
+}
+
+#[cold]
+pub fn a_rest_parameter_cannot_have_an_initializer(span: Span) -> OxcDiagnostic {
+    OxcDiagnostic::error("A rest parameter cannot have an initializer.").with_label(span)
 }
 
 #[cold]
@@ -1078,6 +1090,11 @@ pub fn cannot_appear_on_a_parameter(
 pub fn parameter_property_cannot_be_binding_pattern(span: Span) -> OxcDiagnostic {
     ts_error("1187", "A parameter property may not be declared using a binding pattern.")
         .with_label(span)
+}
+
+#[cold]
+pub fn constructor_cannot_be_parameter_property_name(span: Span) -> OxcDiagnostic {
+    ts_error("2398", "'constructor' cannot be used as a parameter property name.").with_label(span)
 }
 
 pub fn cannot_appear_on_an_index_signature(

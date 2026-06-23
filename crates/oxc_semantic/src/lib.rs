@@ -78,6 +78,12 @@ pub struct Semantic<'a> {
     /// The Abstract Syntax Tree (AST) nodes.
     nodes: AstNodes<'a>,
 
+    /// Number of AST nodes in the program.
+    ///
+    /// Tracked separately from `nodes`, which is empty unless the builder ran
+    /// with [`SemanticBuilder::with_build_nodes`] enabled.
+    node_count: u32,
+
     scoping: Scoping,
 
     classes: ClassTable<'a>,
@@ -220,7 +226,7 @@ impl<'a> Semantic<'a> {
     pub fn stats(&self) -> Stats {
         #[expect(clippy::cast_possible_truncation)]
         Stats::new(
-            self.nodes.len() as u32,
+            self.node_count,
             self.scoping.scopes_len() as u32,
             self.scoping.symbols_len() as u32,
             self.scoping.references.len() as u32,
@@ -291,10 +297,10 @@ mod tests {
         source_type: SourceType,
     ) -> Semantic<'s> {
         let parse = oxc_parser::Parser::new(allocator, source, source_type).parse();
-        assert!(parse.errors.is_empty());
+        assert!(parse.diagnostics.is_empty());
         let semantic =
             SemanticBuilder::new().with_build_nodes(true).build(allocator.alloc(parse.program));
-        assert!(semantic.errors.is_empty(), "Parse error: {}", semantic.errors[0]);
+        assert!(semantic.diagnostics.is_empty(), "Parse error: {}", semantic.diagnostics[0]);
         semantic.semantic
     }
 
@@ -343,13 +349,13 @@ mod tests {
         let source_type = SourceType::ts();
         let parse = oxc_parser::Parser::new(&allocator, source, source_type).parse();
 
-        assert!(parse.errors.is_empty());
+        assert!(parse.diagnostics.is_empty());
 
         let first = SemanticBuilder::new_compiler().build(&parse.program);
-        assert!(first.errors.is_empty());
+        assert!(first.diagnostics.is_empty());
 
         let second = SemanticBuilder::new_compiler().build(&parse.program);
-        assert!(second.errors.is_empty());
+        assert!(second.diagnostics.is_empty());
     }
 
     #[test]

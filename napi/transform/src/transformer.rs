@@ -14,13 +14,12 @@ use oxc::{
     CompilerInterface,
     allocator::Allocator,
     codegen::{Codegen, CodegenOptions, CodegenReturn},
-    diagnostics::OxcDiagnostic,
+    diagnostics::{Diagnostics, OxcDiagnostic},
     parser::Parser,
     semantic::{SemanticBuilder, SemanticBuilderReturn},
     span::SourceType,
     transformer::{
-        EnvOptions, HelperLoaderMode, HelperLoaderOptions, JsxRuntime, ProposalOptions,
-        RewriteExtensionsMode,
+        EnvOptions, HelperLoaderMode, HelperLoaderOptions, JsxRuntime, RewriteExtensionsMode,
     },
     transformer_plugins::{
         InjectGlobalVariablesConfig, InjectImport, ModuleRunnerTransform,
@@ -30,7 +29,7 @@ use oxc::{
 use oxc_napi::{OxcError, get_source_type};
 use oxc_sourcemap::napi::SourceMap;
 
-use crate::{IsolatedDeclarationsOptions, react_compiler::ReactCompilerOptions};
+use crate::IsolatedDeclarationsOptions;
 
 #[derive(Default)]
 #[napi(object)]
@@ -82,6 +81,13 @@ pub struct TransformResult {
 
 /// Options for transforming a JavaScript or TypeScript file.
 ///
+/// Options are listed in evaluation order: the source is parsed (`lang`,
+/// `sourceType`), declarations are emitted (`typescript.declaration`), then
+/// transforms run (`typescript`, `decorator`, `plugins`,
+/// `jsx`, `target`), followed by the `inject` and `define` plugins, and
+/// finally codegen (`sourcemap`). `helpers` configures the runtime helpers
+/// the transforms emit.
+///
 /// @see {@link transform}
 #[napi(object)]
 #[derive(Default)]
@@ -98,21 +104,22 @@ pub struct TransformOptions {
     /// options.
     pub cwd: Option<String>,
 
-    /// Enable source map generation.
-    ///
-    /// When `true`, the `sourceMap` field of transform result objects will be populated.
-    ///
-    /// @default false
-    ///
-    /// @see {@link SourceMap}
-    pub sourcemap: Option<bool>,
-
     /// Set assumptions in order to produce smaller output.
     pub assumptions: Option<CompilerAssumptions>,
 
     /// Configure how TypeScript is transformed.
+    ///
+    /// `typescript.declaration` is evaluated before all transforms.
+    ///
     /// @see {@link https://oxc.rs/docs/guide/usage/transformer/typescript}
     pub typescript: Option<TypeScriptOptions>,
+
+    /// Decorator plugin
+    pub decorator: Option<DecoratorOptions>,
+
+    /// Third-party plugins to use.
+    /// @see {@link https://oxc.rs/docs/guide/usage/transformer/plugins}
+    pub plugins: Option<PluginsOptions>,
 
     /// Configure how TSX and JSX are transformed.
     /// @see {@link https://oxc.rs/docs/guide/usage/transformer/jsx}
@@ -136,30 +143,30 @@ pub struct TransformOptions {
     /// Behaviour for runtime helpers.
     pub helpers: Option<Helpers>,
 
-    /// Define Plugin
-    /// @see {@link https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement#define}
-    #[napi(ts_type = "Record<string, string>")]
-    pub define: Option<FxHashMap<String, String>>,
-
     /// Inject Plugin
+    ///
+    /// Runs after all transforms.
+    ///
     /// @see {@link https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement#inject}
     #[napi(ts_type = "Record<string, string | [string, string]>")]
     pub inject: Option<FxHashMap<String, Either<String, Vec<String>>>>,
 
-    /// Decorator plugin
-    pub decorator: Option<DecoratorOptions>,
-
-    /// Enable the experimental [React Compiler](https://github.com/facebook/react/pull/36173).
+    /// Define Plugin
     ///
-    /// `true` enables it with default options; an object enables it with the
-    /// given options; `false` or omitted disables it. When enabled, the compiler
-    /// runs as the first transform and memoizes React components and hooks.
-    #[napi(ts_type = "boolean | ReactCompilerOptions")]
-    pub react_compiler: Option<Either<bool, ReactCompilerOptions>>,
+    /// Runs after the inject plugin.
+    ///
+    /// @see {@link https://oxc.rs/docs/guide/usage/transformer/global-variable-replacement#define}
+    #[napi(ts_type = "Record<string, string>")]
+    pub define: Option<FxHashMap<String, String>>,
 
-    /// Third-party plugins to use.
-    /// @see {@link https://oxc.rs/docs/guide/usage/transformer/plugins}
-    pub plugins: Option<PluginsOptions>,
+    /// Enable source map generation.
+    ///
+    /// When `true`, the `sourceMap` field of transform result objects will be populated.
+    ///
+    /// @default false
+    ///
+    /// @see {@link SourceMap}
+    pub sourcemap: Option<bool>,
 }
 
 impl TryFrom<TransformOptions> for oxc::transformer::TransformOptions {
@@ -182,6 +189,10 @@ impl TryFrom<TransformOptions> for oxc::transformer::TransformOptions {
                 .decorator
                 .map(oxc::transformer::DecoratorOptions::from)
                 .unwrap_or_default(),
+            plugins: options
+                .plugins
+                .map(oxc::transformer::PluginsOptions::from)
+                .unwrap_or_default(),
             jsx: match options.jsx {
                 Some(Either::A(s)) => {
                     if s == "preserve" {
@@ -194,25 +205,16 @@ impl TryFrom<TransformOptions> for oxc::transformer::TransformOptions {
                 None => oxc::transformer::JsxOptions::enable(),
             },
             env,
-            proposals: ProposalOptions::default(),
             helper_loader: options
                 .helpers
                 .map_or_else(HelperLoaderOptions::default, HelperLoaderOptions::from),
-            plugins: options
-                .plugins
-                .map(oxc::transformer::PluginsOptions::from)
-                .unwrap_or_default(),
+            // `..Default` supplies `proposals` (TC39, none implemented) and, when a
+            // workspace build enables it via Cargo feature unification, the gated
+            // `oxc_transformer` `react_compiler` field this binding no longer exposes.
+            // Keeps the literal valid in every feature config (and avoids
+            // `clippy::needless_update`).
+            ..Default::default()
         })
-    }
-}
-
-impl TransformOptions {
-    /// Take the `reactCompiler` option and resolve it into the compiler's
-    /// `PluginOptions`. The React Compiler is a standalone pass driven by the
-    /// [`CompilerInterface`], so it is not part of
-    /// `oxc::transformer::TransformOptions`.
-    fn take_react_compiler(&mut self) -> Option<oxc_react_compiler::PluginOptions> {
-        crate::react_compiler::resolve(self.react_compiler.take())
     }
 }
 
@@ -472,7 +474,10 @@ pub struct StyledComponentsOptions {
     /// Transpiles styled-components tagged template literals to a smaller representation
     /// than what Babel normally creates, helping to reduce bundle size.
     ///
-    /// @default true
+    /// Disabled by default because Oxc does not down-level template literals, so this
+    /// transform only increases output size.
+    ///
+    /// @default false
     pub transpile_template_literals: Option<bool>,
 
     /// Minifies CSS content by removing all whitespace and comments from your CSS,
@@ -760,11 +765,9 @@ struct Compiler {
 
     define: Option<ReplaceGlobalDefinesConfig>,
     inject: Option<InjectGlobalVariablesConfig>,
-    #[expect(clippy::struct_field_names)]
-    react_compiler: Option<oxc_react_compiler::PluginOptions>,
 
     helpers_used: FxHashMap<String, String>,
-    errors: Vec<OxcDiagnostic>,
+    errors: Diagnostics,
 }
 
 impl Compiler {
@@ -814,8 +817,6 @@ impl Compiler {
             .transpose()?
             .map(InjectGlobalVariablesConfig::new);
 
-        let react_compiler = options.as_mut().and_then(TransformOptions::take_react_compiler);
-
         let transform_options = match options {
             Some(options) => oxc::transformer::TransformOptions::try_from(options)
                 .map_err(|err| vec![OxcDiagnostic::error(err)])?,
@@ -832,15 +833,14 @@ impl Compiler {
             declaration_map: None,
             define,
             inject,
-            react_compiler,
             helpers_used: FxHashMap::default(),
-            errors: vec![],
+            errors: Diagnostics::new(),
         })
     }
 }
 
 impl CompilerInterface for Compiler {
-    fn handle_errors(&mut self, errors: Vec<OxcDiagnostic>) {
+    fn handle_errors(&mut self, errors: Diagnostics) {
         self.errors.extend(errors);
     }
 
@@ -866,16 +866,12 @@ impl CompilerInterface for Compiler {
         self.inject.clone()
     }
 
-    fn react_compiler_options(&self) -> Option<oxc_react_compiler::PluginOptions> {
-        self.react_compiler.clone()
-    }
-
-    fn after_codegen(&mut self, ret: CodegenReturn) {
+    fn after_codegen(&mut self, ret: CodegenReturn<'_>) {
         self.printed = ret.code;
         self.printed_sourcemap = ret.map.map(SourceMap::from);
     }
 
-    fn after_isolated_declarations(&mut self, ret: CodegenReturn) {
+    fn after_isolated_declarations(&mut self, ret: CodegenReturn<'_>) {
         self.declaration.replace(ret.code);
         self.declaration_map = ret.map.map(SourceMap::from);
     }
@@ -1084,9 +1080,9 @@ fn module_runner_transform_impl(
     let mut parser_ret = Parser::new(&allocator, source_text, source_type).parse();
     let mut program = parser_ret.program;
 
-    let SemanticBuilderReturn { semantic, errors } =
+    let SemanticBuilderReturn { semantic, diagnostics } =
         SemanticBuilder::new_compiler().build(&program);
-    parser_ret.errors.extend(errors);
+    parser_ret.diagnostics.extend(diagnostics);
 
     let scoping = semantic.into_scoping();
     let (deps, dynamic_deps) =
@@ -1106,7 +1102,7 @@ fn module_runner_transform_impl(
         map: map.map(Into::into),
         deps: deps.into_iter().collect::<Vec<String>>(),
         dynamic_deps: dynamic_deps.into_iter().collect::<Vec<String>>(),
-        errors: OxcError::from_diagnostics(filename, source_text, parser_ret.errors),
+        errors: OxcError::from_diagnostics(filename, source_text, parser_ret.diagnostics),
     }
 }
 

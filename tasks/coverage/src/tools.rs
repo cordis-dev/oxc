@@ -712,7 +712,7 @@ pub fn run_estree_test262(files: &[Test262File]) -> Vec<CoverageResult> {
             let mut program = parser_ret.program;
             let source_text = program.source_text;
             Utf8ToUtf16::new(source_text).convert_program_with_ascending_order_checks(&mut program);
-            program.to_pretty_estree_js_json(false)
+            program.to_pretty_estree_json(false, false)
         },
     )
 }
@@ -772,9 +772,11 @@ fn run_estree_test262_impl(
                 .with_config(parser_config)
                 .parse();
 
-            if ret.panicked || !ret.errors.is_empty() {
-                let error =
-                    ret.errors.first().map_or_else(|| "Panicked".to_string(), ToString::to_string);
+            if ret.panicked || !ret.diagnostics.is_empty() {
+                let error = ret
+                    .diagnostics
+                    .first()
+                    .map_or_else(|| "Panicked".to_string(), ToString::to_string);
                 return CoverageResult {
                     path: test_file.path.clone(),
                     should_fail: false,
@@ -802,7 +804,7 @@ pub fn run_estree_acorn_jsx(files: &[AcornJsxFile]) -> Vec<CoverageResult> {
             let mut program = parser_ret.program;
             let source_text = program.source_text;
             Utf8ToUtf16::new(source_text).convert_program_with_ascending_order_checks(&mut program);
-            program.to_pretty_estree_js_json(false)
+            program.to_pretty_estree_json(false, false)
         },
     )
 }
@@ -844,9 +846,11 @@ fn run_estree_acorn_jsx_impl(
                 .with_config(parser_config)
                 .parse();
 
-            if ret.panicked || !ret.errors.is_empty() {
-                let error =
-                    ret.errors.first().map_or_else(|| "Panicked".to_string(), ToString::to_string);
+            if ret.panicked || !ret.diagnostics.is_empty() {
+                let error = ret
+                    .diagnostics
+                    .first()
+                    .map_or_else(|| "Panicked".to_string(), ToString::to_string);
                 let result = if test_file.should_fail {
                     TestResult::CorrectError(error, ret.panicked)
                 } else {
@@ -910,7 +914,7 @@ pub fn run_estree_typescript(files: &[TypeScriptFile]) -> Vec<CoverageResult> {
         let mut program = ret.program;
         let source_text = program.source_text;
         Utf8ToUtf16::new(source_text).convert_program_with_ascending_order_checks(&mut program);
-        program.to_pretty_estree_ts_json(false)
+        program.to_pretty_estree_json(true, false)
     })
 }
 
@@ -982,9 +986,9 @@ fn run_estree_typescript_impl(
                     .with_config(parser_config)
                     .parse();
 
-                if ret.panicked || !ret.errors.is_empty() {
+                if ret.panicked || !ret.diagnostics.is_empty() {
                     let error = ret
-                        .errors
+                        .diagnostics
                         .first()
                         .map_or_else(|| "Panicked".to_string(), ToString::to_string);
                     return CoverageResult {

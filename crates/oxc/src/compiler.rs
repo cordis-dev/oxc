@@ -3,12 +3,11 @@ use std::{mem, ops::ControlFlow, path::Path};
 use oxc_allocator::Allocator;
 use oxc_ast::ast::Program;
 use oxc_codegen::{Codegen, CodegenOptions, CodegenReturn};
-use oxc_diagnostics::OxcDiagnostic;
+use oxc_diagnostics::Diagnostics;
 use oxc_isolated_declarations::{IsolatedDeclarations, IsolatedDeclarationsOptions};
 use oxc_mangler::{MangleOptions, Mangler, ManglerReturn};
 use oxc_minifier::{CompressOptions, Compressor};
 use oxc_parser::{ParseOptions, Parser, ParserReturn};
-use oxc_react_compiler::{self, PluginOptions as ReactCompilerOptions};
 use oxc_semantic::{Scoping, SemanticBuilder, SemanticBuilderReturn, Stats};
 use oxc_span::SourceType;
 use oxc_transformer::{TransformOptions, Transformer, TransformerReturn};
@@ -20,15 +19,15 @@ use oxc_transformer_plugins::{
 #[derive(Default)]
 pub struct Compiler {
     printed: String,
-    errors: Vec<OxcDiagnostic>,
+    errors: Diagnostics,
 }
 
 impl CompilerInterface for Compiler {
-    fn handle_errors(&mut self, errors: Vec<OxcDiagnostic>) {
+    fn handle_errors(&mut self, errors: Diagnostics) {
         self.errors.extend(errors);
     }
 
-    fn after_codegen(&mut self, ret: CodegenReturn) {
+    fn after_codegen(&mut self, ret: CodegenReturn<'_>) {
         self.printed = ret.code;
     }
 }
@@ -36,13 +35,13 @@ impl CompilerInterface for Compiler {
 impl Compiler {
     /// # Errors
     ///
-    /// * A list of [OxcDiagnostic].
+    /// * The accumulated [Diagnostics].
     pub fn execute(
         &mut self,
         source_text: &str,
         source_type: SourceType,
         source_path: &Path,
-    ) -> Result<String, Vec<OxcDiagnostic>> {
+    ) -> Result<String, Diagnostics> {
         self.compile(source_text, source_type, source_path);
         if self.errors.is_empty() {
             Ok(mem::take(&mut self.printed))
@@ -53,7 +52,7 @@ impl Compiler {
 }
 
 pub trait CompilerInterface {
-    fn handle_errors(&mut self, _errors: Vec<OxcDiagnostic>) {}
+    fn handle_errors(&mut self, _errors: Diagnostics) {}
 
     fn enable_sourcemap(&self) -> bool {
         false
@@ -68,13 +67,6 @@ pub trait CompilerInterface {
     }
 
     fn transform_options(&self) -> Option<&TransformOptions> {
-        None
-    }
-
-    /// Options for the [React Compiler], which runs before all other transforms.
-    ///
-    /// [React Compiler]: oxc_react_compiler
-    fn react_compiler_options(&self) -> Option<ReactCompilerOptions> {
         None
     }
 
@@ -120,7 +112,7 @@ pub trait CompilerInterface {
         ControlFlow::Continue(())
     }
 
-    fn after_isolated_declarations(&mut self, _ret: CodegenReturn) {}
+    fn after_isolated_declarations(&mut self, _ret: CodegenReturn<'_>) {}
 
     fn after_transform(
         &mut self,
@@ -130,7 +122,7 @@ pub trait CompilerInterface {
         ControlFlow::Continue(())
     }
 
-    fn after_codegen(&mut self, _ret: CodegenReturn) {}
+    fn after_codegen(&mut self, _ret: CodegenReturn<'_>) {}
 
     fn compile(&mut self, source_text: &str, source_type: SourceType, source_path: &Path) {
         let allocator = Allocator::default();
@@ -141,8 +133,8 @@ pub trait CompilerInterface {
         if self.after_parse(&mut parser_return).is_break() {
             return;
         }
-        if !parser_return.errors.is_empty() {
-            self.handle_errors(parser_return.errors);
+        if !parser_return.diagnostics.is_empty() {
+            self.handle_errors(parser_return.diagnostics);
         }
 
         let mut program = parser_return.program;
@@ -155,8 +147,8 @@ pub trait CompilerInterface {
         /* Semantic */
 
         let mut semantic_return = self.semantic(&program);
-        if !semantic_return.errors.is_empty() {
-            self.handle_errors(semantic_return.errors);
+        if !semantic_return.diagnostics.is_empty() {
+            self.handle_errors(semantic_return.diagnostics);
             return;
         }
         if self.after_semantic(&mut semantic_return).is_break() {
@@ -166,60 +158,31 @@ pub trait CompilerInterface {
         let stats = semantic_return.semantic.stats();
         let mut scoping = semantic_return.semantic.into_scoping();
 
-        /* React Compiler */
-
-        // Runs first, on the pristine AST, before every other transform.
-        let mut errors = Vec::new();
-        if let Some(options) = self.react_compiler_options() {
-            // `compiled` lives in `allocator`, not borrowed from `program`, so the
-            // reassignment below is sound.
-            let result = oxc_react_compiler::transform(&program, &allocator, options);
-            errors.extend(result.errors);
-            errors.extend(result.warnings);
-            if let Some(compiled) = result.program {
-                program = compiled;
-                // Rebuild scoping for downstream transforms.
-                scoping = SemanticBuilder::new()
-                    .with_enum_eval(true)
-                    .build(&program)
-                    .semantic
-                    .into_scoping();
-            }
-        }
-
         /* Transform */
 
         if let Some(options) = self.transform_options() {
             let mut transformer_return =
                 self.transform(options, &allocator, &mut program, source_path, scoping);
 
-            if !transformer_return.errors.is_empty() {
-                errors.append(&mut transformer_return.errors);
-                self.handle_errors(errors);
+            // Errors are fatal (e.g. a React Compiler error); warnings are reported
+            // but codegen still runs.
+            let diagnostics = mem::take(&mut transformer_return.diagnostics);
+            let has_errors = diagnostics.has_errors();
+            self.handle_errors(diagnostics);
+            if has_errors {
                 return;
-            }
-
-            // The React Compiler always leaves a valid program (compiled on
-            // success, original on bail-out), so its diagnostics are reported but
-            // never abort codegen.
-            if !errors.is_empty() {
-                self.handle_errors(errors);
             }
 
             if self.after_transform(&mut program, &mut transformer_return).is_break() {
                 return;
             }
 
-            (scoping) = transformer_return.scoping;
-        } else if !errors.is_empty() {
-            // The React Compiler ran without a transform; surface its diagnostics
-            // but never abort — it always leaves a valid program.
-            self.handle_errors(errors);
+            scoping = transformer_return.scoping;
         }
 
         // The transformer leaves symbols and scopes out of sync with the AST;
-        // the parser, React Compiler, and any fresh semantic build leave them in
-        // sync. Track the state so each consumer below only rebuilds when needed.
+        // the parser and any fresh semantic build leave them in sync. Track the
+        // state so each consumer below only rebuilds when needed.
         let transform = self.transform_options().is_some();
         let mut scoping_dirty = transform;
 
@@ -269,7 +232,8 @@ pub trait CompilerInterface {
 
         /* Mangler */
 
-        let mangler = self.mangle_options().map(|options| self.mangle(&mut program, options));
+        let mangler =
+            self.mangle_options().map(|options| self.mangle(&mut program, options, stats));
 
         /* Codegen */
 
@@ -310,7 +274,7 @@ pub trait CompilerInterface {
         source_path: &Path,
     ) {
         let ret = IsolatedDeclarations::new(allocator, options).build(program);
-        self.handle_errors(ret.errors);
+        self.handle_errors(ret.diagnostics);
         let ret = self.codegen(
             &ret.program,
             source_path,
@@ -341,17 +305,24 @@ pub trait CompilerInterface {
         Compressor::new(allocator).build_with_scoping(program, scoping, options);
     }
 
-    fn mangle(&self, program: &mut Program<'_>, options: MangleOptions) -> ManglerReturn {
-        Mangler::new().with_options(options).build(program)
+    /// `stats` from a prior semantic build size the mangler's internal semantic
+    /// rebuild, avoiding a full-AST counting pass.
+    fn mangle(
+        &self,
+        program: &mut Program<'_>,
+        options: MangleOptions,
+        stats: Stats,
+    ) -> ManglerReturn {
+        Mangler::new().with_options(options).with_stats(stats).build(program)
     }
 
-    fn codegen(
+    fn codegen<'a>(
         &self,
-        program: &Program<'_>,
+        program: &Program<'a>,
         source_path: &Path,
         mangler_return: Option<ManglerReturn>,
         options: CodegenOptions,
-    ) -> CodegenReturn {
+    ) -> CodegenReturn<'a> {
         let mut options = options;
         if self.enable_sourcemap() {
             options.source_map_path = Some(source_path.to_path_buf());

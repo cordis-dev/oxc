@@ -595,6 +595,49 @@ pub fn get_parent_component<'a, 'b>(
     ctx.nodes().ancestors(node.id()).find(|node| is_es5_component(node) || is_es6_component(node))
 }
 
+pub fn function_count_before_lifecycle_component(
+    node: &AstNode,
+    ctx: &LintContext,
+    lifecycle_method_name: &str,
+) -> Option<usize> {
+    let mut function_count = 0;
+    let mut in_lifecycle = false;
+
+    for ancestor in ctx.nodes().ancestors(node.id()).skip(1) {
+        if !in_lifecycle {
+            if is_lifecycle_component_method(ancestor, lifecycle_method_name) {
+                in_lifecycle = true;
+            } else if matches!(
+                ancestor.kind(),
+                AstKind::Function(_) | AstKind::ArrowFunctionExpression(_)
+            ) {
+                function_count += 1;
+            }
+        }
+
+        if in_lifecycle && (is_es5_component(ancestor) || is_es6_component(ancestor)) {
+            return Some(function_count);
+        }
+    }
+
+    None
+}
+
+fn is_lifecycle_component_method(node: &AstNode, lifecycle_method_name: &str) -> bool {
+    match node.kind() {
+        AstKind::ObjectProperty(prop) => {
+            prop.key.static_name().is_some_and(|key| key == lifecycle_method_name)
+        }
+        AstKind::MethodDefinition(method) => {
+            method.key.static_name().is_some_and(|name| name == lifecycle_method_name)
+        }
+        AstKind::PropertyDefinition(prop) => {
+            prop.key.static_name().is_some_and(|name| name == lifecycle_method_name)
+        }
+        _ => false,
+    }
+}
+
 fn get_jsx_mem_expr_name<'a>(jsx_mem_expr: &JSXMemberExpression) -> Cow<'a, str> {
     let prefix = match &jsx_mem_expr.object {
         JSXMemberExpressionObject::IdentifierReference(id) => Cow::Borrowed(id.name.as_str()),
@@ -1027,7 +1070,7 @@ mod test {
             let allocator = Allocator::default();
             let source_type = SourceType::jsx();
             let parser_ret = Parser::new(&allocator, source, source_type).parse();
-            assert!(parser_ret.errors.is_empty(), "Parse error in: {source}");
+            assert!(parser_ret.diagnostics.is_empty(), "Parse error in: {source}");
             let semantic =
                 SemanticBuilder::new_linter().build(allocator.alloc(parser_ret.program)).semantic;
 
@@ -1057,7 +1100,7 @@ mod test {
         for (source, expected) in cases {
             let allocator = Allocator::default();
             let parser_ret = Parser::new(&allocator, source, SourceType::tsx()).parse();
-            assert!(parser_ret.errors.is_empty(), "Parse error in: {source}");
+            assert!(parser_ret.diagnostics.is_empty(), "Parse error in: {source}");
 
             let semantic =
                 SemanticBuilder::new_linter().build(allocator.alloc(parser_ret.program)).semantic;
@@ -1122,7 +1165,7 @@ mod test {
             let allocator = Allocator::default();
             let source_type = SourceType::tsx();
             let parser_ret = Parser::new(&allocator, source, source_type).parse();
-            assert!(parser_ret.errors.is_empty(), "Parse error in: {source}");
+            assert!(parser_ret.diagnostics.is_empty(), "Parse error in: {source}");
             let semantic =
                 SemanticBuilder::new_linter().build(allocator.alloc(parser_ret.program)).semantic;
 

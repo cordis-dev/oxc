@@ -1,22 +1,22 @@
-pub mod apply_renames;
 pub mod convert_ast;
 pub mod convert_ast_reverse;
 pub mod convert_scope;
 pub mod diagnostics;
 pub mod prefilter;
 
-use apply_renames::build_rename_plan;
 use convert_ast::convert_program;
 use convert_scope::convert_scope_info;
 use diagnostics::compile_result_to_diagnostics;
 use prefilter::{has_react_like_functions, has_resource_management_declarations};
 use react_compiler::entrypoint::compile_result::LoggerEvent;
-use react_compiler_hir::environment_config::EnvironmentConfig;
-use rustc_hash::FxHashSet;
-// Re-exported so integrations needn't depend on the upstream `react_compiler` crate.
+
+// Re-exported so integrations needn't depend on the upstream `react_compiler` crates.
 pub use react_compiler::entrypoint::plugin_options::{
     CompilerTarget, DynamicGatingConfig, GatingConfig, PluginOptions,
 };
+pub use react_compiler_hir::environment_config::EnvironmentConfig;
+
+use rustc_hash::FxHashSet;
 
 /// [`PluginOptions`] with the compiler's standard defaults (it has no `Default`).
 /// Override fields with struct-update syntax: `PluginOptions { ..default_plugin_options() }`.
@@ -48,23 +48,19 @@ pub fn default_plugin_options() -> PluginOptions {
 pub struct TransformResult<'a> {
     /// Compiled, ready-to-codegen OXC AST; `None` if the compiler made no changes.
     pub program: Option<oxc_ast::ast::Program<'a>>,
-    /// `Error`-severity diagnostics (e.g. Rules of Hooks violations). These are
-    /// hard problems in the source; the program is still left valid.
-    pub errors: Vec<oxc_diagnostics::OxcDiagnostic>,
-    /// `Warning`/`Hint`-severity diagnostics, including bail-outs where the
-    /// compiler declined to optimize a function (e.g. unsupported syntax).
-    pub warnings: Vec<oxc_diagnostics::OxcDiagnostic>,
+    /// Errors and warnings produced by the compile. Errors (e.g. Rules of Hooks
+    /// violations) are hard problems in the source; the program is still left
+    /// valid. Warnings include bail-outs where the compiler declined to optimize.
+    pub diagnostics: oxc_diagnostics::Diagnostics,
     /// Raw structured logger events from the upstream compiler (compile
     /// success/skip/error with memoization stats), for tooling and profiling.
-    /// Unlike `errors`/`warnings`, these are not meant for user-facing reporting.
+    /// Unlike `diagnostics`, these are not meant for user-facing reporting.
     pub events: Vec<LoggerEvent>,
 }
 
 pub struct LintResult {
-    /// `Error`-severity diagnostics (e.g. Rules of Hooks violations).
-    pub errors: Vec<oxc_diagnostics::OxcDiagnostic>,
-    /// `Warning`/`Hint`-severity diagnostics, including compiler bail-outs.
-    pub warnings: Vec<oxc_diagnostics::OxcDiagnostic>,
+    /// Errors and warnings produced by the compile.
+    pub diagnostics: oxc_diagnostics::Diagnostics,
 }
 
 /// Run the React Compiler on a pre-parsed program, building the semantic model
@@ -91,43 +87,32 @@ pub fn transform<'a>(
         return TransformResult::default();
     }
 
-    let semantic = oxc_semantic::SemanticBuilder::new()
-        .with_build_nodes(true)
-        .with_enum_eval(true)
-        .build(program)
-        .semantic;
+    let semantic =
+        oxc_semantic::SemanticBuilder::new().with_build_nodes(true).build(program).semantic;
 
     let file = convert_program(program, source_text);
     let scope_info = convert_scope_info(&semantic, program);
-    let result =
-        react_compiler::entrypoint::program::compile_program(file, scope_info.clone(), options);
+    let result = react_compiler::entrypoint::program::compile_program(file, scope_info, options);
 
-    let diagnostics::Diagnostics { errors, warnings } = compile_result_to_diagnostics(&result);
-    let (program_ast, events, renames) = match result {
+    let diagnostics = compile_result_to_diagnostics(&result);
+    let (program_ast, events) = match result {
         react_compiler::entrypoint::compile_result::CompileResult::Success {
-            ast,
-            events,
-            renames,
-            ..
-        } => (ast, events, renames),
+            ast, events, ..
+        } => (ast, events),
         react_compiler::entrypoint::compile_result::CompileResult::Error { events, .. } => {
-            (None, events, Vec::new())
+            (None, events)
         }
     };
-
-    // Rename plan maps source positions of uncompiled references to new names.
-    let rename_plan = build_rename_plan(&scope_info, &renames);
 
     let compiled_program = program_ast.map(|file: react_compiler_ast::File| {
         let mut compiled =
             convert_ast_reverse::convert_program_to_oxc_with_source(&file, allocator, source_text);
         compiled.source_type = program.source_type;
-        apply_renames::apply_renames(&mut compiled, &rename_plan, allocator);
         preserve_comments(&mut compiled, program, allocator);
         compiled
     });
 
-    TransformResult { program: compiled_program, errors, warnings, events }
+    TransformResult { program: compiled_program, diagnostics, events }
 }
 
 /// Carry over the comments attached to top-level statements of the compiled
@@ -184,7 +169,7 @@ pub fn lint(program: &oxc_ast::ast::Program, options: PluginOptions) -> LintResu
     // `no_emit` yields `program: None`; a local arena for the conversion suffices.
     let allocator = oxc_allocator::Allocator::default();
     let result = transform(program, &allocator, opts);
-    LintResult { errors: result.errors, warnings: result.warnings }
+    LintResult { diagnostics: result.diagnostics }
 }
 
 /// Convenience wrapper — parses source text, runs semantic analysis, then lints.
@@ -207,14 +192,12 @@ mod tests {
     use super::transform_source;
 
     fn options() -> PluginOptions {
-        // Only the non-`#[serde(default)]` fields are required; the rest default.
-        serde_json::from_value(serde_json::json!({
-            "shouldCompile": true,
-            "enableReanimated": false,
-            "isDev": false,
-            "filename": "Component.jsx",
-        }))
-        .unwrap()
+        // The upstream options type is constructed typed (it has no `Deserialize`);
+        // only `filename` differs from the compiler's standard defaults.
+        PluginOptions {
+            filename: Some("Component.jsx".to_string()),
+            ..super::default_plugin_options()
+        }
     }
 
     #[test]
@@ -225,8 +208,12 @@ mod tests {
         let allocator = oxc_allocator::Allocator::default();
         let result = transform_source(source, oxc_span::SourceType::tsx(), &allocator, options());
 
-        assert!(result.errors.is_empty(), "unexpected errors: {:?}", result.errors);
-        assert!(result.warnings.is_empty(), "unexpected warnings: {:?}", result.warnings);
+        assert!(!result.diagnostics.has_errors(), "unexpected errors: {:?}", result.diagnostics);
+        assert!(
+            !result.diagnostics.has_warnings(),
+            "unexpected warnings: {:?}",
+            result.diagnostics
+        );
         let program = result.program.expect("React Compiler should have transformed the component");
 
         let output = oxc_codegen::Codegen::new().build(&program).code;
@@ -267,9 +254,9 @@ export = legacy;\n";
 
         let allocator = oxc_allocator::Allocator::default();
         let result = transform_source(source, oxc_span::SourceType::tsx(), &allocator, options());
-        let program = result
-            .program
-            .unwrap_or_else(|| panic!("component should be compiled; errors: {:?}", result.errors));
+        let program = result.program.unwrap_or_else(|| {
+            panic!("component should be compiled; diagnostics: {:?}", result.diagnostics)
+        });
         let output = oxc_codegen::Codegen::new().build(&program).code;
         assert!(
             output.contains("react/compiler-runtime"),
@@ -393,9 +380,9 @@ function Component(props: Props): JSX.Element {\n\
 
         let allocator = oxc_allocator::Allocator::default();
         let result = transform_source(source, oxc_span::SourceType::tsx(), &allocator, options());
-        let program = result
-            .program
-            .unwrap_or_else(|| panic!("component should compile; errors: {:?}", result.errors));
+        let program = result.program.unwrap_or_else(|| {
+            panic!("component should compile; diagnostics: {:?}", result.diagnostics)
+        });
         let output = oxc_codegen::Codegen::new().build(&program).code;
 
         assert!(output.contains("react/compiler-runtime"), "component should memoize:\n{output}");
@@ -456,55 +443,6 @@ function Component({ fields }: { fields: Field[] }) {\n\
         );
     }
 
-    fn rename_collision_source_and_offset() -> (&'static str, usize) {
-        let rename_source = "\
-function makeResults(items, names) {\n\
-  const results = [...items.map((x) => use(x.value)), ...names.map((x) => use(x))];\n\
-  return results;\n\
-}\n";
-        let collision_offset = rename_source
-            .find("use(x))")
-            .map(|index| index + "use(".len())
-            .expect("test source should contain the renamed reference");
-        (rename_source, collision_offset)
-    }
-
-    fn assert_has_rename_collision_setup(output: &str) {
-        assert!(
-            output.contains("function _temp2(x_0)") || output.contains("function _temp(x_0)"),
-            "test setup did not produce a compiler rename:\n{output}"
-        );
-    }
-
-    #[test]
-    fn source_extracted_class_spans_do_not_collide_with_rename_plan() {
-        let (rename_source, collision_offset) = rename_collision_source_and_offset();
-
-        let class_prefix = "export class C {\n  m() {\n    ";
-        let declarator_prefix = "const [octokit, ";
-        let padding_len = collision_offset
-            .checked_sub(class_prefix.len() + declarator_prefix.len())
-            .expect("class binding should be padded to the earlier rename position");
-        let source = format!(
-            "{rename_source}{class_prefix}{}{declarator_prefix}ghRepository] = foo();\n    return ghRepository.full_name;\n  }}\n}}\n",
-            " ".repeat(padding_len)
-        );
-
-        let allocator = oxc_allocator::Allocator::default();
-        let mut opts = options();
-        opts.compilation_mode = "all".to_string();
-        let result = transform_source(&source, oxc_span::SourceType::tsx(), &allocator, opts);
-        let program = result.program.expect("file should be compiled");
-        let output = oxc_codegen::Codegen::new().build(&program).code;
-
-        assert_has_rename_collision_setup(&output);
-        assert!(
-            output.contains("const [octokit, ghRepository] = foo()"),
-            "source-preserved class binding was renamed by an unrelated plan entry:\n{output}"
-        );
-        assert!(!output.contains("const [octokit, x_0]"), "class binding was corrupted:\n{output}");
-    }
-
     #[test]
     fn jsx_attribute_string_entities_are_decoded() {
         let source = "\
@@ -544,10 +482,9 @@ async function Component(props) {\n  await using x = sideEffect();\n  return <di
 
             assert!(result.program.is_none(), "resource management should skip React Compiler");
             assert!(
-                result.errors.is_empty() && result.warnings.is_empty(),
-                "unexpected diagnostics: {:?} {:?}",
-                result.errors,
-                result.warnings
+                result.diagnostics.is_empty(),
+                "unexpected diagnostics: {:?}",
+                result.diagnostics
             );
         }
     }
@@ -573,6 +510,50 @@ function Component(props) {\n  return <div>{E.A}{N.value}{props.text}</div>;\n}\
         );
     }
 
+    /// A local `export { x }` that re-exports an imported binding must keep its
+    /// `local` as an `IdentifierReference` after the round-trip, so semantic
+    /// analysis links it to the import and downstream TypeScript import elision
+    /// keeps the import alive instead of leaving a dangling export.
+    #[test]
+    fn local_reexport_keeps_its_import_binding() {
+        use oxc_ast::ast::{ModuleExportName, Statement};
+
+        let source = "\
+import { Foo } from './foo';\n\
+export { Foo };\n\
+function Component(props) {\n  return <div>{props.text}</div>;\n}\n";
+        let allocator = oxc_allocator::Allocator::default();
+        let result = transform_source(source, oxc_span::SourceType::tsx(), &allocator, options());
+        let program = result.program.expect("component should be compiled");
+
+        let export = program
+            .body
+            .iter()
+            .find_map(|stmt| match stmt {
+                Statement::ExportNamedDeclaration(decl) if decl.source.is_none() => Some(decl),
+                _ => None,
+            })
+            .expect("a local `export { Foo }` should round-trip");
+        let local = &export.specifiers.first().expect("export specifier").local;
+        assert!(
+            matches!(local, ModuleExportName::IdentifierReference(_)),
+            "local export `local` must be an IdentifierReference so semantic links it to the import",
+        );
+
+        // The freshly-built scoping for the compiled program must record the
+        // export's reference to the import, or import elision would drop it.
+        let semantic = oxc_semantic::SemanticBuilder::new().build(&program).semantic;
+        let scoping = semantic.scoping();
+        let foo = scoping
+            .symbol_ids()
+            .find(|&id| scoping.symbol_name(id) == "Foo")
+            .expect("`Foo` import binding should exist");
+        assert!(
+            scoping.get_resolved_references(foo).next().is_some(),
+            "the local re-export must reference the `Foo` import binding",
+        );
+    }
+
     /// A `React.memo(...)` component is anonymous; the prefilter must still see it.
     #[test]
     fn memo_wrapped_component_compiles() {
@@ -593,9 +574,9 @@ function Component(props) {\n  return <div>{E.A}{N.value}{props.text}</div>;\n}\
         let allocator = oxc_allocator::Allocator::default();
         let result = transform_source(source, oxc_span::SourceType::tsx(), &allocator, options());
         assert!(
-            !result.errors.is_empty(),
+            result.diagnostics.has_errors(),
             "Rules of Hooks violation should be reported as an error: {:?}",
-            result.errors
+            result.diagnostics
         );
 
         // A local named `fbt` is an unsupported-syntax bail-out — a warning, not an error.
@@ -603,14 +584,14 @@ function Component(props) {\n  return <div>{E.A}{N.value}{props.text}</div>;\n}\
         let allocator = oxc_allocator::Allocator::default();
         let result = transform_source(source, oxc_span::SourceType::tsx(), &allocator, options());
         assert!(
-            !result.warnings.is_empty(),
+            result.diagnostics.has_warnings(),
             "fbt bail-out should be reported as a warning: {:?}",
-            result.warnings
+            result.diagnostics
         );
         assert!(
-            result.errors.is_empty(),
+            !result.diagnostics.has_errors(),
             "fbt warning must not be reported as an error: {:?}",
-            result.errors
+            result.diagnostics
         );
     }
 
