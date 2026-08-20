@@ -7,7 +7,6 @@
 #![expect(clippy::missing_errors_doc)]
 
 use std::{
-    borrow::Cow,
     iter, mem,
     path::Path,
     ptr::{self, NonNull},
@@ -15,7 +14,7 @@ use std::{
     string::ToString,
 };
 
-use oxc_allocator::{Allocator, AllocatorPool, CloneIn, TakeIn, Vec as ArenaVec};
+use oxc_allocator::{Allocator, AllocatorPool, ArenaVec, CloneIn, TakeIn};
 use oxc_ast::{
     ast::{Comment, CommentContent, CommentKind, Program},
     ast_kind::AST_TYPE_MAX,
@@ -24,7 +23,7 @@ use oxc_ast_macros::ast;
 use oxc_ast_visit::utf8_to_utf16::Utf8ToUtf16;
 use oxc_data_structures::box_macros::boxed_array;
 use oxc_diagnostics::OxcDiagnostic;
-use oxc_estree_tokens::{ESTreeTokenOptionsJS, update_tokens};
+use oxc_estree_tokens::update_tokens_as_js;
 use oxc_parser::Token;
 use oxc_semantic::{AstNode, Semantic};
 use oxc_span::Span;
@@ -64,7 +63,7 @@ mod tester;
 
 mod lint_runner;
 
-pub use crate::config::plugins::normalize_plugin_name;
+pub use crate::config::{normalize_rule_name, plugins::normalize_plugin_name};
 pub use crate::disable_directives::{
     DirectivePrefix, DisableDirectives, DisableRuleComment, RuleCommentRule, RuleCommentType,
     create_unused_directives_diagnostics,
@@ -81,7 +80,7 @@ pub use crate::{
         JsFix, LintFileResult, LoadPluginResult, convert_and_merge_js_fixes,
     },
     external_plugin_store::{ExternalOptionsId, ExternalPluginStore, ExternalRuleId},
-    fixer::{Fix, FixKind, Fixer, Message, MessageRule, PossibleFixes},
+    fixer::{Fix, FixKind, Fixer, Message, PossibleFixes, oxc_code_short_canonical_name},
     frameworks::FrameworkFlags,
     lint_runner::{DirectivesStore, LintRunner, LintRunnerBuilder},
     loader::LINTABLE_EXTENSIONS,
@@ -145,15 +144,6 @@ fn cmp_diagnostics_for_runtime_optimization_assertion(
         .then_with(|| left.error.url.cmp(&right.error.url))
         .then_with(|| left.span.cmp(&right.span))
         .then_with(|| left.fixes.cmp_fix_sequence(&right.fixes))
-        .then_with(|| left.section_offset.cmp(&right.section_offset))
-        .then_with(|| {
-            left.rule.as_ref().map(|rule| (rule.plugin_name.as_ref(), rule.rule_name.as_ref())).cmp(
-                &right
-                    .rule
-                    .as_ref()
-                    .map(|rule| (rule.plugin_name.as_ref(), rule.rule_name.as_ref())),
-            )
-        })
 }
 
 /// Per-thread scratch buffers for dispatching rules to AST nodes by node type.
@@ -367,7 +357,8 @@ impl Linter {
         let ResolvedLinterState { rules, config, external_rules } = self.config.resolve(path);
         let mut timing_recorder = TIMINGS.then(|| RuleTimingRecorder::with_capacity(rules.len()));
 
-        let mut ctx_host = Rc::new(ContextHost::new(path, context_sub_hosts, self.options, config));
+        let mut ctx_host =
+            Rc::new(ContextHost::new(path, context_sub_hosts, allocator, self.options, config));
 
         #[cfg(debug_assertions)]
         let mut current_diagnostic_index = 0;
@@ -495,9 +486,16 @@ impl Linter {
 
         let result = (diagnostics, disable_directives);
         if TIMINGS {
-            rule_timing_store
-                .expect("missing rule timing store")
-                .merge(timing_recorder.expect("missing rule timing recorder"));
+            let timing_recorder = timing_recorder.expect("missing rule timing recorder");
+            rule_timing_store.expect("missing rule timing store").merge(
+                timing_recorder.into_timings().into_iter().map(|(key, stat)| RuleTimingRecord {
+                    source: key.source,
+                    plugin_name: key.plugin_name.into_owned(),
+                    rule_name: key.rule_name.into_owned(),
+                    duration: stat.duration,
+                    calls: stat.calls,
+                }),
+            );
         }
         result
     }
@@ -608,7 +606,8 @@ impl Linter {
         original_program: &mut Program<'_>,
         js_allocator_pool: &AllocatorPool,
     ) {
-        let js_allocator = js_allocator_pool.get();
+        let js_allocator_guard = js_allocator_pool.get();
+        let js_allocator = &*js_allocator_guard;
 
         // Get the original source text from the `Program`, and replace it with an empty string.
         // This avoids cloning the original source text, which can be large.
@@ -631,7 +630,7 @@ impl Linter {
                 hashbang.span.end,
                 CommentKind::Line,
             ));
-            comments_with_hashbang.extend(original_program.comments.iter().copied());
+            comments_with_hashbang.extend_from_slice_copy(&original_program.comments);
 
             original_program.comments.clear();
 
@@ -644,7 +643,7 @@ impl Linter {
         // We need to allocate the `Program` struct ITSELF in the allocator, not just its contents.
         // `clone_in` returns a value on the stack, but we need it in the allocator for raw transfer.
         let program = {
-            let mut program = original_program.clone_in(&js_allocator);
+            let mut program = original_program.clone_in(js_allocator);
             program.source_text = new_source_text;
             js_allocator.alloc(program)
         };
@@ -663,10 +662,10 @@ impl Linter {
             ctx_host,
             program,
             tokens,
-            &js_allocator,
+            js_allocator,
         );
 
-        // The `AllocatorGuard` (`js_allocator`) is dropped here, returning the allocator to the pool.
+        // The `AllocatorGuard` (`js_allocator_guard`) is dropped here, returning the allocator to the pool.
         // This ensures that we never have too many allocators in play at once, avoiding OOM.
     }
 
@@ -722,7 +721,7 @@ impl Linter {
         // Convert token spans to UTF-16 and update token kinds
         #[expect(clippy::if_not_else, clippy::cast_possible_truncation)]
         let (tokens_offset, tokens_len) = if !tokens.is_empty() {
-            update_tokens(tokens, program, &span_converter, ESTreeTokenOptionsJS);
+            update_tokens_as_js(tokens, program, &span_converter);
             (tokens.as_ptr() as u32, tokens.len() as u32)
         } else {
             (0, 0)
@@ -881,19 +880,13 @@ impl Linter {
                         PossibleFixes::from(fix)
                     };
 
-                    ctx_host.push_diagnostic(
-                        Message::new(
-                            OxcDiagnostic::error(diagnostic.message)
-                                .with_label(span)
-                                .with_error_code(plugin_name.to_string(), rule_name.to_string())
-                                .with_severity(severity.into()),
-                            possible_fixes,
-                        )
-                        .with_rule(MessageRule {
-                            plugin_name: Cow::Owned(plugin_name.to_string()),
-                            rule_name: Cow::Owned(rule_name.to_string()),
-                        }),
-                    );
+                    ctx_host.push_diagnostic(Message::new(
+                        OxcDiagnostic::error(diagnostic.message)
+                            .with_label(span)
+                            .with_error_code(plugin_name.to_string(), rule_name.to_string())
+                            .with_severity(severity.into()),
+                        possible_fixes,
+                    ));
                 }
             }
             Err(err) => {

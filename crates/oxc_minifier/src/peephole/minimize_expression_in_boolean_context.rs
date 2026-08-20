@@ -16,14 +16,12 @@ impl<'a> PeepholeOptimizations {
         ctx: &mut TraverseCtx<'a>,
     ) {
         match expr {
-            // "!!a" => "a"
             Expression::UnaryExpression(u1) if u1.operator.is_not() => {
-                if let Expression::UnaryExpression(u2) = &mut u1.argument
-                    && u2.operator.is_not()
-                {
-                    let mut e = u2.argument.take_in(ctx);
-                    Self::minimize_expression_in_boolean_context(&mut e, ctx);
-                    ctx.replace_expression(expr, e);
+                if Self::try_negate_expression(&mut u1.argument, ctx, true) {
+                    Self::minimize_expression_in_boolean_context(&mut u1.argument, ctx);
+                    ctx.replace_expression_with(expr, Self::unwrap_unary);
+                } else {
+                    Self::minimize_expression_in_boolean_context(&mut u1.argument, ctx);
                 }
             }
             Expression::BinaryExpression(e)
@@ -40,7 +38,12 @@ impl<'a> PeepholeOptimizations {
                     argument
                 } else {
                     // `if ((a | b) === 0);", "if (!(a | b));")`
-                    ctx.ast.expression_unary(e.span, UnaryOperator::LogicalNot, argument)
+                    Expression::new_unary_expression(
+                        e.span,
+                        UnaryOperator::LogicalNot,
+                        argument,
+                        ctx,
+                    )
                 };
                 ctx.replace_expression(expr, new_expr);
             }
@@ -55,7 +58,7 @@ impl<'a> PeepholeOptimizations {
                 }
             }
             // "if (!!a ||!!b)" => "if (a || b)"
-            Expression::LogicalExpression(e) if e.operator == LogicalOperator::Or => {
+            Expression::LogicalExpression(e) if e.operator.is_or() => {
                 Self::minimize_expression_in_boolean_context(&mut e.left, ctx);
                 Self::minimize_expression_in_boolean_context(&mut e.right, ctx);
                 // "if (anything || falsyNoSideEffects)" => "if (anything)"
@@ -77,7 +80,7 @@ impl<'a> PeepholeOptimizations {
                         (LogicalOperator::Or, left)
                     } else {
                         // "if (anything1 ? falsyNoSideEffects : anything2)" => "if (!anything1 && anything2)"
-                        (LogicalOperator::And, Self::minimize_not(left.span(), left, ctx))
+                        (LogicalOperator::And, Self::minimize_not(left.span(), left, ctx, true))
                     };
                     let new_expr = Self::join_with_left_associative_op(span, op, left, right, ctx);
                     ctx.replace_expression(expr, new_expr);
@@ -89,7 +92,7 @@ impl<'a> PeepholeOptimizations {
                     let span = e.span;
                     let (op, left) = if boolean {
                         // "if (anything1 ? anything2 : truthyNoSideEffects)" => "if (!anything1 || anything2)"
-                        (LogicalOperator::Or, Self::minimize_not(left.span(), left, ctx))
+                        (LogicalOperator::Or, Self::minimize_not(left.span(), left, ctx, true))
                     } else {
                         // "if (anything1 ? anything2 : falsyNoSideEffects)" => "if (anything1 && anything2)"
                         (LogicalOperator::And, left)
@@ -112,13 +115,9 @@ impl<'a> PeepholeOptimizations {
                 let reference_id = ident.reference_id();
                 let span = ident.span;
                 if let Some(symbol_id) = ctx.scoping().get_reference(reference_id).symbol_id()
-                    && ctx
-                        .state
-                        .symbol_values
-                        .get_symbol_value(symbol_id)
-                        .is_some_and(|sv| sv.boolean_falsy)
+                    && ctx.state.symbols.value(symbol_id).is_some_and(|sv| sv.boolean_falsy)
                 {
-                    let new_expr = ctx.ast.expression_boolean_literal(span, false);
+                    let new_expr = Expression::new_boolean_literal(span, false, ctx);
                     ctx.replace_expression(expr, new_expr);
                 }
             }

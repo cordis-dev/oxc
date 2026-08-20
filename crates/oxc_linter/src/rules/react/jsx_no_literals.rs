@@ -137,7 +137,7 @@ declare_oxc_lint!(
 
 impl Rule for JsxNoLiterals {
     fn from_configuration(value: serde_json::Value) -> Result<Self, serde_json::error::Error> {
-        serde_json::from_value::<DefaultRuleConfig<JsxNoLiteralsConfig>>(value)
+        DefaultRuleConfig::<JsxNoLiteralsConfig>::from_value(value)
             .map(|config| Self(Box::new(config.into_inner())))
     }
 
@@ -179,7 +179,7 @@ impl JsxNoLiterals {
 
         for prop in &obj.properties {
             if let BindingPattern::BindingIdentifier(local) = &prop.value
-                && local.symbol_id.get() == Some(symbol_id)
+                && local.symbol_id() == symbol_id
                 && let PropertyKey::StaticIdentifier(key) = &prop.key
             {
                 return Some(key.name.to_compact_str());

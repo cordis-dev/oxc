@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     AstNode,
+    ast_util::variable_declaration_kind,
     context::LintContext,
     rule::{Rule, TupleRuleConfig},
 };
@@ -116,16 +117,14 @@ impl PreferDestructuringOption {
 
 #[derive(Debug, Default, Clone, JsonSchema, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", default, deny_unknown_fields)]
-struct PreferDestructuringRenamedPropertiesConfig {
+struct PreferDestructuringEnforcementConfig {
     enforce_for_renamed_properties: bool,
+    enforce_for_declaration_with_type_annotation: bool,
 }
 
 #[derive(Debug, Default, Clone, JsonSchema, Deserialize, Serialize)]
 #[serde(default)]
-struct PreferDestructuringConfig(
-    PreferDestructuringOption,
-    PreferDestructuringRenamedPropertiesConfig,
-);
+struct PreferDestructuringConfig(PreferDestructuringOption, PreferDestructuringEnforcementConfig);
 
 impl PreferDestructuringConfig {
     fn into_rule(self) -> PreferDestructuring {
@@ -135,6 +134,9 @@ impl PreferDestructuringConfig {
             variable_declarator,
             assignment_expression,
             enforce_for_renamed_properties: self.1.enforce_for_renamed_properties,
+            enforce_for_declaration_with_type_annotation: self
+                .1
+                .enforce_for_declaration_with_type_annotation,
         }
     }
 }
@@ -150,6 +152,8 @@ pub struct PreferDestructuring {
     assignment_expression: PreferDestructuringTargetConfig,
     /// Determines whether the object destructuring rule applies to renamed variables.
     enforce_for_renamed_properties: bool,
+    /// Determines whether the rule applies to variable declarations with type annotations.
+    enforce_for_declaration_with_type_annotation: bool,
 }
 
 declare_oxc_lint!(
@@ -230,20 +234,7 @@ impl Rule for PreferDestructuring {
                                 && get_target_name(&assign_expr.left)
                                     .is_some_and(|v| v == string_literal.value)
                             {
-                                ctx.diagnostic_with_fix(
-                                    prefer_object_destructuring(assign_expr.span),
-                                    |fixer| {
-                                        generate_fix(
-                                            &fixer,
-                                            string_literal.span.shrink(1),
-                                            get_object_span_without_redundant_parentheses(
-                                                &comp_expr.object,
-                                            ),
-                                            assign_expr.span,
-                                            true,
-                                        )
-                                    },
-                                );
+                                ctx.diagnostic(prefer_object_destructuring(assign_expr.span));
                             }
                         }
                     }
@@ -252,29 +243,20 @@ impl Rule for PreferDestructuring {
                             && get_target_name(&assign_expr.left)
                                 .is_some_and(|name| name == static_expr.property.name.as_str()) =>
                     {
-                        // Safe autofix for assignments: foo = object.foo; -> ({ foo } = object);
-                        ctx.diagnostic_with_fix(
-                            prefer_object_destructuring(assign_expr.span),
-                            |fixer| {
-                                generate_fix(
-                                    &fixer,
-                                    static_expr.property.span,
-                                    get_object_span_without_redundant_parentheses(
-                                        &static_expr.object,
-                                    ),
-                                    assign_expr.span,
-                                    true,
-                                )
-                            },
-                        );
+                        ctx.diagnostic(prefer_object_destructuring(assign_expr.span));
                     }
                     _ => {}
                 }
             }
             AstKind::VariableDeclarator(declarator) => {
+                let has_type_annotation = declarator.type_annotation.is_some();
+                if has_type_annotation && !self.enforce_for_declaration_with_type_annotation {
+                    return;
+                }
+
                 // Skip `using` and `await using` declarations - destructuring doesn't apply to them
                 if matches!(
-                    declarator.kind,
+                    variable_declaration_kind(declarator, ctx),
                     VariableDeclarationKind::Using | VariableDeclarationKind::AwaitUsing
                 ) {
                     return;
@@ -299,55 +281,56 @@ impl Rule for PreferDestructuring {
                                 if self.variable_declarator.array {
                                     ctx.diagnostic(prefer_array_destructuring(init.span()));
                                 }
-                            } else {
-                                if self.enforce_for_renamed_properties
-                                    && self.variable_declarator.object
-                                {
-                                    ctx.diagnostic(prefer_object_destructuring(right.span()));
-                                }
+                            } else if self.variable_declarator.object {
                                 if let Expression::StringLiteral(string_literal) =
                                     &comp_expr.expression
-                                    && self.variable_declarator.object
                                     && name.is_some_and(|v| v == string_literal.value)
                                 {
-                                    ctx.diagnostic_with_fix(
-                                        prefer_object_destructuring(init.span()),
-                                        |fixer| {
-                                            generate_fix(
-                                                &fixer,
-                                                string_literal.span.shrink(1),
-                                                get_object_span_without_redundant_parentheses(
-                                                    &comp_expr.object,
-                                                ),
-                                                declarator.span(),
-                                                false,
-                                            )
-                                        },
-                                    );
+                                    if has_type_annotation {
+                                        ctx.diagnostic(prefer_object_destructuring(init.span()));
+                                    } else {
+                                        ctx.diagnostic_with_fix(
+                                            prefer_object_destructuring(init.span()),
+                                            |fixer| {
+                                                generate_fix(
+                                                    &fixer,
+                                                    string_literal.span.shrink(1),
+                                                    get_object_span_without_redundant_parentheses(
+                                                        &comp_expr.object,
+                                                    ),
+                                                    declarator.span(),
+                                                )
+                                            },
+                                        );
+                                    }
+                                } else if self.enforce_for_renamed_properties {
+                                    ctx.diagnostic(prefer_object_destructuring(right.span()));
                                 }
                             }
                         }
                         MemberExpression::StaticMemberExpression(static_expr)
                             if self.variable_declarator.object =>
                         {
-                            if self.enforce_for_renamed_properties {
-                                ctx.diagnostic(prefer_object_destructuring(right.span()));
-                            }
                             if name.is_some_and(|name| name == static_expr.property.name.as_str()) {
-                                ctx.diagnostic_with_fix(
-                                    prefer_object_destructuring(init.span()),
-                                    |fixer| {
-                                        generate_fix(
-                                            &fixer,
-                                            static_expr.property.span,
-                                            get_object_span_without_redundant_parentheses(
-                                                &static_expr.object,
-                                            ),
-                                            declarator.span(),
-                                            false,
-                                        )
-                                    },
-                                );
+                                if has_type_annotation {
+                                    ctx.diagnostic(prefer_object_destructuring(init.span()));
+                                } else {
+                                    ctx.diagnostic_with_fix(
+                                        prefer_object_destructuring(init.span()),
+                                        |fixer| {
+                                            generate_fix(
+                                                &fixer,
+                                                static_expr.property.span,
+                                                get_object_span_without_redundant_parentheses(
+                                                    &static_expr.object,
+                                                ),
+                                                declarator.span(),
+                                            )
+                                        },
+                                    );
+                                }
+                            } else if self.enforce_for_renamed_properties {
+                                ctx.diagnostic(prefer_object_destructuring(right.span()));
                             }
                         }
                         _ => {}
@@ -391,22 +374,16 @@ fn get_object_span_without_redundant_parentheses(object: &Expression) -> Span {
     }
 }
 
-/// Generate the fix for object destructuring.
-/// `is_assignment` determines whether to wrap in parentheses for assignment expressions.
+/// Generate the fix for object destructuring in a variable declaration.
 fn generate_fix(
     fixer: &crate::fixer::RuleFixer<'_, '_>,
     prop_span: Span,
     object_span: Span,
     replacement_span: Span,
-    is_assignment: bool,
 ) -> crate::fixer::RuleFix {
     let prop = fixer.source_range(prop_span);
     let object_text = fixer.source_range(object_span);
-    let replacement = if is_assignment {
-        format!("({{ {prop} }} = {object_text})")
-    } else {
-        format!("{{{prop}}} = {object_text}")
-    };
+    let replacement = format!("{{{prop}}} = {object_text}");
     fixer.replace(replacement_span, replacement)
 }
 
@@ -417,6 +394,26 @@ fn test() {
     let pass = vec![
         ("var [foo] = array;", None),
         ("var { foo } = object;", None),
+        ("const foo: string = object.foo;", None),
+        ("const foo: string = object['foo'];", None),
+        ("const foo: string = array[0];", None),
+        (
+            "const object = { foo: 'value' as const }; const foo: string = object.foo;",
+            Some(serde_json::json!([
+                {
+                    "VariableDeclarator": { "array": false, "object": true },
+                    "AssignmentExpression": { "array": false, "object": false }
+                },
+                {
+                    "enforceForDeclarationWithTypeAnnotation": false,
+                    "enforceForRenamedProperties": false
+                }
+            ])),
+        ),
+        (
+            "const foo: string = object.foo;",
+            Some(serde_json::json!([{ "object": true }, { "enforceForRenamedProperties": true }])),
+        ),
         (
             "a = b.c",
             Some(
@@ -619,6 +616,44 @@ fn test() {
         ("var foo = array[0];", None),
         ("foo = array[0];", None),
         ("var foo = object.foo;", None),
+        (
+            "var foo: string = object.foo;",
+            Some(
+                serde_json::json!([{ "object": true }, { "enforceForDeclarationWithTypeAnnotation": true }]),
+            ),
+        ),
+        (
+            "var foo: string = object['foo'];",
+            Some(
+                serde_json::json!([{ "object": true }, { "enforceForDeclarationWithTypeAnnotation": true }]),
+            ),
+        ),
+        (
+            "var foo: string = array[0];",
+            Some(
+                serde_json::json!([{ "array": true }, { "enforceForDeclarationWithTypeAnnotation": true }]),
+            ),
+        ),
+        (
+            "var foo: string = object.foo;",
+            Some(serde_json::json!([
+                { "object": true },
+                {
+                    "enforceForDeclarationWithTypeAnnotation": true,
+                    "enforceForRenamedProperties": true
+                }
+            ])),
+        ),
+        (
+            "var foo: string = object['foo'];",
+            Some(serde_json::json!([
+                { "object": true },
+                {
+                    "enforceForDeclarationWithTypeAnnotation": true,
+                    "enforceForRenamedProperties": true
+                }
+            ])),
+        ),
         ("var foo = (a, b).foo;", None),
         ("var length = (() => {}).length;", None),
         ("var foo = (a = b).foo;", None),
@@ -774,7 +809,22 @@ fn test() {
         ),
         ("var foo = object.foo, /* comment */ a;", "var {foo} = object, /* comment */ a;", None),
         ("var foo = object['foo'];", "var {foo} = object;", None),
-        ("foo = object.foo;", "({ foo } = object);", None),
+        (
+            "var foo: string = object.foo;",
+            "var foo: string = object.foo;",
+            Some(
+                serde_json::json!([{ "object": true }, { "enforceForDeclarationWithTypeAnnotation": true }]),
+            ),
+        ),
+        (
+            "var foo: string = object['foo'];",
+            "var foo: string = object['foo'];",
+            Some(
+                serde_json::json!([{ "object": true }, { "enforceForDeclarationWithTypeAnnotation": true }]),
+            ),
+        ),
+        ("foo = object.foo;", "foo = object.foo;", None),
+        ("foo = object['foo'];", "foo = object['foo'];", None),
     ];
 
     Tester::new(PreferDestructuring::NAME, PreferDestructuring::PLUGIN, pass, fail)

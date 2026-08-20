@@ -9,11 +9,14 @@ use oxc_macros::declare_oxc_lint;
 use oxc_span::{GetSpan, Span};
 use oxc_str::CompactStr;
 use rustc_hash::FxHashMap;
-use schemars::JsonSchema;
+use schemars::{
+    JsonSchema, SchemaGenerator,
+    schema::{ArrayValidation, Schema, SchemaObject},
+};
 use serde::de::Error;
 use serde_json::Value;
 
-use crate::{AstNode, context::LintContext, rule::Rule};
+use crate::{AstNode, ast_util::iter_outer_expressions, context::LintContext, rule::Rule};
 
 fn no_restricted_globals(global_name: &str, suffix: &str, span: Span) -> OxcDiagnostic {
     let warn_text = if suffix.is_empty() {
@@ -38,8 +41,7 @@ impl Deref for NoRestrictedGlobals {
     }
 }
 
-#[derive(Debug, Clone, JsonSchema)]
-#[serde(rename_all = "camelCase", default)]
+#[derive(Debug, Clone)]
 pub struct NoRestrictedGlobalsConfig {
     /// Objects in the format
     /// `{ "name": "event", "message": "Use local parameter instead." }`, which define what globals
@@ -63,6 +65,79 @@ impl Default for NoRestrictedGlobalsConfig {
             check_global_object: false,
             global_objects: default_globals_objects(),
         }
+    }
+}
+
+/// A restricted global with an optional custom message.
+#[derive(Debug, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[expect(unused)] // only for schemars
+struct RestrictedGlobal {
+    /// The name of the restricted global.
+    name: String,
+    /// A custom message shown when the restricted global is used.
+    message: Option<String>,
+}
+
+#[derive(Debug, JsonSchema)]
+#[serde(untagged)]
+#[expect(unused)] // only for schemars
+enum GlobalNameOrObject {
+    /// The name of a restricted global.
+    String(String),
+    /// A restricted global with an optional custom message.
+    Object(RestrictedGlobal),
+}
+
+/// Object form of the configuration, which additionally allows detecting
+/// restricted globals accessed via global objects.
+#[derive(Debug, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[expect(unused)] // only for schemars
+struct NoRestrictedGlobalsObjectConfig {
+    /// The restricted globals, as names or `{ "name", "message" }` objects.
+    globals: Vec<GlobalNameOrObject>,
+    /// Whether to also detect restricted globals accessed via global objects. Default is `false`.
+    #[serde(default)]
+    check_global_object: bool,
+    /// Additional global object names to check when `checkGlobalObject` is enabled.
+    /// By default, the rule checks these global objects: `globalThis`, `self`, and `window`.
+    #[serde(default)]
+    global_objects: Vec<String>,
+}
+
+#[derive(Debug)]
+#[expect(unused)] // only for schemars
+enum NoRestrictedGlobalsConfigValue {
+    String(String),
+    Simple(RestrictedGlobal),
+    Complex(NoRestrictedGlobalsObjectConfig),
+}
+
+impl JsonSchema for NoRestrictedGlobalsConfigValue {
+    fn schema_name() -> String {
+        "NoRestrictedGlobalsConfigValue".to_string()
+    }
+
+    fn json_schema(r#gen: &mut SchemaGenerator) -> Schema {
+        #[derive(JsonSchema)]
+        #[serde(untagged)]
+        #[expect(unused)] // only for schemars
+        enum NoRestrictedGlobalsConfigEnum {
+            String(String),
+            Simple(RestrictedGlobal),
+            Complex(NoRestrictedGlobalsObjectConfig),
+        }
+
+        Schema::Object(SchemaObject {
+            array: Some(Box::new(ArrayValidation {
+                additional_items: Some(Box::new(
+                    r#gen.subschema_for::<NoRestrictedGlobalsConfigEnum>(),
+                )),
+                ..Default::default()
+            })),
+            ..Default::default()
+        })
     }
 }
 
@@ -98,7 +173,7 @@ declare_oxc_lint!(
     NoRestrictedGlobals,
     eslint,
     restriction,
-    config = NoRestrictedGlobalsConfig,
+    config = NoRestrictedGlobalsConfigValue,
     version = "0.4.0",
     short_description = "Specify global variable names that should not be used in your application.",
 );
@@ -182,32 +257,86 @@ impl Rule for NoRestrictedGlobals {
         Ok(Self(Box::new(config)))
     }
 
-    fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        match node.kind() {
-            AstKind::IdentifierReference(ident) => {
+    fn run_once(&self, ctx: &LintContext) {
+        // Prefer `run_once` only (not `run` + `run_once`): implementing both forces NODE_TYPES=None
+        // and invokes the rule on every AST node.
+        if self.globals.is_empty() {
+            return;
+        }
+        let unresolved = ctx.scoping().root_unresolved_references();
+        for (name, message) in &self.globals {
+            let Some(ref_ids) = unresolved.get(name.as_str()) else {
+                continue;
+            };
+            for &ref_id in ref_ids {
+                let reference = ctx.scoping().get_reference(ref_id);
+                if reference.symbol_id().is_some() || reference.is_type() {
+                    continue;
+                }
+                let node = ctx.nodes().get_node(reference.node_id());
+                let AstKind::IdentifierReference(ident) = node.kind() else {
+                    continue;
+                };
                 if self.check_global_object
                     && is_ident_property(ident, &ctx.nodes().parent_kind(node.id()))
                 {
-                    return;
+                    continue;
                 }
-
-                let Some(message) = self.globals.get(ident.name.as_str()) else {
-                    return;
-                };
-                let reference = ctx.scoping().get_reference(ident.reference_id());
-                if reference.symbol_id().is_none() && reference.is_type() {
-                    return;
-                }
-                ctx.diagnostic(no_restricted_globals(&ident.name, message, ident.span));
+                ctx.diagnostic(no_restricted_globals(name, message, ident.span));
             }
-            AstKind::ComputedMemberExpression(expression) if self.check_global_object => {
-                let Some(ident) = expression.object.get_identifier_reference() else {
+        }
+
+        // Restricted globals accessed as `window.event` / `globalThis['event']`.
+        if !self.check_global_object {
+            return;
+        }
+        // `global_objects` may contain duplicates (defaults are appended in from_configuration).
+        let mut seen_global_objs = rustc_hash::FxHashSet::default();
+        for global_obj in &self.global_objects {
+            if !seen_global_objs.insert(global_obj.as_str()) {
+                continue;
+            }
+            let Some(ref_ids) = unresolved.get(global_obj.as_str()) else {
+                continue;
+            };
+            for &ref_id in ref_ids {
+                let node = ctx.nodes().get_node(ctx.scoping().get_reference(ref_id).node_id());
+                self.check_global_object_member_access(node, ctx);
+            }
+        }
+    }
+}
+
+impl NoRestrictedGlobals {
+    fn check_global_object_member_access<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
+        let ident_span = node.kind().span();
+        let Some(parent) = iter_outer_expressions(ctx.nodes(), node.id()).next() else {
+            return;
+        };
+        match parent {
+            AstKind::StaticMemberExpression(expression) => {
+                let Some(obj_ident) = expression.object.get_identifier_reference() else {
                     return;
                 };
-                if !ctx.scoping().root_unresolved_references().contains_key(&ident.name) {
+                // Only when this identifier is the object, not the property.
+                if obj_ident.span != ident_span {
                     return;
                 }
-                if !self.global_objects.contains(&ident.name.into()) {
+                let Some(message) = self.globals.get(expression.property.name.as_str()) else {
+                    return;
+                };
+                ctx.diagnostic(no_restricted_globals(
+                    expression.property.name.as_str(),
+                    message,
+                    expression.property.span,
+                ));
+            }
+            AstKind::ComputedMemberExpression(expression) => {
+                let Some(obj_ident) = expression.object.get_identifier_reference() else {
+                    return;
+                };
+                // Only when this identifier is the object, not the property.
+                if obj_ident.span != ident_span {
                     return;
                 }
                 let property_name = match &expression.expression {
@@ -229,25 +358,6 @@ impl Rule for NoRestrictedGlobals {
                     property_name,
                     message,
                     expression.expression.span(),
-                ));
-            }
-            AstKind::StaticMemberExpression(expression) if self.check_global_object => {
-                let Some(ident) = expression.object.get_identifier_reference() else {
-                    return;
-                };
-                if !ctx.scoping().root_unresolved_references().contains_key(&ident.name) {
-                    return;
-                }
-                if !self.global_objects.contains(&ident.name.into()) {
-                    return;
-                }
-                let Some(message) = self.globals.get(expression.property.name.as_str()) else {
-                    return;
-                };
-                ctx.diagnostic(no_restricted_globals(
-                    &expression.property.name,
-                    message,
-                    expression.property.span,
                 ));
             }
             _ => {}
@@ -439,6 +549,12 @@ fn test() {
         ("foo.bar", Some(serde_json::json!(["bar"])), None),
         ("foo.globalThis.bar", Some(serde_json::json!(["bar"])), None),
         ("foo.globalThis.bar()", Some(serde_json::json!(["bar"])), None),
+        (
+            "function handler(event) { return event.target; }",
+            Some(serde_json::json!(["event"])),
+            None,
+        ),
+        ("function handler(name) { return name.length; }", Some(serde_json::json!(["name"])), None),
     ];
 
     let fail = vec![
@@ -612,6 +728,16 @@ fn test() {
             Some(json!({"env": { "browser": true}})),
         ),
         (
+            "(window).foo()",
+            Some(serde_json::json!([{ "globals": ["foo"], "checkGlobalObject": true }])),
+            Some(json!({"env": { "browser": true}})),
+        ),
+        (
+            "window!.foo()",
+            Some(serde_json::json!([{ "globals": ["foo"], "checkGlobalObject": true }])),
+            Some(json!({"env": { "browser": true}})),
+        ),
+        (
             "self.foo()",
             Some(serde_json::json!([{ "globals": ["foo"], "checkGlobalObject": true }])),
             Some(json!({"env": { "browser": true}})),
@@ -629,6 +755,11 @@ fn test() {
         // ),
         (
             "globalThis.foo()",
+            Some(serde_json::json!([{ "globals": ["foo"], "checkGlobalObject": true }])),
+            None,
+        ), // { "ecmaVersion": 2020 },
+        (
+            "(globalThis as any).foo()",
             Some(serde_json::json!([{ "globals": ["foo"], "checkGlobalObject": true }])),
             None,
         ), // { "ecmaVersion": 2020 },

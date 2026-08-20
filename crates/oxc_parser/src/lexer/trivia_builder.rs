@@ -1,5 +1,5 @@
 use memchr::memchr_iter;
-use oxc_allocator::{Allocator, Vec as ArenaVec};
+use oxc_allocator::{Allocator, ArenaVec};
 use oxc_ast::ast::{Comment, CommentContent, CommentKind, CommentPosition};
 use oxc_span::Span;
 
@@ -38,7 +38,7 @@ pub struct TriviaBuilder<'a> {
 impl<'a> TriviaBuilder<'a> {
     pub fn new_in(allocator: &'a Allocator) -> Self {
         Self {
-            comments: ArenaVec::new_in(allocator),
+            comments: ArenaVec::new_in(&allocator),
             irregular_whitespaces: vec![],
             processed: 0,
             saw_newline: true,
@@ -186,6 +186,7 @@ impl<'a> TriviaBuilder<'a> {
                 | CommentContent::Pure
                 | CommentContent::PureNotApplied
                 | CommentContent::NoSideEffects
+                | CommentContent::PropertyKey
         )
     }
 
@@ -276,6 +277,14 @@ impl<'a> TriviaBuilder<'a> {
             return;
         }
 
+        let rest = &bytes[start..];
+        if (rest.starts_with(b"@__KEY__") || rest.starts_with(b"#__KEY__") || !rest[0].is_ascii())
+            && is_property_key_annotation(s)
+        {
+            comment.content = CommentContent::PropertyKey;
+            return;
+        }
+
         // Fast path: check first non-whitespace byte
         match bytes[start] {
             b'@' => {
@@ -331,7 +340,11 @@ impl<'a> TriviaBuilder<'a> {
                     || rest.starts_with(b"node:coverage")
                     || rest.starts_with(b"istanbul ignore")
                 {
-                    comment.content = CommentContent::CoverageIgnore;
+                    comment.content = if is_coverage_ignore_file(rest) {
+                        CommentContent::CoverageIgnoreFile
+                    } else {
+                        CommentContent::CoverageIgnore
+                    };
                     return;
                 }
                 // Fall through to check license/preserve
@@ -365,31 +378,39 @@ impl<'a> TriviaBuilder<'a> {
     }
 }
 
-#[expect(clippy::inline_always)]
+#[inline]
+fn is_property_key_annotation(source: &str) -> bool {
+    matches!(source.trim().strip_prefix(['@', '#']), Some("__KEY__"))
+}
+
 #[inline(always)]
 fn contains_license_or_preserve_comment(s: &str) -> bool {
+    const LICENSE_LEN: usize = b"@license".len();
+    const PRESERVE_LEN: usize = b"@preserve".len();
     let hay = s.as_bytes();
 
-    if hay.len() < 9 {
+    if hay.len() < LICENSE_LEN {
         return false;
     }
 
-    let search_len = hay.len() - 8;
+    let search_len = hay.len() - LICENSE_LEN + 1;
 
     for i in memchr_iter(b'@', &hay[..search_len]) {
         debug_assert!(i < search_len);
-        // SAFETY: we `i` has a max val of len of bytes - 8, so accessing `i + 1` is safe
+        debug_assert!(hay.len() - i >= LICENSE_LEN);
+        // SAFETY: `search_len` only includes candidate starts with at least `LICENSE_LEN` bytes
+        // remaining, so `i + 1` and the full `@license` range are in bounds.
         match unsafe { hay.get_unchecked(i + 1) } {
             // spellchecker:off
             b'l'
-                // SAFETY: we `i` has a max val of len of bytes - 8, so accessing `i + 7` is safe
-                if unsafe { hay.get_unchecked(i + 2..i + 1 + 7) } == b"icense" =>
+                // SAFETY: The candidate bound proves the full `@license` range is in bounds.
+                if unsafe { hay.get_unchecked(i + 2..i + LICENSE_LEN) } == b"icense" =>
             {
                 return true;
             }
-            b'p'
-                // SAFETY: we `i` has a max val of len of bytes - 8, so accessing `i + 8` is safe
-                if unsafe { hay.get_unchecked(i + 2..i + 1 + 8) } == b"reserve" =>
+            b'p' if hay.len() - i >= PRESERVE_LEN
+                    // SAFETY: The preceding guard proves the full `@preserve` range is in bounds.
+                    && unsafe { hay.get_unchecked(i + 2..i + PRESERVE_LEN) } == b"reserve" =>
             {
                 return true;
             }
@@ -399,6 +420,17 @@ fn contains_license_or_preserve_comment(s: &str) -> bool {
     }
 
     false
+}
+
+fn is_coverage_ignore_file(source: &[u8]) -> bool {
+    fn starts_with_directive(source: &[u8], directive: &[u8]) -> bool {
+        source
+            .strip_prefix(directive)
+            .is_some_and(|rest| rest.first().is_none_or(u8::is_ascii_whitespace))
+    }
+
+    starts_with_directive(source, b"v8 ignore file")
+        || starts_with_directive(source, b"istanbul ignore file")
 }
 
 #[cfg(test)]
@@ -617,6 +649,23 @@ function bar() {}";
     }
 
     #[test]
+    fn property_key_comment_after_code_is_attached_to_next_literal() {
+        for (source_text, literal) in [
+            ("work();/* #__KEY__ */\n\"_field\";", "\"_field\""),
+            ("work();// @__KEY__\n`_field`;", "`_field`"),
+        ] {
+            let comments = get_comments(source_text);
+            let literal_start = u32::try_from(source_text.find(literal).unwrap()).unwrap();
+
+            assert_eq!(comments.len(), 1);
+            assert_eq!(comments[0].position, CommentPosition::Leading);
+            assert_eq!(comments[0].attached_to, literal_start);
+            assert!(comments[0].is_property_key_annotation());
+            assert!(comments[0].is_annotation());
+        }
+    }
+
+    #[test]
     fn leading_comments_after_eq() {
         let source_text = "
             const v1 = // Leading comment 1
@@ -768,10 +817,20 @@ function bar() {}";
             ("/* @license */", CommentContent::Legal),
             ("/* foo @preserve */", CommentContent::Legal),
             ("/* foo @license */", CommentContent::Legal),
+            ("/* foo @preserve*/", CommentContent::Legal),
+            ("/* foo @license*/", CommentContent::Legal),
+            ("/* foo @licensed*/", CommentContent::Legal),
+            ("/* foo @License*/", CommentContent::None),
+            // spellchecker:disable-next-line
+            ("/* foo @licens*/", CommentContent::None),
+            // spellchecker:disable-next-line
+            ("/* foo @preserv*/", CommentContent::None),
             ("/* @foo @preserve */", CommentContent::Legal),
             ("/* @foo @license */", CommentContent::Legal),
             ("/** foo @preserve */", CommentContent::JsdocLegal),
             ("/** foo @license */", CommentContent::JsdocLegal),
+            ("/** foo @license*/", CommentContent::JsdocLegal),
+            ("// foo @license", CommentContent::Legal),
             ("/** jsdoc */", CommentContent::Jsdoc),
             ("/**/", CommentContent::None),
             ("/***/", CommentContent::None),
@@ -788,7 +847,26 @@ function bar() {}";
             ("/* @__NO_SIDE_EFFECTS__ */", CommentContent::NoSideEffects),
             ("/* #__PURE__ */", CommentContent::Pure),
             ("/* #__NO_SIDE_EFFECTS__ */", CommentContent::NoSideEffects),
+            ("/* @__KEY__ */", CommentContent::PropertyKey),
+            ("/* #__KEY__ */", CommentContent::PropertyKey),
+            ("/*\u{a0}@__KEY__\u{a0}*/", CommentContent::PropertyKey),
+            ("//@__KEY__", CommentContent::PropertyKey),
+            ("// #__KEY__", CommentContent::PropertyKey),
+            ("/**\n * @__KEY__\n */", CommentContent::Jsdoc),
+            ("/* __KEY__ */", CommentContent::None),
+            ("/* @ __KEY__ */", CommentContent::None),
+            ("/* @__key__ */", CommentContent::None),
+            ("/* @__KEY___ */", CommentContent::None),
+            ("/* @__KEY__ extra */", CommentContent::None),
             ("/* turbopackOptional: true */", CommentContent::Turbopack),
+            ("/* v8 ignore next */", CommentContent::CoverageIgnore),
+            ("/* v8 ignore filename */", CommentContent::CoverageIgnore),
+            ("/* c8 ignore file */", CommentContent::CoverageIgnore),
+            ("/* v8 ignore file */", CommentContent::CoverageIgnoreFile),
+            ("// v8 ignore file", CommentContent::CoverageIgnoreFile),
+            ("/* v8 ignore file -- @preserve */", CommentContent::CoverageIgnoreFile),
+            ("/* istanbul ignore file */", CommentContent::CoverageIgnoreFile),
+            ("// istanbul ignore file -- generated", CommentContent::CoverageIgnoreFile),
         ];
 
         for (source_text, expected) in data {

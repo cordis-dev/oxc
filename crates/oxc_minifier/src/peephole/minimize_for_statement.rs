@@ -1,4 +1,4 @@
-use oxc_allocator::TakeIn;
+use oxc_allocator::{ArenaBox, TakeIn};
 use oxc_ast::ast::*;
 use oxc_span::GetSpan;
 
@@ -40,27 +40,22 @@ impl<'a> PeepholeOptimizations {
                 stmt => (stmt, None),
             };
 
-            let Statement::IfStatement(mut if_stmt) = first else { unreachable!() };
-
-            let expr = match if_stmt.test.take_in(ctx) {
-                Expression::UnaryExpression(unary_expr) if unary_expr.operator.is_not() => {
-                    unary_expr.unbox().argument
-                }
-                e => Self::minimize_not(e.span(), e, ctx),
-            };
+            let Statement::IfStatement(if_stmt) = first else { unreachable!() };
+            let IfStatement { test, alternate, .. } = if_stmt.unbox();
+            let expr = Self::minimize_not(test.span(), test, ctx, true);
 
             if let Some(test) = &mut for_stmt.test {
                 let left = test.take_in(ctx);
                 let mut logical_expr =
-                    ctx.ast.logical_expression(test.span(), left, LogicalOperator::And, expr);
-                let new_test = Self::try_fold_and_or(&mut logical_expr, ctx)
-                    .unwrap_or_else(|| Expression::LogicalExpression(ctx.ast.alloc(logical_expr)));
+                    LogicalExpression::new(test.span(), left, LogicalOperator::And, expr, ctx);
+                let new_test = Self::try_fold_and_or(&mut logical_expr, ctx).unwrap_or_else(|| {
+                    Expression::LogicalExpression(ArenaBox::new_in(logical_expr, ctx))
+                });
                 ctx.replace_expression(test, new_test);
             } else {
                 for_stmt.test = Some(expr);
             }
 
-            let alternate = if_stmt.alternate.take();
             let new_body = Self::drop_first_statement(span, body, alternate, ctx);
             ctx.replace_statement(&mut for_stmt.body, new_body);
             return;
@@ -83,22 +78,23 @@ impl<'a> PeepholeOptimizations {
                 stmt => (stmt, None),
             };
 
-            let Statement::IfStatement(mut if_stmt) = first else { unreachable!() };
+            let Statement::IfStatement(if_stmt) = first else { unreachable!() };
+            let IfStatement { test, consequent, .. } = if_stmt.unbox();
 
-            let expr = if_stmt.test.take_in(ctx);
+            let expr = test;
 
             if let Some(test) = &mut for_stmt.test {
                 let left = test.take_in(ctx);
                 let mut logical_expr =
-                    ctx.ast.logical_expression(test.span(), left, LogicalOperator::And, expr);
-                let new_test = Self::try_fold_and_or(&mut logical_expr, ctx)
-                    .unwrap_or_else(|| Expression::LogicalExpression(ctx.ast.alloc(logical_expr)));
+                    LogicalExpression::new(test.span(), left, LogicalOperator::And, expr, ctx);
+                let new_test = Self::try_fold_and_or(&mut logical_expr, ctx).unwrap_or_else(|| {
+                    Expression::LogicalExpression(ArenaBox::new_in(logical_expr, ctx))
+                });
                 ctx.replace_expression(test, new_test);
             } else {
                 for_stmt.test = Some(expr);
             }
 
-            let consequent = if_stmt.consequent.take_in(ctx);
             let new_body = Self::drop_first_statement(span, body, Some(consequent), ctx);
             ctx.replace_statement(&mut for_stmt.body, new_body);
         }
@@ -117,13 +113,13 @@ impl<'a> PeepholeOptimizations {
                 } else if block_stmt.body.len() == 2
                     && !Self::statement_cares_about_scope(&block_stmt.body[1])
                 {
-                    return block_stmt.body[1].take_in(ctx);
+                    return block_stmt.body.pop().unwrap();
                 } else {
                     block_stmt.body.remove(0);
                 }
                 Statement::BlockStatement(block_stmt)
             }
-            _ => replace.unwrap_or_else(|| ctx.ast.statement_empty(span)),
+            _ => replace.unwrap_or_else(|| Statement::new_empty_statement(span, ctx)),
         }
     }
 }

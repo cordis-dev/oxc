@@ -9,6 +9,7 @@ use oxc_ast::ast::{ImportDeclaration, ImportDeclarationSpecifier, Statement};
 use oxc_diagnostics::OxcDiagnostic;
 use oxc_macros::declare_oxc_lint;
 use oxc_span::Span;
+use oxc_str::Ident;
 use rustc_hash::FxHashSet;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -98,7 +99,7 @@ declare_oxc_lint!(
 
 impl Rule for SortImports {
     fn from_configuration(value: serde_json::Value) -> Result<Self, serde_json::error::Error> {
-        serde_json::from_value::<DefaultRuleConfig<Self>>(value).map(DefaultRuleConfig::into_inner)
+        DefaultRuleConfig::<Self>::from_value(value).map(DefaultRuleConfig::into_inner)
     }
 
     fn run_once(&self, ctx: &LintContext) {
@@ -172,15 +173,8 @@ impl SortImports {
         let previous_member_syntax_group_index =
             self.member_syntax_sort_order.get_group_index_by_import_decl(previous);
 
-        let mut current_local_member_name = get_first_local_member_name(current);
-        let mut previous_local_member_name = get_first_local_member_name(previous);
-
-        if self.ignore_case {
-            current_local_member_name = current_local_member_name
-                .map(|name| Cow::Owned(name.cow_to_ascii_lowercase().into_owned()));
-            previous_local_member_name = previous_local_member_name
-                .map(|name| Cow::Owned(name.cow_to_ascii_lowercase().into_owned()));
-        }
+        let current_local_member_name = get_first_local_member_name(current);
+        let previous_local_member_name = get_first_local_member_name(previous);
 
         // "memberSyntaxSortOrder": ["none", "all", "multiple", "single"]
         // ```js
@@ -208,7 +202,12 @@ impl SortImports {
                 // ```
                 if let Some((current_name, previous_name)) =
                     current_local_member_name.zip(previous_local_member_name)
-                    && current_name < previous_name
+                    && if self.ignore_case {
+                        current_name.as_str().cow_to_ascii_lowercase()
+                            < previous_name.as_str().cow_to_ascii_lowercase()
+                    } else {
+                        current_name.as_str() < previous_name.as_str()
+                    }
                 {
                     ctx.diagnostic(sort_imports_alphabetically_diagnostic(current.span));
                 }
@@ -290,14 +289,13 @@ impl SortImports {
                     // add a empty string for zip with specifiers
                     paddings.push("");
 
-                    let specifiers = specifiers.iter().sorted_by(|a, b| {
-                        let a = a.local.name.as_str();
-                        let b = b.local.name.as_str();
-
+                    // Compute each sort key once instead of once per comparison.
+                    let specifiers = specifiers.iter().sorted_by_cached_key(|specifier| {
+                        let name = specifier.local.name.as_str();
                         if self.ignore_case {
-                            a.cow_to_ascii_lowercase().cmp(&b.cow_to_ascii_lowercase())
+                            name.cow_to_ascii_lowercase()
                         } else {
-                            a.cmp(b)
+                            Cow::Borrowed(name)
                         }
                     });
 
@@ -422,7 +420,7 @@ impl Display for ImportKind {
     }
 }
 
-fn get_first_local_member_name<'a>(decl: &ImportDeclaration<'a>) -> Option<Cow<'a, str>> {
+fn get_first_local_member_name<'a>(decl: &ImportDeclaration<'a>) -> Option<Ident<'a>> {
     let specifiers = decl.specifiers.as_ref()?;
     specifiers.first().map(ImportDeclarationSpecifier::name)
 }

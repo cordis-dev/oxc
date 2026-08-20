@@ -2,147 +2,147 @@
 source: crates/oxc_linter/src/tester.rs
 ---
 
-  ⚠ eslint(no-warning-comments): Unexpected 'fixme' comment: fixme
+  ⚠ eslint(no-warning-comments): Unresolved 'fixme' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // fixme
    · ────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'fixme' comment: any fixme
+  ⚠ eslint(no-warning-comments): Unresolved 'fixme' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // any fixme
    · ────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'fixme' comment: any fixme
+  ⚠ eslint(no-warning-comments): Unresolved 'fixme' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // any fixme
    · ────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'fixme' comment: any FIXME
+  ⚠ eslint(no-warning-comments): Unresolved 'fixme' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // any FIXME
    · ────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'fixme' comment: any fIxMe
+  ⚠ eslint(no-warning-comments): Unresolved 'fixme' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // any fIxMe
    · ────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'fixme' comment: any fixme
+  ⚠ eslint(no-warning-comments): Unresolved 'fixme' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ /* any fixme */
    · ───────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'fixme' comment: any FIXME
+  ⚠ eslint(no-warning-comments): Unresolved 'fixme' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ /* any FIXME */
    · ───────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'fixme' comment: any fIxMe
+  ⚠ eslint(no-warning-comments): Unresolved 'fixme' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ /* any fIxMe */
    · ───────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'fixme' comment: any fixme or todo
+  ⚠ eslint(no-warning-comments): Unresolved 'fixme' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // any fixme or todo
    · ────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'fixme' comment: any fixme or todo
+  ⚠ eslint(no-warning-comments): Unresolved 'fixme' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ /* any fixme or todo */
    · ───────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: any fixme or todo
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ /* any fixme or todo */
    · ───────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'fixme' comment: fixme and todo
+  ⚠ eslint(no-warning-comments): Unresolved 'fixme' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ /* fixme and todo */
    · ────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: fixme and todo
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ /* fixme and todo */
    · ────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'fixme' comment: any fixme
+  ⚠ eslint(no-warning-comments): Unresolved 'fixme' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ /* any fixme */
    · ───────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'fixme' comment: fixme!
+  ⚠ eslint(no-warning-comments): Unresolved 'fixme' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ /* fixme! */
    · ────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected '[litera|$]' comment: regex [litera|$]
+  ⚠ eslint(no-warning-comments): Unresolved '[litera|$]' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // regex [litera|$]
    · ───────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'eslint' comment: eslint one-var: 2
+  ⚠ eslint(no-warning-comments): Unresolved 'eslint' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ /* eslint one-var: 2 */
    · ───────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'one' comment: eslint one-var: 2
+  ⚠ eslint(no-warning-comments): Unresolved 'one' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ /* eslint one-var: 2 */
    · ───────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: any block comment with TODO, FIXME or...
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ /* any block comment with TODO, FIXME or XXX */
    · ───────────────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: any block comment with (TODO, FIXME's or...
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ /* any block comment with (TODO, FIXME's or XXX!) */
    · ────────────────────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: * *any block comment *with (TODO,...
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ ╭─▶ /**
  2 │ │                *any block comment
@@ -150,28 +150,28 @@ source: crates/oxc_linter/src/tester.rs
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: any comment with TODO, FIXME or XXX
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // any comment with TODO, FIXME or XXX
    · ──────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: TODO: something small
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // TODO: something small
    · ────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: TODO: something really longer than 40...
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // TODO: something really longer than 40 characters
    · ───────────────────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: TODO: something really longer than 40...
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ ╭─▶ /* TODO: something
  2 │ │                really longer than 40 characters
@@ -179,91 +179,91 @@ source: crates/oxc_linter/src/tester.rs
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: TODO: small
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // TODO: small
    · ──────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: ...
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // https://github.com/eslint/eslint/pull/13522#discussion_r470293411 TODO
    · ─────────────────────────────────────────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: Comment ending with term followed by...
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // Comment ending with term followed by punctuation TODO!
    · ─────────────────────────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo!' comment: Comment ending with term including...
+  ⚠ eslint(no-warning-comments): Unresolved 'todo!' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // Comment ending with term including punctuation TODO!
    · ───────────────────────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo!' comment: Comment ending with term including...
+  ⚠ eslint(no-warning-comments): Unresolved 'todo!' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // Comment ending with term including punctuation followed by more TODO!!!
    · ──────────────────────────────────────────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: !TODO comment starting with term...
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // !TODO comment starting with term preceded by punctuation
    · ───────────────────────────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected '!todo' comment: !TODO comment starting with term...
+  ⚠ eslint(no-warning-comments): Unresolved '!todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // !TODO comment starting with term including punctuation
    · ─────────────────────────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected '!todo' comment: !!!TODO comment starting with term...
+  ⚠ eslint(no-warning-comments): Unresolved '!todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // !!!TODO comment starting with term including punctuation preceded by more
    · ────────────────────────────────────────────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'fix!' comment: FIX!term ending with punctuation...
+  ⚠ eslint(no-warning-comments): Unresolved 'fix!' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // FIX!term ending with punctuation followed word character
    · ───────────────────────────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected '!fix' comment: Term starting with punctuation preceded...
+  ⚠ eslint(no-warning-comments): Unresolved '!fix' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // Term starting with punctuation preceded word character!FIX
    · ─────────────────────────────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected '!xxx' comment: !XXX comment starting with no spaces...
+  ⚠ eslint(no-warning-comments): Unresolved '!xxx' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ //!XXX comment starting with no spaces (anywhere)
    · ─────────────────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected '!xxx' comment: !XXX comment starting with no spaces...
+  ⚠ eslint(no-warning-comments): Unresolved '!xxx' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ //!XXX comment starting with no spaces (start)
    · ──────────────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: TODO undecorated multi-line block...
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ ╭─▶ /*
  2 │ │               TODO undecorated multi-line block comment (start)
@@ -271,7 +271,7 @@ source: crates/oxc_linter/src/tester.rs
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: /// TODO decorated single-line comment...
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ ///// TODO decorated single-line comment with decoration array
    · ──────────────────────────────────────────────────────────────
@@ -279,7 +279,7 @@ source: crates/oxc_linter/src/tester.rs
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo' comment: /*/*/ TODO decorated single-line comment...
+  ⚠ eslint(no-warning-comments): Unresolved 'todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ ///*/*/ TODO decorated single-line comment with multiple decoration characters (start)
    · ──────────────────────────────────────────────────────────────────────────────────────
@@ -287,14 +287,14 @@ source: crates/oxc_linter/src/tester.rs
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected '*todo' comment: **TODO term starts with a decoration...
+  ⚠ eslint(no-warning-comments): Unresolved '*todo' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ //**TODO term starts with a decoration character
    · ────────────────────────────────────────────────
    ╰────
   help: Remove or rephrase this comment
 
-  ⚠ eslint(no-warning-comments): Unexpected 'todo!' comment: todo! with punctuation at start
+  ⚠ eslint(no-warning-comments): Unresolved 'todo!' comment.
    ╭─[no_warning_comments.tsx:1:1]
  1 │ // todo! with punctuation at start
    · ──────────────────────────────────

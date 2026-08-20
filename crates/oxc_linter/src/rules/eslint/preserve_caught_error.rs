@@ -3,7 +3,7 @@ use oxc_ast::ast::{
     Argument, BindingPattern, CatchClause, Expression, Function, IdentifierReference,
     ObjectExpression, ObjectPropertyKind, PropertyKey, ThrowStatement, TryStatement,
 };
-use oxc_ast_visit::Visit;
+use oxc_ast_visit::VisitJs;
 use oxc_diagnostics::OxcDiagnostic;
 use oxc_macros::declare_oxc_lint;
 use oxc_semantic::{IsGlobalReference, ScopeFlags};
@@ -53,19 +53,23 @@ struct ThrowFinder<'a, 'ctx> {
     ctx: &'ctx LintContext<'a>,
 }
 
-impl<'a> Visit<'a> for ThrowFinder<'a, '_> {
+impl<'a> VisitJs<'a> for ThrowFinder<'a, '_> {
     fn visit_throw_statement(&mut self, throw_stmt: &ThrowStatement<'a>) {
-        let (callee, args) = match &throw_stmt.argument {
-            Expression::NewExpression(new_expr) => (&new_expr.callee, &new_expr.arguments),
-            Expression::CallExpression(call_expr) => (&call_expr.callee, &call_expr.arguments),
+        let (callee, type_arguments, args) = match &throw_stmt.argument {
+            Expression::NewExpression(new_expr) => {
+                (&new_expr.callee, &new_expr.type_arguments, &new_expr.arguments)
+            }
+            Expression::CallExpression(call_expr) => {
+                (&call_expr.callee, &call_expr.type_arguments, &call_expr.arguments)
+            }
             _ => return,
         };
 
-        if !is_builtin_error_constructor(callee, self.ctx) {
+        let Some(options_argument_index) = error_options_argument_index(callee, self.ctx) else {
             return;
-        }
+        };
 
-        if let Some(Argument::ObjectExpression(obj_expr)) = args.get(1)
+        if let Some(Argument::ObjectExpression(obj_expr)) = args.get(options_argument_index)
             && has_cause_property(obj_expr, self.catch_param, self.ctx)
         {
             return;
@@ -84,15 +88,18 @@ impl<'a> Visit<'a> for ThrowFinder<'a, '_> {
 
             match args.len() {
                 0 => {
-                    // find starting `(` of call after callee
-                    let src = throw_stmt.argument.span().source_text(fixer.source_text());
-                    if let Some(start_paren_idx) = src.find('(') {
+                    // find starting `(` of call after the callee and its type arguments
+                    let args_start = match type_arguments {
+                        Some(type_args) => type_args.span.end,
+                        None => callee.span().end,
+                    };
+                    if let Some(offset) = fixer.find_next_token_within(
+                        args_start,
+                        throw_stmt.argument.span().end,
+                        "(",
+                    ) {
                         let mut fix = fixer.new_fix_with_capacity(3);
-                        #[expect(clippy::cast_possible_truncation)]
-                        let span = Span::sized(
-                            throw_stmt.argument.span().start + start_paren_idx as u32,
-                            1,
-                        );
+                        let span = Span::sized(args_start + offset, 1);
                         if let Expression::Identifier(ident) = callee
                             && is_aggregate_error(ident, self.ctx)
                         {
@@ -194,14 +201,20 @@ impl<'a> Visit<'a> for ThrowFinder<'a, '_> {
     fn visit_catch_clause(&mut self, _catch_clause: &CatchClause<'a>) {}
 }
 
-fn is_builtin_error_constructor(expr: &Expression, ctx: &LintContext) -> bool {
+fn error_options_argument_index(expr: &Expression, ctx: &LintContext) -> Option<usize> {
     let Expression::Identifier(ident) = expr else {
-        return false;
+        return None;
     };
 
-    ident.is_global_reference_name(static_ident!("Error"), ctx.scoping())
+    if ident.is_global_reference_name(static_ident!("Error"), ctx.scoping())
         || ident.is_global_reference_name(static_ident!("TypeError"), ctx.scoping())
-        || is_aggregate_error(ident, ctx)
+    {
+        Some(1)
+    } else if is_aggregate_error(ident, ctx) {
+        Some(2)
+    } else {
+        None
+    }
 }
 
 fn is_aggregate_error(ident: &IdentifierReference, ctx: &LintContext) -> bool {
@@ -234,9 +247,7 @@ fn is_catch_parameter(expr: &Expression, catch_param: &BindingPattern, ctx: &Lin
         return false;
     };
 
-    let Some(catch_symbol_id) = binding.symbol_id.get() else {
-        return false;
-    };
+    let catch_symbol_id = binding.symbol_id();
 
     let Expression::Identifier(ident) = expr else {
         return false;
@@ -308,7 +319,7 @@ impl PreserveCaughtError {
 
 impl Rule for PreserveCaughtError {
     fn from_configuration(value: serde_json::Value) -> Result<Self, serde_json::error::Error> {
-        serde_json::from_value::<DefaultRuleConfig<Self>>(value).map(DefaultRuleConfig::into_inner)
+        DefaultRuleConfig::<Self>::from_value(value).map(DefaultRuleConfig::into_inner)
     }
 
     fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
@@ -414,9 +425,15 @@ fn test() {
             r#"try { doSomething(); } catch (errorA) { try { doSomethingElse(); } catch (errorB) { throw new Error( `The certificate key "${chalk.yellow(keyFile)}" is invalid.\n${errorA.message}`, { cause: errorB }); } }"#,
             None,
         ),
+        (
+            r#"try { doSomething(); } catch (error) { throw new AggregateError([error], "aggregate", { cause: error }); }"#,
+            None,
+        ),
     ];
 
     let fail = vec![
+        ("try { doSomething(); } catch (err) { throw new Error/* ( */(); }", None),
+        ("try { doSomething(); } catch (err) { throw new Error<() => void>(); }", None),
         (
             r#"try {
 			            doSomething();
@@ -666,9 +683,25 @@ fn test() {
 			}"#,
             None,
         ),
+        (
+            r#"try { doSomething(); } catch (error) { throw new AggregateError([error], "aggregate", { cause: unrelated }); }"#,
+            None,
+        ),
     ];
 
     let fix = vec![
+        // the `(` inside the comment is not the start of the arguments
+        (
+            "try { doSomething(); } catch (err) { throw new Error/* ( */(); }",
+            "try { doSomething(); } catch (err) { throw new Error/* ( */(\"\", { cause: err }); }",
+            None,
+        ),
+        // the `(` inside the type arguments is not the start of the arguments
+        (
+            "try { doSomething(); } catch (err) { throw new Error<() => void>(); }",
+            "try { doSomething(); } catch (err) { throw new Error<() => void>(\"\", { cause: err }); }",
+            None,
+        ),
         (
             r#"try {
                         doSomething();

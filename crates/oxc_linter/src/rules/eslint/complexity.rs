@@ -20,17 +20,12 @@ use crate::{
 /// Variant to control which decision points are counted.
 /// In the "classic" variant (the default), switch statements do not
 /// add a decision point for the entire switch.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 enum ComplexityVariant {
+    #[default]
     Classic,
     Modified,
-}
-
-impl Default for ComplexityVariant {
-    fn default() -> Self {
-        ComplexityVariant::Classic
-    }
 }
 
 /// The perceived complexity rule. It reports a warning if a function’s
@@ -68,8 +63,7 @@ impl Deref for Complexity {
 /// Creates a diagnostic message for excessive complexity.
 fn complexity_diagnostic(name: &str, complexity: usize, max: usize, span: Span) -> OxcDiagnostic {
     OxcDiagnostic::warn(format!(
-        "{} has a complexity of {}. Maximum allowed is {}.",
-        name, complexity, max
+        "{name} has a complexity of {complexity}. Maximum allowed is {max}."
     ))
     .with_help("Consider refactoring your code to reduce its complexity.")
     .with_label(span)
@@ -132,9 +126,10 @@ impl Rule for Complexity {
     fn from_configuration(value: Value) -> Result<Self, serde_json::Error> {
         // The configuration can be either a number or an object with a "max" property.
         let config = value.get(0);
-        if let Some(max) = config.and_then(Value::as_u64) {
+        if let Some(max) = config.and_then(Value::as_u64).and_then(|max| usize::try_from(max).ok())
+        {
             return Ok(Self(Box::new(ComplexityConfig {
-                max: max as usize,
+                max,
                 variant: ComplexityVariant::Classic,
             })));
         }
@@ -163,37 +158,37 @@ fn compute_complexity<'a>(
             }
 
             // Check for recursive calls
-            if let AstKind::CallExpression(_) = node.kind() {
-                if is_recursive_call(function_node, node) {
-                    complexity += 1;
-                }
+            if let AstKind::CallExpression(_) = node.kind()
+                && is_recursive_call(function_node, node)
+            {
+                complexity += 1;
             }
 
             // Special handling for if statements with else branches
-            if let AstKind::IfStatement(if_stmt) = node.kind() {
-                if let Some(alternate) = &if_stmt.alternate {
-                    // Check if this is an "else if" construction
-                    let is_else_if = matches!(alternate, oxc_ast::ast::Statement::IfStatement(_));
+            if let AstKind::IfStatement(if_stmt) = node.kind()
+                && let Some(alternate) = &if_stmt.alternate
+            {
+                // Check if this is an "else if" construction
+                let is_else_if = matches!(alternate, oxc_ast::ast::Statement::IfStatement(_));
 
-                    if !is_else_if {
-                        complexity += 1;
-                    }
+                if !is_else_if {
+                    complexity += 1;
                 }
             }
 
             // Special handling for switch statements with default cases
-            if let AstKind::SwitchStatement(switch_stmt) = node.kind() {
-                if switch_stmt.cases.iter().any(|case| case.test.is_none()) {
-                    complexity += 1;
-                }
+            if let AstKind::SwitchStatement(switch_stmt) = node.kind()
+                && switch_stmt.cases.iter().any(|case| case.test.is_none())
+            {
+                complexity += 1;
             }
 
             // Special handling for logical expressions
-            if let AstKind::LogicalExpression(_) = node.kind() {
-                if !has_logical_expression_parent(node, nodes) {
-                    let operator_sequences = count_logical_operator_sequences(node);
-                    complexity += operator_sequences;
-                }
+            if let AstKind::LogicalExpression(_) = node.kind()
+                && !has_logical_expression_parent(node, nodes)
+            {
+                let operator_sequences = count_logical_operator_sequences(node);
+                complexity += operator_sequences;
             }
         }
     }
@@ -203,15 +198,15 @@ fn compute_complexity<'a>(
 /// Checks if the node has a logical expression as its parent
 fn has_logical_expression_parent<'a>(node: &AstNode<'a>, nodes: &'a AstNodes<'a>) -> bool {
     let parent_id = nodes.parent_id(node.id());
-    if parent_id != node.id() {
+    if parent_id == node.id() {
+        false
+    } else {
         let parent = nodes.get_node(parent_id);
         matches!(parent.kind(), AstKind::LogicalExpression(_))
-    } else {
-        false
     }
 }
 
-fn count_logical_operator_sequences<'a>(node: &AstNode<'a>) -> usize {
+fn count_logical_operator_sequences(node: &AstNode<'_>) -> usize {
     use oxc_syntax::operator::LogicalOperator;
 
     fn count_sequences(
@@ -258,15 +253,15 @@ fn is_in_function<'a>(
 
 fn is_decision_point(node: &AstNode, _variant: ComplexityVariant) -> bool {
     match node.kind() {
-        AstKind::IfStatement(_) => true,
-        AstKind::ForStatement(_) => true,
-        AstKind::ForInStatement(_) => true,
-        AstKind::ForOfStatement(_) => true,
-        AstKind::WhileStatement(_) => true,
-        AstKind::DoWhileStatement(_) => true,
-        AstKind::ConditionalExpression(_) => true,
-        AstKind::CatchClause(_) => true,
-        AstKind::SwitchStatement(_) => true,
+        AstKind::IfStatement(_)
+        | AstKind::ForStatement(_)
+        | AstKind::ForInStatement(_)
+        | AstKind::ForOfStatement(_)
+        | AstKind::WhileStatement(_)
+        | AstKind::DoWhileStatement(_)
+        | AstKind::ConditionalExpression(_)
+        | AstKind::CatchClause(_)
+        | AstKind::SwitchStatement(_) => true,
         AstKind::AssignmentExpression(assign_expr) => {
             // If the assignment operator has short-circuiting behavior,
             // count it as a decision point.
@@ -304,13 +299,13 @@ fn get_function_name(node: &AstNode) -> String {
 
 /// Returns true if the call expression is a recursive call to the current function.
 fn is_recursive_call<'a>(function_node: &AstNode<'a>, call_node: &AstNode<'a>) -> bool {
-    if let AstKind::CallExpression(call_expr) = call_node.kind() {
-        if let oxc_ast::ast::Expression::Identifier(callee_ident) = &call_expr.callee {
-            let function_name = get_function_name(function_node);
-            return function_name != "anonymous function"
-                && function_name != "function"
-                && function_name == callee_ident.name.to_string();
-        }
+    if let AstKind::CallExpression(call_expr) = call_node.kind()
+        && let oxc_ast::ast::Expression::Identifier(callee_ident) = &call_expr.callee
+    {
+        let function_name = get_function_name(function_node);
+        return function_name != "anonymous function"
+            && function_name != "function"
+            && function_name == callee_ident.name.as_str();
     }
     false
 }
@@ -369,7 +364,7 @@ mod tests {
 
         for (js, expected) in &test_cases {
             let complexity = get_test_complexity(js, ComplexityVariant::Classic);
-            assert_eq!(complexity, *expected, "Classic variant failed for: {}", js);
+            assert_eq!(complexity, *expected, "Classic variant failed for: {js}");
         }
     }
 
@@ -404,7 +399,7 @@ mod tests {
         let program = ret.program;
 
         // Build semantic model
-        let semantic_builder = SemanticBuilder::new();
+        let semantic_builder = SemanticBuilder::new().with_build_nodes(true);
         let semantic = semantic_builder.build(&program);
         let nodes = semantic.semantic.nodes();
 

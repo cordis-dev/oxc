@@ -17,7 +17,7 @@ use oxc_estree::{ESTree, Serializer as ESTreeSerializer};
 #[cfg(feature = "serialize")]
 use serde::{Serialize, Serializer as SerdeSerializer};
 
-use crate::Allocator;
+use crate::GetAllocator;
 
 /// A `Box` without [`Drop`], which stores its data in the arena allocator.
 ///
@@ -33,6 +33,30 @@ use crate::Allocator;
 /// with a [`Drop`] type.
 #[repr(transparent)]
 pub struct Box<'alloc, T: ?Sized>(NonNull<T>, PhantomData<(&'alloc (), T)>);
+
+/// SAFETY: A [`Box`] has exclusive access to the `T` it points to, and grants access to nothing else,
+/// so it gets the same auto traits as the `&'alloc mut T` it stands in for.
+///
+/// Unlike [`Vec`], a `Box` holds no `&Arena`. There is no way from a `Box` to the [`Allocator`]
+/// it points into, so 2 `Box`es on different threads cannot both allocate from the same arena -
+/// which is the reason `Vec` cannot be `Send`. [`new_in`] is the only method which touches an
+/// [`Allocator`], and it receives one as a param, so it runs on a thread which has one already.
+///
+/// A `Box` is never [`Drop`], so sending one to another thread cannot free arena memory there.
+/// `'alloc` borrows the arena, so it cannot be reset or dropped while a `Box` into it is alive
+/// on any thread.
+///
+/// A `T` which itself holds arena data keeps its own bound - a `Box<Vec<T>>` is not `Send`,
+/// because [`Vec`] is not.
+///
+/// [`Vec`]: crate::Vec
+/// [`Allocator`]: crate::Allocator
+/// [`new_in`]: Box::new_in
+unsafe impl<T: Send + ?Sized> Send for Box<'_, T> {}
+
+/// SAFETY: Sharing a `&Box<T>` shares only a `&T`, so `T` being [`Sync`] is what it takes.
+/// The [`Send`] impl above covers why a `Box` grants access to nothing else.
+unsafe impl<T: Sync + ?Sized> Sync for Box<'_, T> {}
 
 impl<T: ?Sized> Box<'_, T> {
     /// Const assertion that `T` is not `Drop`.
@@ -50,6 +74,7 @@ impl<'alloc, T> Box<'alloc, T> {
     /// use oxc_allocator::{Allocator, Box};
     ///
     /// let arena = Allocator::default();
+    /// let arena = &arena;
     /// let in_arena: Box<i32> = Box::new_in(5, &arena);
     /// ```
     ///
@@ -60,6 +85,7 @@ impl<'alloc, T> Box<'alloc, T> {
     ///
     /// let boxed = {
     ///     let allocator = Allocator::default();
+    ///     let allocator = &allocator;
     ///     Box::new_in(5, &allocator)
     /// };
     /// assert_eq!(*boxed, 5);
@@ -69,21 +95,10 @@ impl<'alloc, T> Box<'alloc, T> {
     // We always want it to be inlined.
     #[expect(clippy::inline_always)]
     #[inline(always)]
-    pub fn new_in(value: T, allocator: &'alloc Allocator) -> Self {
+    pub fn new_in(value: T, allocator: &impl GetAllocator<'alloc>) -> Self {
         const { Self::ASSERT_T_IS_NOT_DROP };
 
-        Self(NonNull::from(allocator.alloc(value)), PhantomData)
-    }
-
-    /// Create a fake [`Box`] with a dangling pointer.
-    ///
-    /// # SAFETY
-    /// Safe to create, but must never be dereferenced, as does not point to a valid `T`.
-    /// Only purpose is for mocking types without allocating for const assertions.
-    pub const unsafe fn dangling() -> Self {
-        // SAFETY: None of `from_non_null`'s invariants are satisfied, but caller promises
-        // never to dereference the `Box`
-        unsafe { Self::from_non_null(ptr::NonNull::dangling()) }
+        Self(NonNull::from(allocator.allocator().alloc(value)), PhantomData)
     }
 
     /// Take ownership of the value stored in this [`Box`], consuming the box in
@@ -94,6 +109,7 @@ impl<'alloc, T> Box<'alloc, T> {
     /// use oxc_allocator::{Allocator, Box};
     ///
     /// let arena = Allocator::default();
+    /// let arena = &arena;
     ///
     /// // Put `5` into the arena and on the heap.
     /// let boxed: Box<i32> = Box::new_in(5, &arena);
@@ -128,6 +144,7 @@ impl<T: ?Sized> Box<'_, T> {
     /// use oxc_allocator::{Allocator, Box};
     ///
     /// let allocator = Allocator::new();
+    /// let allocator = &allocator;
     /// let boxed = Box::new_in(123_u64, &allocator);
     /// let ptr = Box::as_non_null(&boxed);
     /// ```
@@ -298,15 +315,36 @@ impl<T: Hash> Hash for Box<'_, T> {
 
 #[cfg(test)]
 mod test {
-    use std::hash::{DefaultHasher, Hash, Hasher};
+    use std::{
+        cell::Cell,
+        hash::{DefaultHasher, Hash, Hasher},
+    };
+
+    use oxc_data_structures::types::implements;
 
     use crate::{Allocator, Vec};
 
     use super::Box;
 
+    // A `Box` grants what a `&mut T` does, so it gets the same auto traits.
+    // See `unsafe impl Send for Box`.
+    #[test]
+    fn box_send_sync() {
+        assert!(implements!(Box<u32>: Send));
+        assert!(implements!(Box<u32>: Sync));
+
+        // `Cell` is `Send` but not `Sync`
+        assert!(implements!(Box<Cell<u32>>: Send));
+        assert!(implements!(Box<Cell<u32>>: !Sync));
+        // `Vec` is `Sync` but not `Send`
+        assert!(implements!(Box<Vec<u32>>: !Send));
+        assert!(implements!(Box<Vec<u32>>: Sync));
+    }
+
     #[test]
     fn box_deref_mut() {
         let allocator = Allocator::default();
+        let allocator = &allocator;
         let mut b = Box::new_in("x", &allocator);
         let b = &mut *b;
         *b = allocator.alloc("v");
@@ -324,6 +362,7 @@ mod test {
     #[test]
     fn boxed_slice_into_arena_slice() {
         let allocator = Allocator::default();
+        let allocator = &allocator;
         let v = Vec::from_iter_in([1, 2, 3], &allocator);
         let b = v.into_boxed_slice();
         let slice = b.into_arena_slice();
@@ -333,6 +372,7 @@ mod test {
     #[test]
     fn boxed_slice_into_arena_slice_mut() {
         let allocator = Allocator::default();
+        let allocator = &allocator;
         let v = Vec::from_iter_in([10, 20, 30], &allocator);
         let b = v.into_boxed_slice();
         let slice = b.into_arena_slice_mut();
@@ -343,6 +383,7 @@ mod test {
     #[test]
     fn box_debug() {
         let allocator = Allocator::default();
+        let allocator = &allocator;
         let b = Box::new_in("x", &allocator);
         let b = format!("{b:?}");
         assert_eq!(b, "\"x\"");
@@ -357,6 +398,7 @@ mod test {
         }
 
         let allocator = Allocator::default();
+        let allocator = &allocator;
         let a = Box::new_in("x", &allocator);
         let b = Box::new_in("x", &allocator);
 
@@ -367,6 +409,7 @@ mod test {
     #[test]
     fn box_serialize() {
         let allocator = Allocator::default();
+        let allocator = &allocator;
         let b = Box::new_in("x", &allocator);
         let s = serde_json::to_string(&b).unwrap();
         assert_eq!(s, r#""x""#);
@@ -378,6 +421,7 @@ mod test {
         use oxc_estree::{CompactSerializer, ESTree};
 
         let allocator = Allocator::default();
+        let allocator = &allocator;
         let b = Box::new_in("x", &allocator);
 
         let mut serializer = CompactSerializer::default();
