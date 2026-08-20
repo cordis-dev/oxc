@@ -57,16 +57,12 @@ fn format_github(diagnostic: &Error) -> String {
         let message = escape_data(&message);
         format!("::{severity} title={title}::{message}\n")
     } else {
-        // The parameters before `::` only feed the annotations panel, not the log
-        // stream, so repeat `file:line:col` in the message text. Same layout as Ruff:
-        // https://github.com/astral-sh/ruff/blob/main/crates/ruff_db/src/diagnostic/render/github.rs
         let escaped_filename = escape_property(&filename);
-        let filename_data = escape_data(&filename);
         let message = escape_data(&message);
         let (line, col) = (start.line, start.column);
         let (end_line, end_col) = (end.line, end.column);
         format!(
-            "::{severity} file={escaped_filename},line={line},endLine={end_line},col={col},endColumn={end_col},code={code},title={title}::{filename_data}:{line}:{col}: {message}\n"
+            "::{severity} file={escaped_filename},line={line},endLine={end_line},col={col},endColumn={end_col},code={code},title={title}::{message}\n"
         )
     }
 }
@@ -181,28 +177,31 @@ mod test {
         assert!(result.is_some());
         assert_eq!(
             result.unwrap(),
-            "::warning file=file%3A//test.ts,line=1,endLine=1,col=1,endColumn=9,code=,title=oxlint::file://test.ts:1:1: error message\n"
+            "::warning file=file%3A//test.ts,line=1,endLine=1,col=1,endColumn=9,code=,title=oxlint::error message\n"
         );
     }
 
     #[test]
-    fn reporter_error_includes_rule_code() {
+    fn reporter_error_keeps_rule_and_location_out_of_message() {
         let mut reporter = GithubReporter;
-        let error = OxcDiagnostic::warn("error message")
-            .with_error_code("scope", "rule")
-            .with_label(Span::new(0, 8))
-            .with_source_code(NamedSource::new("file://test.ts", "debugger;"));
+        let error = OxcDiagnostic::warn("Expected to call `super()`.")
+            .with_error_code("Eslint", "constructor-super")
+            .with_label(Span::new(10, 15))
+            .with_source_code(NamedSource::new(
+                "ESLint/constructor-super.js",
+                "a\nb\nc\n    super();",
+            ));
 
         let result = reporter.render_error(error);
 
         assert_eq!(
             result.unwrap(),
-            "::warning file=file%3A//test.ts,line=1,endLine=1,col=1,endColumn=9,code=scope(rule),title=scope(rule)::file://test.ts:1:1: error message\n"
+            "::warning file=ESLint/constructor-super.js,line=4,endLine=4,col=5,endColumn=10,code=Eslint(constructor-super),title=Eslint(constructor-super)::Expected to call `super()`.\n"
         );
     }
 
     #[test]
-    fn reporter_error_escapes_filename_differently_in_property_and_message() {
+    fn reporter_error_escapes_filename_property() {
         let mut reporter = GithubReporter;
         let error = OxcDiagnostic::warn("error message")
             .with_label(Span::new(0, 8))
@@ -210,11 +209,9 @@ mod test {
 
         let result = reporter.render_error(error);
 
-        // `,` must be escaped in the `file=` property but stay literal in the
-        // message text. `%` must be escaped in both.
         assert_eq!(
             result.unwrap(),
-            "::warning file=we%2Cird%25name.ts,line=1,endLine=1,col=1,endColumn=9,code=,title=oxlint::we,ird%25name.ts:1:1: error message\n"
+            "::warning file=we%2Cird%25name.ts,line=1,endLine=1,col=1,endColumn=9,code=,title=oxlint::error message\n"
         );
     }
 
@@ -262,7 +259,7 @@ mod test {
         let output = String::from_utf8(output).unwrap();
 
         assert!(output.starts_with("::warning file=file%3A//test.ts,line=1,endLine=1,col=1,"));
-        assert!(output.contains("title=oxlint::file://test.ts:1:1: error message"));
+        assert!(output.contains("title=oxlint::error message"));
         assert!(!output.contains("File is too long to fit on the screen"));
         assert!(!output.contains("file=,line=0,endLine=0,col=0,endColumn=0"));
     }
