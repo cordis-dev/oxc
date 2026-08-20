@@ -169,13 +169,9 @@ impl Info {
         let mut start = InfoPosition { line: 0, column: 0 };
         let mut end = InfoPosition { line: 0, column: 0 };
         let mut filename = String::new();
-        let diagnostic_message = diagnostic.to_string();
-        // Our messages usually come with `eslint(rule): message`.
-        let (mut rule_id, message) = diagnostic_message.split_once(':').map_or_else(
-            || (None, diagnostic_message.clone()),
-            |(id, message)| (Some(id.to_string()), message.trim().to_string()),
-        );
+        let message = diagnostic.to_string();
         let mut severity = Severity::Warning;
+        let rule_id = diagnostic.code().map(|code| code.to_string());
         if let Some(source) = diagnostic.source_code()
             && let Some(label) = diagnostic.labels().first()
             && let Ok(start_offset) = usize::try_from(label.offset())
@@ -197,11 +193,42 @@ impl Info {
             }
         }
 
-        // Newer diagnostics expose the code separately instead of including it in Display.
-        if rule_id.is_none() {
-            rule_id = diagnostic.code().map(|code| code.to_string());
-        }
-
         Self { start, end, filename, message, severity, rule_id }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use oxc_span::Span;
+
+    use crate::{NamedSource, OxcDiagnostic};
+
+    use super::Info;
+
+    #[test]
+    fn message_does_not_include_rule_or_location() {
+        let diagnostic = OxcDiagnostic::warn("Expected to call `super()`.")
+            .with_error_code("Eslint", "constructor-super")
+            .with_label(Span::new(10, 15))
+            .with_source_code(NamedSource::new(
+                "ESLint/constructor-super.js",
+                "a\nb\nc\n    super();",
+            ));
+
+        let info = Info::new(&diagnostic);
+
+        assert_eq!(info.message, "Expected to call `super()`.");
+        assert_eq!(info.rule_id.as_deref(), Some("Eslint(constructor-super)"));
+        assert_eq!(info.filename, "ESLint/constructor-super.js");
+        assert_eq!((info.start.line, info.start.column), (4, 5));
+    }
+
+    #[test]
+    fn message_preserves_colons() {
+        let diagnostic = OxcDiagnostic::error("Expected `;` but found `:`")
+            .with_label(Span::new(0, 1))
+            .with_source_code(NamedSource::new("test.js", ":"));
+
+        assert_eq!(Info::new(&diagnostic).message, "Expected `;` but found `:`");
     }
 }
