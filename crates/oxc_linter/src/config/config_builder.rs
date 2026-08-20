@@ -204,7 +204,7 @@ impl ConfigStoreBuilder {
         let (oxlintrc, extended_paths) = resolve_oxlintrc_config(oxlintrc, false)?;
 
         // Collect external plugins from both base config and overrides
-        let mut external_plugins: FxHashSet<&ExternalPluginEntry> = FxHashSet::default();
+        /*let mut external_plugins: FxHashSet<&ExternalPluginEntry> = FxHashSet::default();
 
         if let Some(base_external_plugins) = &oxlintrc.external_plugins {
             external_plugins.extend(base_external_plugins.iter());
@@ -245,7 +245,7 @@ impl ConfigStoreBuilder {
                     workspace_uri,
                 )?;
             }
-        }
+        }*/
 
         let plugins = oxlintrc.plugins.unwrap_or_default();
 
@@ -522,11 +522,11 @@ impl ConfigStoreBuilder {
 
                 // Convert to vectors
                 builtin_rules.extend(rules_map);
-                external_rules.extend(
+                /*.extend(
                     external_rules_map
                         .into_iter()
                         .map(|(rule_id, (options_id, severity))| (rule_id, options_id, severity)),
-                );
+                );*/
 
                 Ok::<_, Vec<OverrideRulesError>>(ResolvedOxlintOverride {
                     files: override_config.files,
