@@ -4,13 +4,11 @@
 //! The span getter returns `None` for elements the formatter never prints (dropped empty statements, elision holes),
 //! which are skipped when computing `following_span_start`.
 
-use std::cmp::min;
-
 use oxc_allocator::{Allocator, ArenaVec};
 use oxc_ast::ast::*;
 use oxc_span::GetSpan;
 
-use crate::utils::is_dropped_statement;
+use crate::utils::{is_dropped_statement, statement_span};
 
 use super::{AstNode, AstNodes};
 
@@ -50,27 +48,7 @@ fn get_statement_span(stmt: &Statement<'_>) -> Option<u32> {
     if is_dropped_statement(stmt) {
         return None;
     }
-    Some(match stmt {
-        Statement::ExportDefaultDeclaration(export) => {
-            if let ExportDefaultDeclarationKind::ClassDeclaration(class) = &export.declaration
-                && let Some(decorator) = class.decorators.first()
-            {
-                min(decorator.span.start, export.span.start)
-            } else {
-                export.span.start
-            }
-        }
-        Statement::ExportDeclaration(export) => {
-            if let Declaration::ClassDeclaration(class) = &export.declaration
-                && let Some(decorator) = class.decorators.first()
-            {
-                min(decorator.span.start, export.span.start)
-            } else {
-                export.span.start
-            }
-        }
-        _ => stmt.span().start,
-    })
+    Some(statement_span(stmt).start)
 }
 
 macro_rules! impl_ast_node_vec {

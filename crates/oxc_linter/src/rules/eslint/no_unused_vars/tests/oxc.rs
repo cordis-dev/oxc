@@ -224,11 +224,20 @@ fn test_vars_self_use_js() {
     let pass = vec![
         // https://github.com/oxc-project/oxc/issues/11215
         "export function promisify() { var fn; function fn() {} return fn; }",
+        // https://github.com/VSC-NeuroPilot/neuropilot/blob/5fb53e68ad41fa74c0114e1639473909173279d3/src/rce.ts#L128-L202
+        "const sink = {}; const promise = new Promise(resolve => { sink.callback = async () => { return promise; }; void resolve; }); console.log(sink);",
+        "const value = factory(() => { return value; });",
+        "const value = new Factory(() => { return value; });",
+        "let value; consume(value = () => { return value; });",
+        "let value; consume(value = () => { return value(); });",
     ];
 
     let fail = vec![
         // https://github.com/oxc-project/oxc/issues/11215
         "export function promisify() { var fn; function fn() { fn() } }",
+        "const value = (() => () => { return value; })();",
+        "let value; consume((value = () => value, 0));",
+        "let value; consume((value = () => value(), 0));",
     ];
 
     Tester::new(NoUnusedVars::NAME, NoUnusedVars::PLUGIN, pass, fail)
@@ -1150,6 +1159,22 @@ fn test_arguments() {
             "function foo(a, ...args: unknown[]) { return a } foo()",
             Some(json!([{ "args": "none" }])),
         ),
+        // https://github.com/oxc-project/oxc/issues/26562
+        // `after-used`: params before a used rest parameter are allowed
+        (
+            "function foo(unusedBeforeRest: string, ...usedRest: string[]) { console.log(usedRest); } foo('x', 'y');",
+            Some(json!([{ "args": "after-used" }])),
+        ),
+        (
+            "function foo(a, ...[_used]) { return _used } foo()",
+            Some(json!([{ "args": "after-used", "destructuredArrayIgnorePattern": "^_" }])),
+        ),
+        (
+            "function foo(a, ...{b, ..._ignored}) { return b } foo()",
+            Some(
+                json!([{ "args": "after-used", "ignoreRestSiblings": true, "argsIgnorePattern": "^_" }]),
+            ),
+        ),
     ];
     let fail = vec![
         ("function foo(a) {} foo()", None),
@@ -1162,6 +1187,16 @@ fn test_arguments() {
         ("function foo(...args) { return 1 } foo()", Some(json!([{ "args": "after-used" }]))),
         ("function foo(...args: unknown[]) { return 1 } foo()", Some(json!([{ "args": "all" }]))),
         ("let count = 0; function foo(c = (count++, 0)) { console.log(c) } foo()", None),
+        (
+            "function foo(a, ...[_ignored]) {} foo()",
+            Some(json!([{ "args": "after-used", "destructuredArrayIgnorePattern": "^_" }])),
+        ),
+        (
+            "function foo(a, ...{b, ..._ignored}) {} foo()",
+            Some(
+                json!([{ "args": "after-used", "ignoreRestSiblings": true, "argsIgnorePattern": "^_" }]),
+            ),
+        ),
     ];
 
     Tester::new(NoUnusedVars::NAME, NoUnusedVars::PLUGIN, pass, fail)
@@ -1829,6 +1864,69 @@ fn test_ignore() {
         .intentionally_allow_no_fix_tests()
         .with_snapshot_suffix("oxc-ignore")
         .test_and_snapshot();
+}
+
+#[test]
+fn test_ambient_export_modifiers() {
+    let pass = vec![
+        (
+            r"
+            export {};
+            declare module 'some-package' {
+                interface ImplicitlyExportedInterface { addedProperty?: string; }
+                export interface ExplicitlyExportedInterface { otherProperty?: string; }
+            }
+            ",
+            None,
+        ),
+        (
+            r"
+            export {};
+            declare module 'some-package' {
+                interface ImplicitlyExportedInterface { addedProperty?: string; }
+            }
+            ",
+            None,
+        ),
+        (
+            r"
+            export {};
+            declare namespace NS {
+                interface ImplicitlyExportedInterface { addedProperty?: string; }
+                export interface ExplicitlyExportedInterface { otherProperty?: string; }
+            }
+            ",
+            None,
+        ),
+    ];
+    let fail = vec![
+        (
+            r"
+            export {};
+            declare module 'some-package' {
+                interface ImplicitlyExportedInterface { addedProperty?: string; }
+                export {};
+            }
+            ",
+            None,
+        ),
+        (
+            r"
+            export {};
+            declare module 'some-package' {
+                interface ImplicitlyExportedInterface { addedProperty?: string; }
+                export = Assigned;
+            }
+            declare const Assigned: unknown;
+            ",
+            None,
+        ),
+        ("interface LocalUnused {}", None),
+    ];
+    Tester::new(NoUnusedVars::NAME, NoUnusedVars::PLUGIN, pass, fail)
+        .intentionally_allow_no_fix_tests()
+        .change_rule_path_extension("ts")
+        .test();
 }
 
 // #[test]

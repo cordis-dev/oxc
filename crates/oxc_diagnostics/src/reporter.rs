@@ -172,24 +172,27 @@ impl Info {
         let message = diagnostic.to_string();
         let mut severity = Severity::Warning;
         let rule_id = diagnostic.code().map(|code| code.to_string());
-        if let Some(source) = diagnostic.source_code()
-            && let Some(label) = diagnostic.labels().first()
-            && let Ok(start_offset) = usize::try_from(label.offset())
-            && let Some(end_offset) = label.offset().checked_add(label.len())
-            && let Ok(end_offset) = usize::try_from(end_offset)
-            && source.data().get(start_offset..end_offset).is_some()
-            && let Some(start_position) = line_column(source.data(), start_offset)
-        {
-            start = start_position;
-            if let Some(end_position) = line_column(source.data(), end_offset) {
-                end = end_position;
-            }
 
+        if let Some(source) = diagnostic.source_code() {
             if let Some(name) = source.name() {
                 filename = name.to_string();
             }
-            if matches!(diagnostic.severity(), Some(Severity::Error)) {
-                severity = Severity::Error;
+
+            if let Some(label) = diagnostic.labels().first()
+                && let Ok(start_offset) = usize::try_from(label.offset())
+                && let Some(end_offset) = label.offset().checked_add(label.len())
+                && let Ok(end_offset) = usize::try_from(end_offset)
+                && source.data().get(start_offset..end_offset).is_some()
+                && let Some(start_position) = line_column(source.data(), start_offset)
+            {
+                start = start_position;
+                if let Some(end_position) = line_column(source.data(), end_offset) {
+                    end = end_position;
+                }
+
+                if matches!(diagnostic.severity(), Some(Severity::Error)) {
+                    severity = Severity::Error;
+                }
             }
         }
 
@@ -198,10 +201,10 @@ impl Info {
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use oxc_span::Span;
 
-    use crate::{NamedSource, OxcDiagnostic};
+    use crate::{Error, NamedSource, OxcDiagnostic};
 
     use super::Info;
 
@@ -230,5 +233,15 @@ mod tests {
             .with_source_code(NamedSource::new("test.js", ":"));
 
         assert_eq!(Info::new(&diagnostic).message, "Expected `;` but found `:`");
+    }
+
+    #[test]
+    fn includes_source_name_for_unlabelled_diagnostic() {
+        let error: Error = OxcDiagnostic::error("Something went wrong")
+            .with_source_code(NamedSource::new("file.js", ""));
+
+        let info = Info::new(&error);
+        assert_eq!(info.filename, "file.js");
+        assert_eq!(info.message, "Something went wrong");
     }
 }

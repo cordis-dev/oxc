@@ -224,7 +224,7 @@ define_token_kind! {
 
 /// First keyword kind: every kind `>= KW_BASE` other than [`TokenKind::Invalid`] is a keyword.
 pub const KW_BASE: u8 = TokenKind::KwBreak as u8;
-const KW_MAX: u8 = TokenKind::KwUsing as u8;
+pub(crate) const KW_MAX: u8 = TokenKind::KwUsing as u8;
 
 impl TokenKind {
     #[inline]
@@ -304,7 +304,13 @@ impl TokenKind {
     pub const fn is_numeric(self) -> bool {
         matches!(
             self,
-            Self::Number | Self::Decimal | Self::Float | Self::Binary | Self::Octal | Self::Hex
+            Self::Number
+                | Self::BigInt
+                | Self::Decimal
+                | Self::Float
+                | Self::Binary
+                | Self::Octal
+                | Self::Hex
         )
     }
 }
@@ -454,7 +460,7 @@ impl StringSpan {
 #[cfg(test)]
 mod tests {
     use super::{KW_BASE, TRIVIA_MAX, TRIVIA_MIN, TokenKind};
-    use crate::{Lexer, PAD, default_options};
+    use crate::{LexOptions, Lexer, PAD};
 
     #[test]
     fn from_u8_round_trips_every_variant() {
@@ -505,6 +511,13 @@ mod tests {
         assert!(TokenKind::Hashbang.is_trivia());
     }
 
+    #[test]
+    fn numeric_predicate_covers_both_number_families() {
+        assert!(TokenKind::Number.is_numeric());
+        assert!(TokenKind::BigInt.is_numeric());
+        assert!(!TokenKind::String.is_numeric());
+    }
+
     /// Backs the safety invariant of [`super::kinds_from_bytes`]: the lexer
     /// never emits a byte outside the declared discriminants.
     #[test]
@@ -522,9 +535,7 @@ mod tests {
             let n = bytes.len();
             bytes.extend_from_slice(&[0u8; PAD]);
             for (jsx, ts) in [(false, false), (true, false), (false, true), (true, true)] {
-                let mut opts = default_options();
-                opts.jsx = jsx;
-                opts.ts = ts;
+                let opts = LexOptions { jsx, ts, ..Default::default() };
                 let mut lexer = Lexer::new();
                 lexer.lex(&bytes, n, opts);
                 for kind in lexer.kinds() {
