@@ -262,7 +262,8 @@ impl RuleRunner for crate::rules::eslint::class_methods_use_this::ClassMethodsUs
 }
 
 impl RuleRunner for crate::rules::eslint::complexity::Complexity {
-    const NODE_TYPES: Option<&AstTypesBitset> = None;
+    const NODE_TYPES: Option<&AstTypesBitset> =
+        Some(&AstTypesBitset::from_types(&[AstType::ArrowFunctionExpression, AstType::Function]));
     const RUN_FUNCTIONS: RuleRunFunctionsImplemented = RuleRunFunctionsImplemented::Run;
 }
 

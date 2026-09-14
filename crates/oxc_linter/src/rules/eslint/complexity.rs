@@ -108,18 +108,25 @@ declare_oxc_lint!(
     version = "1.37.0",
 );
 
-impl Rule for Complexity {
-    fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
-        // Only process function-like nodes.
-        if !is_function_node(node) {
-            return;
-        }
-
+impl Complexity {
+    fn check<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
         let nodes = ctx.semantic().nodes();
         let complexity = compute_complexity(node, nodes, self.variant);
         if self.max == 0 || complexity > self.max {
             let name = get_function_name(node);
             ctx.diagnostic(complexity_diagnostic(&name, complexity, self.max, node.span()));
+        }
+    }
+}
+
+impl Rule for Complexity {
+    fn run<'a>(&self, node: &AstNode<'a>, ctx: &LintContext<'a>) {
+        // Only process function-like nodes. Kept as a top-level `match` so the
+        // linter codegen can derive `NODE_TYPES` and skip dispatch on other nodes.
+        match node.kind() {
+            AstKind::Function(_) if is_function_node(node) => self.check(node, ctx),
+            AstKind::ArrowFunctionExpression(_) => self.check(node, ctx),
+            _ => {}
         }
     }
 
