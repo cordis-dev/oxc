@@ -206,7 +206,8 @@ impl ServerLinterBuilder {
             ..Default::default()
         };
 
-        let type_aware = options.type_aware.unwrap_or(config_store.type_aware_enabled());
+        // Fork: type-aware linting (tsgolint) is disabled, see `apps/oxlint/src/lint.rs`.
+        let type_aware = false;
         let config_store_clone = config_store.clone();
 
         // Send JS plugins config to JS side

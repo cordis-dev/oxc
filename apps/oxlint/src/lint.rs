@@ -408,11 +408,10 @@ impl CliRunner {
         );
 
         let config_store = ConfigStore::new(lint_config, nested_configs, external_plugin_store);
-        let type_check_only = self.options.type_check_only;
-        let type_aware =
-            type_check_only || self.options.type_aware || config_store.type_aware_enabled();
-        let type_check =
-            type_check_only || self.options.type_check || config_store.type_check_enabled();
+        // Fork: type-aware linting is off because it runs a `tsgolint` program from the linted repo.
+        let type_check_only = false;
+        let type_aware = false;
+        let type_check = false;
         if type_check && !type_aware {
             print_and_flush_stdout(
                 stdout,
