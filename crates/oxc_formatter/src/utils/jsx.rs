@@ -112,10 +112,25 @@ pub fn is_whitespace_jsx_expression<'a>(
 ) -> bool {
     match &child.expression {
         JSXExpression::StringLiteral(literal) => {
-            matches!(literal.value.as_str(), " ") && !comments.has_comment_in_span(child.span)
+            literal.value == " " && !comments.has_comment_in_span(child.span)
         }
         _ => false,
     }
+}
+
+/// Whether the children of this element are read as raw `JSXText`
+/// by a compile-time DSL instead of going through the JSX whitespace rules.
+///
+/// JSX (compiler) drops whitespace containing a newline between text and an element,
+/// so the formatter can normally add or remove line breaks there freely.
+/// A DSL that reads the raw text sees that as a change to the string:
+/// `fbt` collapses any whitespace to a single space, so `</b>\n.` becomes `" ."`.
+/// For these elements, the presence or absence of a newline between text and a non-text child
+/// must be kept as written.
+///
+/// Also matches Prettier: only `<fbt>` is recognized, and only its direct children are affected.
+pub fn is_whitespace_sensitive_element(name: &JSXElementName<'_>) -> bool {
+    name.get_identifier_name().is_some_and(|name| name == "fbt")
 }
 
 #[derive(Debug, Clone)]

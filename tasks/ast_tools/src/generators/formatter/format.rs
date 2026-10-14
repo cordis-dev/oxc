@@ -49,10 +49,6 @@ const AST_NODE_WITHOUT_PRINTING_COMMENTS_LIST: &[&str] = &[
 const AST_NODE_WITHOUT_PRINTING_LEADING_COMMENTS_LIST: &[&str] =
     &["TSUnionType", "ExpressionStatement"];
 
-// A trailing suppression comment counts like a leading one, and the outermost node ending there claims it.
-// A union leaves it to its member instead, like Prettier (`handleUnionTypeComments`); see `format_union_types`.
-const AST_NODE_WITHOUT_TRAILING_SUPPRESSION_LIST: &[&str] = &["TSUnionType"];
-
 const AST_NODE_NEEDS_PARENTHESES: &[&str] = &[
     "TSTypeAssertion",
     "TSInferType",
@@ -99,7 +95,7 @@ impl Generator for FormatterFormatGenerator {
                 formatter::{JsFormatContext, JsFormatter, JsFormatterExt as _, trivia::{format_leading_comments, format_trailing_comments}},
                 parentheses::NeedsParentheses,
                 ast_nodes::AstNode,
-                utils::{suppressed::{FormatSuppressedNode, write_suppressed_expression}, typecast::{format_type_cast_comment_node, format_leading_comments_and_open_paren, format_outer_leading_comments_and_open_paren}},
+                utils::{suppressed::{FormatSuppressedNode, write_suppressed_expression}, typecast::{TypeCast, classify_type_cast, format_type_cast_comment_node, format_leading_comments_and_open_paren, format_outer_leading_comments_and_open_paren}},
                 print::{FormatWrite, semicolon::write_suppressed_statement},
             };
 
@@ -141,16 +137,17 @@ fn generate_struct_implementation(
         }
     });
 
+    let bare_open_paren = quote! {
+        let needs_parentheses = self.needs_parentheses(f);
+        if needs_parentheses {
+            "(".fmt(f);
+        }
+    };
     let needs_parentheses_before = if needs_parentheses {
         if do_not_print_comment {
             // The node owns ALL its comment printing (leading and trailing) in `write`;
             // keep the added paren bare and leave every comment to it.
-            quote! {
-                let needs_parentheses = self.needs_parentheses(f);
-                if needs_parentheses {
-                    "(".fmt(f);
-                }
-            }
+            bare_open_paren.clone()
         } else if do_not_print_leading_comment {
             // The node prints its own leading comments in `write`,
             // but the ones that belong outside the formatter-added paren (source side / own-line) must
@@ -201,32 +198,26 @@ fn generate_struct_implementation(
                 | "ExportDeclaration"
                 | "ExportDefaultDeclaration"
         ))
-        .then(|| {
-            if AST_NODE_WITHOUT_TRAILING_SUPPRESSION_LIST.contains(&struct_name) {
-                quote! { let is_suppressed = f.comments().is_suppressed(self.span().start); }
-            } else {
-                quote! { let is_suppressed = f.comments().is_span_suppressed(self.span()); }
-            }
-        });
+        .then(|| quote! { let is_suppressed = f.comments().is_span_suppressed(self.span()); });
 
         // Expression-shaped nodes (formatter parens + own comment printing) hand the whole suppressed sequence to one owner,
         // so the cast-target decision is made once while every comment is still unprinted (see `write_suppressed_expression`).
+        // A node that prints its own leading comments never runs its `write` when suppressed, so it takes the same path.
         let suppressed_expression_return =
-            (suppressed_check.is_some() && needs_parentheses && !do_not_print_leading_comment)
-                .then(|| {
-                    quote! {
-                        if is_suppressed {
-                            write_suppressed_expression(
-                                self.span(),
-                                self.leading_comments_start(),
-                                self.needs_parentheses(f),
-                                f,
-                            );
-                            self.format_trailing_comments(f);
-                            return;
-                        }
+            (suppressed_check.is_some() && needs_parentheses).then(|| {
+                quote! {
+                    if is_suppressed {
+                        write_suppressed_expression(
+                            self.span(),
+                            self.leading_comments_start(),
+                            self.needs_parentheses(f),
+                            f,
+                        );
+                        self.format_trailing_comments(f);
+                        return;
                     }
-                });
+                }
+            });
 
         let write_implementation =
             if suppressed_check.is_none() || suppressed_expression_return.is_some() {
@@ -268,17 +259,33 @@ fn generate_struct_implementation(
                     quote! { false }
                 };
 
-            // With the suppressed early return above, the flag is trivially false here
-            let suppressed_check_for_typecast = (suppressed_check.is_some()
-                && suppressed_expression_return.is_none())
-            .then(|| {
+            // A suppressed node returned above, so no guard is needed here
+            quote! {
+                if format_type_cast_comment_node(self, #is_object_or_array_argument, f) {
+                    return;
+                }
+            }
+        });
+
+        // Most nodes have no comment near them: skip all of the comment handling below.
+        // Only nodes that may get parentheses can be a cast target
+        let quiet = (suppressed_check.is_some() && !do_not_print_leading_comment).then(|| {
+            let open_paren = needs_parentheses.then_some(&bare_open_paren);
+            // The type cast handling it skips (`format_type_cast_comment_node`, `format_leading_comments_and_open_paren`)
+            let no_type_cast = needs_parentheses.then(|| {
                 quote! {
-                    !is_suppressed &&
+                    debug_assert!(
+                        matches!(classify_type_cast(self.span(), f), TypeCast::None),
+                        "a quiet node is in a type cast"
+                    );
                 }
             });
-
             quote! {
-                if #suppressed_check_for_typecast format_type_cast_comment_node(self, #is_object_or_array_argument, f) {
+                if f.comments().is_quiet(self.span(), || self.parent.span(), self.following_span_start, #needs_parentheses) {
+                    #no_type_cast
+                    #open_paren
+                    self.write(f);
+                    #needs_parentheses_after
                     return;
                 }
             }
@@ -292,6 +299,7 @@ fn generate_struct_implementation(
             }
         } else {
             quote! {
+                #quiet
                 #suppressed_check
                 #suppressed_expression_return
                 #type_cast_comment_formatting

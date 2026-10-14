@@ -12,7 +12,7 @@ Prettier compatible CSS/SCSS/Less formatter (`oxfmt`'s Tier 1 backend), using th
 - Entry points:
   - `format()`: standalone files, on a service-less session
   - `format_with_session()`: standalone, on the caller's `FormatSession`
-  - `format_to_ir()`: embedded use via the dispatcher (`template_placeholders` = the css-in-js parse mode)
+  - `format_to_ir()`: embedded use via the dispatcher, parsing a fragment (`CssRoot`; `template_placeholders` = the css-in-js parse mode)
   - `parse_for_format()`: the parse `format()` runs, exposed for callers that inspect the AST (e.g. the fixture harness's fingerprint)
 
 ### Forked parser
@@ -37,8 +37,8 @@ The shared policy applies; CSS specifics:
 
 - `oxc-css-parser` is error-tolerant via `parser.recoverable_errors()`, but any parse error still bails out
 - `TopLevelDeclaration`: a root declaration in Css and Scss, so standalone `format()` rejects it (README "Acceptance")
-  - In the css-in-js parse mode (`template_placeholder`, Scss-only) the parser treats it as a statement and emits nothing
-    - `` css`display: flex;` `` is the dominant css-in-js shape
+  - `format_to_ir()` parses a fragment (`CssRoot::Fragment`, the parser's `block_contents`): the root follows the rules inside a block, so it is a statement
+    - `` css`display: flex;` `` is the dominant css-in-js shape, and MDN-style property snippets in Markdown code blocks
   - Less parses and formats it: less.js accepts it at parse time and fails only at eval
 
 ### Comments
@@ -69,15 +69,15 @@ The shared invariants (FORMATTER_POLICY.md "Comment placement invariants") apply
   - `value /* c */;` keeps the comment before `;` (measured behavior, not principle, may change in the future)
   - `oxc_formatter` prints `1; /* c */` (comment behind the terminator); CSS keeps it before, uniformly for declarations, `$var` / `@var` values and `!flag`s (`write_terminator_tail_comments`).
     - Revisit together with JS if the policy ever picks one side
-  - The gap before the `;` is the formatter's and is dropped (`/* c */ ;` -> `/* c */;`), see DIVERGENCES.md "terminator-gap-normalized"
+  - The gap before the `;` is the formatter's and is dropped (`/* c */ ;` -> `/* c */;`), see DIVERGENCES.md#terminator-gap-normalized
 - The positional cursor makes ownership a bounds discipline, not an attachment one:
   - a flush's upper bound must never extend past the next piece of user content,
   - and a declaration's `tail_bound` may only be consumed by the LAST comma group (`write_value_groups` clears it for every other group)
 - Line-boundary rule in CSS terms: `//` comments force a hardline after;
   - a `//` on a list `,`'s line stays there (`1, // c`, like JS), together with the block comments glued before it on that line;
-    Prettier's CSS moves it below as the next element's leading comment (DIVERGENCES.md "line-comment-after-comma")
+    Prettier's CSS moves it below as the next element's leading comment (DIVERGENCES.md#line-comment-after-comma)
   - a `//` before a list `,` rides past it (`a // c\n, b` -> `a, // c`), an own-line comment there leads the next element;
-    a `//` glued to a prelude's end stays there and `{` starts the next line (DIVERGENCES.md "line-comment-before-block")
+    a `//` glued to a prelude's end stays there and `{` starts the next line (DIVERGENCES.md#line-comment-before-block)
   - a structured prelude printer places its own comments, word by word (`value::write_with_comments`: own-line ones lead the word, glued ones trail it),
     and `write_at_rule` writes whatever is still pending before the `;` / `{`, so a prelude comment is never lost
   - own-line comments stay own-line at statement and trailing level, but a value-level own-line BLOCK comment is a plain fill item (joins the line when it fits):
@@ -107,14 +107,16 @@ the exact set of supported positions (incl. id / attribute-value / class selecto
   - The `;` is kept only when the source has one; consecutive placeholders preserve the source whitespace (`${a} ${b}` on one line, `${a}\n${b}` on two)
   - A `;`-less placeholder opens a postcss "swallow" run: following declarations keep a source-driven `;` until a source `;` ends the run (`write_statement_sequence_bounded`)
   - `${foo}: ${bar}` parses as a declaration whose property NAME is a placeholder
+  - Glued placeholders and static parts interpolate into one name like `#{}` (`${a}-${b}`, `x-${a}`); see DIVERGENCES.md#placeholder-property-name
 - Value position: `ComponentValue::Placeholder`; rides existing gap-based separator rules
   - One added rule: glued to a paren group → `Separator::SoftBreak` (`${fn}(30px)` breaks BEFORE the parens)
 - Selector position: `InterpolableIdent::Placeholder`; a placeholder mid-selector still triggers "garbage mode" in `write_selector_list`
   - Emits the raw source slice with whitespace runs collapsed (sentinels split back out to `EmbedPlaceholder` via `write_text_with_placeholders`), never breaking
   - Mirrors `postcss-selector-parser` degrading on at-words
   - A statement-position placeholder-led selector must not absorb across a newline (oxc-css-parser `placeholder_starts_qualified_rule`): `${mixin}\n& > .x {}` is two statements
-- String / `url()` position: the CSS lexer keeps these opaque, so a sentinel inside them stays in a verbatim `Text` (no `EmbedPlaceholder`)
-  - The JS host (`oxc_formatter`) counts these and substitutes them inline through its `Text`-sentinel branch, a deliberate string-scan fallback at the edges of the typed path
+- String / `url()` / comment position: the CSS lexer keeps these opaque, so a sentinel inside them stays in a verbatim `Text` (no `EmbedPlaceholder`)
+  - The JS host (`oxc_formatter`) counts these and substitutes them through its `Text`-sentinel branch, a deliberate string-scan fallback at the edges of the typed path
+  - The expression prints the same as an `EmbedPlaceholder` one; inside a comment it may sit in a `line_suffix`
 
 `tests/fixtures/embedded/scss/*-placeholders.scss` is the source of truth for which positions parse and how they print (the `embedded/` harness runs `format_to_ir` with the option on); add a fixture there when extending coverage.
 
@@ -201,28 +203,9 @@ The harness snapshots both `--print-width 80` and `100`; verify fixtures at both
 
 ### Prettier conformance
 
-At the current version (v3.9.6), these divergences have been confirmed and are intentional (see DIVERGENCES.md):
+Every failing file is accounted for by a DIVERGENCES.md entry's `Conformance:` line, except these unclassified hunks:
 
-- CSS: `css/stylefmt-repo/at-media/at-media.css`, `css/stylefmt-repo/cssnext-example/cssnext-example.css`, `css/stylefmt-repo/media-queries-ranges/media-queries-ranges.css`, `css/postcss-plugins/postcss-nesting.css`, `css/comments/declaration.css` (terminator-gap-normalized),
-  `css/postcss-8-improment/test.css` (custom-property-raw-verbatim), `css/parens/empty-lines.css` (postcss-simple-var-raw-verbatim)
-- SCSS: `scss/comments/4878.scss`, `scss/map/function-argument/functional-argument.scss`, `scss/parens/issue-16594.scss`, `scss/trailing-comma/comments.scss`, `scss/trailing-comma/list.scss`, `scss/trailing-comma/variable.scss`, `scss/function/arbitrary-arguments-comment.scss`, `scss/map/15193.scss`, `scss/comments/variable-declaration.scss` (terminator-gap-normalized), `scss/variables/postcss-8-improment.scss` (custom-property-raw-verbatim),
-  `scss/comments/4594.scss`, `scss/comments/lists.scss`, `scss/comments/maps.scss`, `scss/trailing-comma/issue-6920.scss` and one more hunk of `scss/trailing-comma/comments.scss` (line-comment-after-comma)
-- Less: `less/comments/value-lists.less` (line-comment-after-comma), `less/postcss-8-improment/test.less` (custom-property-raw-verbatim),
-  and in `less/less-test-suite`: `globalVars/extended.less`, `color-functions/rgba.less`, `extend-selector/extend-selector.less` (trailing-line-comment-print-width),
-  `extend-chaining/extend-chaining.less` (less-extend-statement-break), `javascript/javascript.less` (less-javascript-verbatim),
-  `variables/variables.less`, `strings/strings.less` (less-escaped-string-gap),
-  `namespacing/namespacing-functions.less`, `namespacing/namespacing-media.less`, `namespace-targeted/namespace-targeted.less` (less-lookup-glue),
-  `mixins-guards/mixins-guards.less`, `mixins-guards-default-func/mixins-guards-default-func.less` (less-guard-list-inline),
-  `comments/comments2.less` (less-variable-value-comments, line-comment-continuation-indent), `property-name-interp/property-name-interp.less` (less-variable-value-comments)
-
-Two more files fail with MIXED hunks; they can't pass as files (the intentional hunks alone keep them failing), so the remaining diffs are itemized here:
-
-- `css/fill-value/fill.css` (~96% match) one hunk:
-  - a fill break-point inside a math-y value (`... * -1 +` vs breaking before `/ 2`);
-    - the DIVERGENCES.md "fill-break-position" class (core-fill semantics)
-- `css/parens/parens.css` (~93% match) token-soup math spacing, three hunk classes:
-  - intentional: Prettier splits SOME source-glued `-(` into `- (` (`prop`/`prop44`, DIVERGENCES.md "css-glued-minus-paren")
-    and glues a source-spaced `+ 20px` (`prop34`, DIVERGENCES.md "unary-plus-glue")
+- `css/parens/parens.css` (~93% match) token-soup math spacing; besides the css-glued-minus-paren / unary-plus-glue hunks:
   - normalization-direction difference (open question, low value)
     - a math operator adjacent to a function/paren boundary gets uniform `op` spacing from Prettier regardless of source (`round(1.5)+2` -> `round(1.5) + 2`, calc `*`/`/`);
     - ours preserves the source spacing per token (`prop13/14`, `prop57-60`, `prop73/74`)

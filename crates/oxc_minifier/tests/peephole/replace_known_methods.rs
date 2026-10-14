@@ -663,6 +663,11 @@ fn test_fold_math_functions_cbrt() {
     test_value("Math.cbrt(8)", "2");
     test_same_value("Math.cbrt(2)");
     test_same_value("Unknown.cbrt(1)");
+    // unlike `Math.sqrt`, `Math.cbrt` of a negative number is not NaN
+    test_value("Math.cbrt(-1)", "-1");
+    test_value("Math.cbrt(-8)", "-2");
+    test_value("Math.cbrt(-Infinity)", "-Infinity");
+    test_same_value("Math.cbrt(-2)");
 }
 
 #[test]
@@ -673,6 +678,20 @@ fn test_fold_number_functions_is_safe_integer() {
     test_value("Number.isSafeInteger(9007199254740992)", "!1");
     test_value("Number.isSafeInteger(-9007199254740991)", "!0");
     test_value("Number.isSafeInteger(-9007199254740992)", "!1");
+    // a fractional part smaller than `f64::EPSILON` is still not an integer
+    test_value("Number.isSafeInteger(5e-324)", "!1");
+    test_value("Number.isSafeInteger(-1e-20)", "!1");
+}
+
+#[test]
+fn test_fold_number_functions_is_integer() {
+    test_value("Number.isInteger(1)", "!0");
+    test_value("Number.isInteger(1.5)", "!1");
+    test_value("Number.isInteger(1e300)", "!0");
+    test_value("Number.isInteger(5e-324)", "!1");
+    test_value("Number.isInteger(1e-300)", "!1");
+    test_value("Number.isInteger(Infinity)", "!1");
+    test_value("Number.isInteger(NaN)", "!1");
 }
 
 #[test]
