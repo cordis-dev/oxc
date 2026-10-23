@@ -70,7 +70,7 @@
 //! - Suggestion-only rules where ESLint also only suggests, because the rewrite changes behavior:
 //!   `no-case-declarations`, `no-console`, `no-empty`, `no-empty-function`,
 //!   `no-empty-static-block`, `no-misleading-character-class`, `no-nonoctal-decimal-escape`,
-//!   `no-useless-constructor`, `no-debugger`, `no-iterator`, `no-throw-literal`, and `no-plusplus`
+//!   `no-useless-constructor`, `no-iterator`, `no-throw-literal`, and `no-plusplus`
 //!   (`i += 1` throws on BigInt).
 
 mod ctx;
@@ -151,6 +151,7 @@ fork_fixers! {
     eslint::no_async_promise_executor => "no-async-promise-executor", Fill, [DangerousFix], M::None;
     eslint::no_cond_assign => "no-cond-assign", Fill, [Suggestion], M::None;
     eslint::no_const_assign => "no-const-assign", Fill, [Suggestion], M::None;
+    eslint::no_debugger => "no-debugger", Upgrade, [SafeFix], M::Fixable(FixKind::Suggestion);
     eslint::no_dupe_class_members => "no-dupe-class-members", Fill, [Suggestion], M::None;
     eslint::no_dupe_keys => "no-dupe-keys", Fill, [Suggestion], M::None;
     eslint::no_duplicate_imports => "no-duplicate-imports", Fill, [SafeFix], M::FixPending;

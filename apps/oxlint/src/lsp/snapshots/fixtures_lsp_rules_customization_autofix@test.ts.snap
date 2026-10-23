@@ -38,6 +38,24 @@ TextEdit: TextEdit {
 
 
 CodeAction: 
+Title: Remove the debugger statement
+Is Preferred: Some(false)
+TextEdit: TextEdit {
+    range: Range {
+        start: Position {
+            line: 0,
+            character: 0,
+        },
+        end: Position {
+            line: 0,
+            character: 9,
+        },
+    },
+    new_text: "",
+}
+
+
+CodeAction: 
 Title: Disable no-debugger for this line
 Is Preferred: Some(false)
 TextEdit: TextEdit {

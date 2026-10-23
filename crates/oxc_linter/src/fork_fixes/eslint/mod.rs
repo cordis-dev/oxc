@@ -11,6 +11,7 @@ pub(super) mod logical_assignment_operators;
 pub(super) mod no_async_promise_executor;
 pub(super) mod no_cond_assign;
 pub(super) mod no_const_assign;
+pub(super) mod no_debugger;
 pub(super) mod no_dupe_class_members;
 pub(super) mod no_dupe_keys;
 pub(super) mod no_duplicate_imports;

@@ -49,6 +49,24 @@ TextEdit: TextEdit {
 
 
 CodeAction: 
+Title: Remove the debugger statement
+Is Preferred: Some(false)
+TextEdit: TextEdit {
+    range: Range {
+        start: Position {
+            line: 2,
+            character: 2,
+        },
+        end: Position {
+            line: 2,
+            character: 11,
+        },
+    },
+    new_text: "",
+}
+
+
+CodeAction: 
 Title: Disable no-debugger for this line
 Is Preferred: Some(false)
 TextEdit: TextEdit {
@@ -139,4 +157,19 @@ TextEdit: TextEdit {
 
 
 ########### Fix All Action
-None
+CodeAction: 
+Title: fix all safe fixable oxlint issues
+Is Preferred: Some(true)
+TextEdit: TextEdit {
+    range: Range {
+        start: Position {
+            line: 2,
+            character: 2,
+        },
+        end: Position {
+            line: 2,
+            character: 11,
+        },
+    },
+    new_text: "",
+}
