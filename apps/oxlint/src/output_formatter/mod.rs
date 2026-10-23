@@ -4,6 +4,7 @@ mod default;
 mod github;
 mod gitlab;
 mod json;
+mod json2; // fork(cordis-dev)
 mod junit;
 mod sarif;
 mod stylish;
@@ -36,6 +37,8 @@ pub enum OutputFormat {
     Github,
     Gitlab,
     Json,
+    /// fork(cordis-dev): see `json2.rs`.
+    Json2,
     Unix,
     Agent,
     Checkstyle,
@@ -50,6 +53,7 @@ impl FromStr for OutputFormat {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "json" => Ok(Self::Json),
+            "json2" => Ok(Self::Json2), // fork(cordis-dev)
             "default" => Ok(Self::Default),
             "unix" => Ok(Self::Unix),
             "agent" => Ok(Self::Agent),
@@ -161,6 +165,7 @@ impl OutputFormatter {
     fn get_internal_formatter(format: OutputFormat) -> Box<dyn InternalFormatter> {
         match format {
             OutputFormat::Json => Box::<JsonOutputFormatter>::default(),
+            OutputFormat::Json2 => Box::<json2::Json2OutputFormatter>::default(), // fork(cordis-dev)
             OutputFormat::Checkstyle => Box::<CheckStyleOutputFormatter>::default(),
             OutputFormat::Github => Box::new(GithubOutputFormatter),
             OutputFormat::Gitlab => Box::<GitlabOutputFormatter>::default(),

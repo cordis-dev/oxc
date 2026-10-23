@@ -479,8 +479,8 @@ impl CliRunner {
 
         let linter = Linter::new(LintOptions::default(), config_store, external_linter)
             .with_fix(fix_options.fix_kind())
-            // fork(cordis-dev): `fix=<level>` in the GitHub format
-            .with_report_fixes(format_str == crate::output_formatter::OutputFormat::Github)
+            // fork(cordis-dev): fix levels in the `github` and `json2` formats
+            .with_report_fixes(format_str.reports_fix_levels())
             .with_report_unused_directives(report_unused_directives);
 
         let number_of_files = files_to_lint.len();

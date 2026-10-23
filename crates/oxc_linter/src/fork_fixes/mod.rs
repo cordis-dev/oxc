@@ -11,7 +11,7 @@
 //!   [`RuleEnum::effective_fix`] so `oxlint --rules`, JSON/SARIF output and generated docs report
 //!   the fork's fixes.
 //!
-//! Fix levels in the GitHub output format (see [`report`]) add these marked hunks:
+//! Fix levels in the `github` and `json2` output formats (see [`report`]) add these marked hunks:
 //!
 //! - `options/mod.rs`: the `report_fixes` field of `LintOptions`.
 //! - `context/host.rs`: builds fixes of the kinds [`report::build_kind`] returns.
@@ -19,13 +19,14 @@
 //!   [`report::wrap_diagnostics`] when reporting.
 //! - `fixer/mod.rs`: the `fix_level` field of `Message`.
 //! - `oxc_diagnostics` `protocol.rs`: the `Diagnostic::fix_level` method.
-//! - `apps/oxlint/src/lint.rs`: enables it for `--format=github`; `output_formatter/github.rs`:
-//!   the `fix=` property.
+//! - `apps/oxlint/src/lint.rs`: enables it for `--format=github` and `json2`;
+//!   `output_formatter/github.rs`: the `fix=` property; `output_formatter/mod.rs`: registers the
+//!   fork-only `json2` format (`output_formatter/json2.rs`).
 //!
 //! ## How it works
 //!
 //! Every native diagnostic passes through `LintContext::add_diagnostic`. When fixes are being built
-//! (CLI `--fix*`, the language server, or any `--format=github` run, which builds every kind to
+//! (CLI `--fix*`, the language server, or any `--format=github` or `json2` run, which builds every kind to
 //! report fix levels), the hook looks up the reporting rule in [`ENTRIES`] and runs its fixer, which
 //! inspects the diagnostic and the AST and returns zero or more [`RuleFix`]es. Fixes of kinds that
 //! are not being built are dropped, exactly like upstream's own fixes; [`report::before_fixing`]

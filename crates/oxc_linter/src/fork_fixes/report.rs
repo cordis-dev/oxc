@@ -1,4 +1,5 @@
-//! Fork-only: with `--format=github`, the `oxlint` CLI reports how each issue can be fixed.
+//! Fork-only: with `--format=github` or `--format=json2`, the `oxlint` CLI reports how each issue
+//! can be fixed.
 //!
 //! Upstream only builds a fix when the run may apply it (`--fix`, `--fix-suggestions`,
 //! `--fix-dangerously`), so a plain run cannot tell which issues are fixable. When reporting fix
@@ -6,8 +7,8 @@
 //! before fixing records the least risky one on each message ([`before_fixing`]) and drops the
 //! kinds the `--fix*` flags did not ask for (all of them without a flag). `LintOptions::fix` keeps
 //! upstream's meaning: the kinds to apply. [`wrap_diagnostics`] attaches the level to the reported
-//! error, where the GitHub output format prints it as `fix=<level>`. Other formats leave this off
-//! and behave as upstream. Building the extra fixes costs under 1% of lint time (measured
+//! error, where the `github` format prints it as `fix=<level>` and `json2` as `"fix"`. Other
+//! formats leave this off and behave as upstream. Building the extra fixes costs under 1% of lint time (measured
 //! 2026-10-23 on the React and ESLint repos).
 //!
 //! The level lives on `Message` and on a wrapper around the reported error, not on
@@ -228,7 +229,12 @@ mod test {
     fn wrapped_errors_keep_the_level() {
         let message = |level| {
             let mut message = Message::new(
-                OxcDiagnostic::warn("message").with_label(Span::new(0, 1)),
+                OxcDiagnostic::warn("message")
+                    .with_error_code("eslint", "no-var")
+                    .with_help("help")
+                    .with_note("note")
+                    .with_url("https://example.com")
+                    .with_label(Span::new(0, 1)),
                 PossibleFixes::None,
             );
             message.fix_level = level;
@@ -244,5 +250,11 @@ mod test {
         assert_eq!(errors[1].fix_level(), None);
         assert!(errors[0].source_code().is_some());
         assert_eq!(errors[0].to_string(), "message");
+        // The wrapper forwards everything the output formats print.
+        assert_eq!(errors[0].code().as_deref(), Some("eslint(no-var)"));
+        assert_eq!(errors[0].help().as_deref(), Some("help"));
+        assert_eq!(errors[0].note().as_deref(), Some("note"));
+        assert_eq!(errors[0].url().as_deref(), Some("https://example.com"));
+        assert_eq!(errors[0].labels().len(), 1);
     }
 }

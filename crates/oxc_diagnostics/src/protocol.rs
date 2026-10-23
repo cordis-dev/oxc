@@ -41,7 +41,7 @@ pub trait Diagnostic: Error {
     }
 
     /// fork(cordis-dev): how the issue can be fixed (`safe`, `suggestion`, `dangerous`,
-    /// `dangerous-suggestion`), set by the `oxlint` CLI for `--format=github`. See `oxc_linter`'s `fork_fixes/report.rs`.
+    /// `dangerous-suggestion`), set by the `oxlint` CLI for `--format=github` and `json2`. See `oxc_linter`'s `fork_fixes/report.rs`.
     fn fix_level(&self) -> Option<&'static str> {
         None
     }

@@ -200,36 +200,7 @@ mod test {
     // fork(cordis-dev)
     #[test]
     fn reporter_error_includes_fix_level() {
-        use std::borrow::Cow;
-
-        use oxc_diagnostics::{Diagnostic, Error, LabeledSpan, Severity, SourceCode};
-
-        /// An error that reports a fix level, as the linter's wrapper does.
-        #[derive(Debug)]
-        struct Fixable(Error);
-        impl std::fmt::Display for Fixable {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                self.0.fmt(f)
-            }
-        }
-        impl std::error::Error for Fixable {}
-        impl Diagnostic for Fixable {
-            fn code(&self) -> Option<Cow<'_, str>> {
-                self.0.code()
-            }
-            fn severity(&self) -> Option<Severity> {
-                self.0.severity()
-            }
-            fn fix_level(&self) -> Option<&'static str> {
-                Some("safe")
-            }
-            fn source_code(&self) -> Option<&dyn SourceCode> {
-                self.0.source_code()
-            }
-            fn labels(&self) -> &[LabeledSpan] {
-                self.0.labels()
-            }
-        }
+        use crate::output_formatter::json2::fixable::Fixable;
 
         let mut reporter = GithubReporter;
         let error = OxcDiagnostic::error("error message")
@@ -237,7 +208,7 @@ mod test {
             .with_label(Span::new(0, 8))
             .with_source_code(NamedSource::new("file://test.ts", "debugger;"));
 
-        let result = reporter.render_error(Box::new(Fixable(error)));
+        let result = reporter.render_error(Box::new(Fixable(error, "safe")));
 
         assert_eq!(
             result.unwrap(),
