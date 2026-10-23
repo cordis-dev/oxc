@@ -71,7 +71,7 @@ impl RuleTable {
                     plugin: plugin.to_string(),
                     category: rule.category(),
                     turned_on_by_default: default_rules.contains(&(plugin, name)),
-                    autofix: rule.fix(),
+                    autofix: rule.effective_fix(), // fork(cordis-dev): include fork-only fixes
                     is_tsgolint_rule: rule.is_tsgolint_rule(),
                 }
             })

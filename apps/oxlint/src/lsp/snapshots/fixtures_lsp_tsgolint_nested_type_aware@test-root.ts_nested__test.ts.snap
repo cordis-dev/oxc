@@ -20,6 +20,24 @@ tags: None
 
 ########### Code Actions/Commands
 CodeAction: 
+Title: Remove the unused expression
+Is Preferred: Some(true)
+TextEdit: TextEdit {
+    range: Range {
+        start: Position {
+            line: 1,
+            character: 0,
+        },
+        end: Position {
+            line: 1,
+            character: 8,
+        },
+    },
+    new_text: "",
+}
+
+
+CodeAction: 
 Title: Disable no-unused-expressions for this line
 Is Preferred: Some(false)
 TextEdit: TextEdit {
@@ -75,6 +93,24 @@ source: Some("oxc")
 tags: None
 
 ########### Code Actions/Commands
+CodeAction: 
+Title: Remove the unused expression
+Is Preferred: Some(true)
+TextEdit: TextEdit {
+    range: Range {
+        start: Position {
+            line: 1,
+            character: 0,
+        },
+        end: Position {
+            line: 1,
+            character: 8,
+        },
+    },
+    new_text: "",
+}
+
+
 CodeAction: 
 Title: Disable no-unused-expressions for this line
 Is Preferred: Some(false)

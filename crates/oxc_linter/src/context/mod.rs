@@ -278,6 +278,17 @@ impl<'a> LintContext<'a> {
             message.error = message.error.with_severity(self.severity);
         }
 
+        // fork(cordis-dev): fork-only autofixes. Must run before `push_diagnostic`, which shifts spans.
+        if self.parent.fix.is_some() {
+            crate::fork_fixes::apply(
+                self,
+                self.current_plugin_name,
+                self.current_rule_name,
+                self.parent.fix,
+                &mut message,
+            );
+        }
+
         self.parent.push_diagnostic(message);
     }
 

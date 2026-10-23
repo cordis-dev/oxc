@@ -64,6 +64,9 @@ mod tester;
 
 mod lint_runner;
 
+// fork(cordis-dev): fork-only autofixes, see fork_fixes/mod.rs
+mod fork_fixes;
+
 pub use crate::config::{normalize_rule_name, plugins::normalize_plugin_name};
 pub use crate::disable_directives::{
     DirectivePrefix, DisableDirectives, DisableRuleComment, RuleCommentRule, RuleCommentType,

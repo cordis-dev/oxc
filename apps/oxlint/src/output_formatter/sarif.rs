@@ -388,7 +388,7 @@ fn rule_descriptor(rule_id: &str, rule: &RuleEnum) -> SarifReportingDescriptor {
         properties: Some(SarifRuleProperties {
             category: rule.category().as_str().to_string(),
             plugin: rule.plugin_name().to_string(),
-            fix: rule.fix().to_string(),
+            fix: rule.effective_fix().to_string(), // fork(cordis-dev): include fork-only fixes
         }),
     }
 }

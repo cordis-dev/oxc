@@ -53,7 +53,7 @@ impl InternalFormatter for JsonOutputFormatter {
                 #[cfg(feature = "ruledocs")]
                 version: rule.version(),
                 type_aware: rule.is_tsgolint_rule(),
-                fix: rule.fix().to_string(),
+                fix: rule.effective_fix().to_string(), // fork(cordis-dev): include fork-only fixes
                 default: default_rules.contains(&(rule.plugin_name(), rule.name())),
                 docs_url: format!(
                     "https://oxc.rs/docs/guide/usage/linter/rules/{}/{}.html",
