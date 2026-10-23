@@ -152,11 +152,16 @@ fn compute_complexity<'a>(
     variant: ComplexityVariant,
 ) -> usize {
     let mut complexity = 0; // initial path
-    for node in nodes.iter() {
-        // Skip the function node itself.
-        if node.id() == function_node.id() {
-            continue;
-        }
+    let function_id = function_node.id();
+    // Node ids are assigned in visit (pre-order) order, so the function's descendants are the
+    // contiguous run of nodes right after it. The run ends at the first node whose parent comes
+    // before the function. Scanning only that run keeps the work proportional to the function's
+    // own size, instead of scanning the whole file once per function.
+    for node in nodes
+        .iter()
+        .skip(function_id.index() + 1)
+        .take_while(|node| nodes.parent_id(node.id()) >= function_id)
+    {
         // Count the node only if the first encountered function ancestor is `function_node`.
         if is_in_function(function_node, node, nodes) {
             // Add complexity for decision points
