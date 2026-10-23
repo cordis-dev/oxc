@@ -13,8 +13,8 @@ use unicode_width::UnicodeWidthChar;
 
 use crate::{
     ActualStart, BestFittingElement, Condition, DedentMode, FormatElement, GroupId, IndentStyle,
-    IndentWidth, InvalidDocumentError, LineMode, PrintError, PrintMode, Tag, TagKind, TextWidth,
-    format_element::tag::Prefix,
+    IndentWidth, InvalidDocumentError, LineMode, PrintError, PrintMode, Tag, TagKind,
+    format_element::{TextWidth, tag::Prefix, text_width},
 };
 
 use self::call_stack::{
@@ -831,24 +831,21 @@ impl<'a> Printer<'a> {
 
         match text {
             Text::Token(text) => {
-                // SAFETY: `text` is a ASCII-only string
-                unsafe {
-                    self.state.buffer.print_bytes_unchecked(text.as_bytes());
-                }
+                self.state.buffer.print_str_short(text);
                 self.state.line_width += text.len();
             }
             Text::Text { text, width } => {
                 if width.is_multiline() {
                     let line_break_position = text.find('\n').unwrap_or(text.len());
                     let (first_line, remaining) = text.split_at(line_break_position);
-                    self.state.buffer.print_str(first_line);
+                    self.state.buffer.print_str_short(first_line);
                     self.state.line_width += width.value() as usize;
                     // Print the remaining lines
                     for char in remaining.chars() {
                         self.print_char(char);
                     }
                 } else {
-                    self.state.buffer.print_str(text);
+                    self.state.buffer.print_str_short(text);
                     self.state.line_width += width.value() as usize;
                 }
             }
@@ -1079,7 +1076,7 @@ impl Indention {
         let own =
             node.before.level as usize * indent_width.value() as usize + node.before.align as usize;
         let before = node.before.prefix.map_or(0, |id| Self::chain_width(nodes, id, indent_width));
-        before + own + TextWidth::from_text(node.prefix.text(), indent_width).value() as usize
+        before + own + text_width(node.prefix.text(), indent_width) as usize
     }
 }
 
