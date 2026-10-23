@@ -15,4 +15,7 @@ pub struct LintOptions {
     pub report_unused_directive: Option<AllowWarnDeny>,
     // If true, the linter will create "ignore this section / line" fixes for all diagnostics
     pub with_ignore_fixes: bool,
+    /// fork(cordis-dev): build every kind of fix and record fix levels; `fix` stays the kinds to
+    /// apply. See `fork_fixes/report.rs`.
+    pub report_fixes: bool,
 }

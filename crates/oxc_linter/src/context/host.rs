@@ -218,7 +218,7 @@ impl<'a> ContextHost<'a> {
             allocator,
             current_sub_host_index: Cell::new(0),
             diagnostics: RefCell::new(Vec::with_capacity(DIAGNOSTICS_INITIAL_CAPACITY)),
-            fix: options.fix,
+            fix: crate::fork_fixes::report::build_kind(options), // fork(cordis-dev): kinds to build
             file_path,
             file_extension,
             config,

@@ -11,15 +11,30 @@
 //!   [`RuleEnum::effective_fix`] so `oxlint --rules`, JSON/SARIF output and generated docs report
 //!   the fork's fixes.
 //!
+//! Fix levels in the GitHub output format (see [`report`]) add these marked hunks:
+//!
+//! - `options/mod.rs`: the `report_fixes` field of `LintOptions`.
+//! - `context/host.rs`: builds fixes of the kinds [`report::build_kind`] returns.
+//! - `service/runtime.rs`: calls [`report::before_fixing`] before fixes are applied and
+//!   [`report::wrap_diagnostics`] when reporting.
+//! - `fixer/mod.rs`: the `fix_level` field of `Message`.
+//! - `oxc_diagnostics` `protocol.rs`: the `Diagnostic::fix_level` method.
+//! - `apps/oxlint/src/lint.rs`: enables it for `--format=github`; `output_formatter/github.rs`:
+//!   the `fix=` property.
+//!
 //! ## How it works
 //!
-//! Every native diagnostic passes through `LintContext::add_diagnostic`. When fixing is enabled
-//! (CLI `--fix*` or the language server), the hook looks up the reporting rule in [`ENTRIES`] and
-//! runs its fixer, which inspects the diagnostic and the AST and returns zero or more [`RuleFix`]es.
-//! Fixes whose kind the caller did not ask for are dropped, exactly like upstream's own fixes.
+//! Every native diagnostic passes through `LintContext::add_diagnostic`. When fixes are being built
+//! (CLI `--fix*`, the language server, or any `--format=github` run, which builds every kind to
+//! report fix levels), the hook looks up the reporting rule in [`ENTRIES`] and runs its fixer, which
+//! inspects the diagnostic and the AST and returns zero or more [`RuleFix`]es. Fixes of kinds that
+//! are not being built are dropped, exactly like upstream's own fixes; [`report::before_fixing`]
+//! later drops the kinds that should not be applied.
 //!
-//! - [`Mode::Fill`]: the fixer runs only when the diagnostic carries no applicable fix. If upstream
-//!   later implements its own fix for a rule, upstream's fix wins automatically.
+//! - [`Mode::Fill`]: the fixer runs only when the diagnostic carries no fix. If upstream later
+//!   implements its own fix for a rule, upstream's fix wins automatically. When upstream adds only
+//!   a suggestion to a covered rule, the fork's safe fix stops being built: re-check the rule (the
+//!   `upstream_fix_meta_unchanged` test flags it) and switch it to [`Mode::Upgrade`].
 //! - [`Mode::Upgrade`]: the rule already offers a suggestion. The fixer returns a safe fix only when
 //!   one is provably correct; that fix is placed first and upstream's suggestions are kept after it.
 //!
@@ -60,6 +75,7 @@
 mod ctx;
 mod eslint;
 mod nodes;
+pub mod report;
 mod util;
 
 #[cfg(test)]
@@ -77,7 +93,7 @@ use crate::{
 /// When a fork fixer runs, relative to fixes the upstream rule already provides.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
-    /// Run only when the diagnostic carries no applicable fix.
+    /// Run only when the diagnostic carries no fix (of the kinds being built).
     Fill,
     /// Run when the diagnostic carries no safe fix, and put the fork's fix first.
     Upgrade,

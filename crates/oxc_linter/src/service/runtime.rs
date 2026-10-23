@@ -688,6 +688,12 @@ impl Runtime {
                                 .insert(path.to_path_buf(), disable_directives);
                         }
 
+                        // fork(cordis-dev): record fix levels and keep only the fixes to apply.
+                        crate::fork_fixes::report::before_fixing(
+                            *me.linter.options(),
+                            &mut messages,
+                        );
+
                         if me.linter.options().fix.is_some() {
                             let fix_result = Fixer::new(
                                 dep.source_text,
@@ -714,12 +720,12 @@ impl Runtime {
                         }
 
                         if !messages.is_empty() {
-                            let errors = messages.into_iter().map(Into::into).collect();
-                            let diagnostics = DiagnosticService::wrap_diagnostics(
+                            // fork(cordis-dev): attaches fix levels
+                            let diagnostics = crate::fork_fixes::report::wrap_diagnostics(
                                 &me.cwd,
                                 path,
                                 dep.source_text,
-                                errors,
+                                messages,
                             );
                             tx_error.send(diagnostics).unwrap();
                         }

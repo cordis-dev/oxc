@@ -58,8 +58,11 @@ fn format_github(diagnostic: &Error) -> String {
         let message = escape_data(&message);
         let (line, col) = (start.line, start.column);
         let (end_line, end_col) = (end.line, end.column);
+        // fork(cordis-dev): `fix=<level>` when fixable. It goes before `title`, because the message
+        // after `title=oxlint::` may contain commas, which comma-splitting parsers (CodeFactor) misread.
+        let fix = diagnostic.fix_level().map_or_else(String::new, |level| format!(",fix={level}"));
         format!(
-            "::{severity} file={escaped_filename},line={line},endLine={end_line},col={col},endColumn={end_col},code={code},title=oxlint::{message}\n"
+            "::{severity} file={escaped_filename},line={line},endLine={end_line},col={col},endColumn={end_col},code={code}{fix},title=oxlint::{message}\n"
         )
     }
 }
@@ -191,6 +194,54 @@ mod test {
         assert_eq!(
             result.unwrap(),
             "::error file=file%3A//test.ts,line=1,endLine=1,col=1,endColumn=9,code=scope(rule),title=oxlint::error message\n"
+        );
+    }
+
+    // fork(cordis-dev)
+    #[test]
+    fn reporter_error_includes_fix_level() {
+        use std::borrow::Cow;
+
+        use oxc_diagnostics::{Diagnostic, Error, LabeledSpan, Severity, SourceCode};
+
+        /// An error that reports a fix level, as the linter's wrapper does.
+        #[derive(Debug)]
+        struct Fixable(Error);
+        impl std::fmt::Display for Fixable {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                self.0.fmt(f)
+            }
+        }
+        impl std::error::Error for Fixable {}
+        impl Diagnostic for Fixable {
+            fn code(&self) -> Option<Cow<'_, str>> {
+                self.0.code()
+            }
+            fn severity(&self) -> Option<Severity> {
+                self.0.severity()
+            }
+            fn fix_level(&self) -> Option<&'static str> {
+                Some("safe")
+            }
+            fn source_code(&self) -> Option<&dyn SourceCode> {
+                self.0.source_code()
+            }
+            fn labels(&self) -> &[LabeledSpan] {
+                self.0.labels()
+            }
+        }
+
+        let mut reporter = GithubReporter;
+        let error = OxcDiagnostic::error("error message")
+            .with_error_code("scope", "rule")
+            .with_label(Span::new(0, 8))
+            .with_source_code(NamedSource::new("file://test.ts", "debugger;"));
+
+        let result = reporter.render_error(Box::new(Fixable(error)));
+
+        assert_eq!(
+            result.unwrap(),
+            "::error file=file%3A//test.ts,line=1,endLine=1,col=1,endColumn=9,code=scope(rule),fix=safe,title=oxlint::error message\n"
         );
     }
 

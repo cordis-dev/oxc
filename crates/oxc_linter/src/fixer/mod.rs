@@ -252,6 +252,8 @@ pub struct Message {
     pub error: OxcDiagnostic,
     pub fixes: PossibleFixes,
     pub span: Span,
+    /// fork(cordis-dev): see `fork_fixes/report.rs`.
+    pub fix_level: Option<&'static str>,
 }
 
 impl Message {
@@ -266,7 +268,7 @@ impl Message {
             .map(|span| Span::new(span.offset(), span.offset() + span.len()))
             .unwrap_or_default();
 
-        Self { error, fixes, span }
+        Self { error, fixes, span, fix_level: None } // fork(cordis-dev): `fix_level`
     }
 
     /// move the offset of all spans to the right
