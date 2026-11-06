@@ -11,7 +11,7 @@ use crate::pipeline::{
     operators::is_op_char,
 };
 
-use super::punct1::PUNCT1;
+use super::punct::PUNCT_CHARS;
 
 const FL_WORD: u32 = 0;
 const FL_WS: u32 = 1;
@@ -28,10 +28,10 @@ static CLS_TS: [u16; 256] = cls_table(true);
 const fn cls_table(ts: bool) -> [u16; 256] {
     let cpu = BASELINE;
 
-    let mut punct = [tk!(Invalid); 256];
+    let mut punct_kinds = [tk!(Invalid); 256];
     let mut i = 0;
-    while i < PUNCT1.len() {
-        punct[PUNCT1[i].byte as usize] = PUNCT1[i].kind as u8;
+    while i < PUNCT_CHARS.len() {
+        punct_kinds[PUNCT_CHARS[i].byte as usize] = PUNCT_CHARS[i].kind as u8;
         i += 1;
     }
     let mut t = [0u16; 256];
@@ -65,7 +65,7 @@ const fn cls_table(ts: bool) -> [u16; 256] {
         } else if is_word(b, cpu) {
             if is_digit(b, cpu) { tk!(Number) } else { tk!(Ident) }
         } else {
-            punct[c]
+            punct_kinds[c]
         };
         t[c] = (f << 8) | kd as u16;
         c += 1;
@@ -121,7 +121,8 @@ pub(super) unsafe fn classify_generic(
         }
         let wprev = (mw << 1) | cw;
         let sprev = (ms << 1) | cs;
-        *st.add(b) = (ms & !sprev) | (mw & !wprev) | (!ms & !mw);
+        // A byte starts a token unless it continues a whitespace or word run
+        *st.add(b) = !((ms & sprev) | (mw & wprev));
         cw = mw >> 63;
         cs = ms >> 63;
         *word.add(b) = mw;

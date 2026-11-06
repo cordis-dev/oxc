@@ -1,6 +1,6 @@
 use crate::{
     cpu::{Neon, cpu_version},
-    simd::{Vec128, Vec256},
+    simd::{Vec128, Vec256, VecData128},
     token::tk,
 };
 
@@ -8,7 +8,7 @@ use super::{
     luts::{
         DIGIT_MASK, DOT_MASK, KWINIT_MASK, MERGED_LUTS, OPCH_MASK, WORD_LUTS, WORD_MASK, WS_MASK,
     },
-    punct1_luts::{PH_A, PH_B, PH_T},
+    punct::{PUNCT_HASH_HI, PUNCT_HASH_KINDS, PUNCT_HASH_LO},
 };
 
 struct Luts {
@@ -16,9 +16,9 @@ struct Luts {
     wb_hi: Vec128<Neon>,
     mrg_lo: Vec128<Neon>,
     mrg_hi: Vec128<Neon>,
-    ph_a: Vec128<Neon>,
-    ph_b: Vec128<Neon>,
-    ph_t: Vec256<Neon>,
+    punct_lo: Vec128<Neon>,
+    punct_hi: Vec128<Neon>,
+    punct_kinds: Vec256<Neon>,
 }
 
 /// One chunk's lanes, each 0xFF or 0x00 as mm64 requires, plus its kind bytes.
@@ -51,13 +51,13 @@ pub(super) unsafe fn classify_neon(
 ) {
     let mrg_lo = if ts { MERGED_LUTS.lo_ts } else { MERGED_LUTS.lo };
     let l = Luts {
-        wb_lo: Vec128::read_unaligned(&WORD_LUTS.lo, cpu),
-        wb_hi: Vec128::read_unaligned(&WORD_LUTS.hi, cpu),
-        mrg_lo: Vec128::read_unaligned(&mrg_lo, cpu),
-        mrg_hi: Vec128::read_unaligned(&MERGED_LUTS.hi, cpu),
-        ph_a: Vec128::read_unaligned(&PH_A, cpu),
-        ph_b: Vec128::read_unaligned(&PH_B, cpu),
-        ph_t: Vec256::read_unaligned(&PH_T, cpu),
+        wb_lo: WORD_LUTS.lo.read(cpu),
+        wb_hi: WORD_LUTS.hi.read(cpu),
+        mrg_lo: mrg_lo.read(cpu),
+        mrg_hi: MERGED_LUTS.hi.read(cpu),
+        punct_lo: PUNCT_HASH_LO.read(cpu),
+        punct_hi: PUNCT_HASH_HI.read(cpu),
+        punct_kinds: PUNCT_HASH_KINDS.read(cpu),
     };
 
     let mut cw: u64 = 0;
@@ -90,7 +90,8 @@ pub(super) unsafe fn classify_neon(
         let sprev = (wsm << 1) | cs;
         cw = wordm >> 63;
         cs = wsm >> 63;
-        *st.add(b) = (wsm & !sprev) | (wordm & !wprev) | (!wsm & !wordm);
+        // A byte starts a token unless it continues a whitespace or word run
+        *st.add(b) = !((wsm & sprev) | (wordm & wprev));
 
         i += 64;
         b += 1;
@@ -125,7 +126,7 @@ fn chunk(v: Vec128<Neon>, l: &Luts) -> Classified {
     let digit = tb.test_u8(DIGIT_MASK);
     let misc = v.eq_u8(b'#') | v.eq_u8(b'\\') | na;
 
-    let kind = punct1(v, lo, hn, l)
+    let kind = punct_kinds(v, lo, hn, l)
         .blend(tk!(Whitespace), ws)
         .blend(tk!(Ident), word)
         .blend(tk!(Number), digit);
@@ -144,10 +145,11 @@ fn chunk(v: Vec128<Neon>, l: &Luts) -> Classified {
 
 #[cpu_version(Neon)]
 #[inline(always)]
-fn punct1(v: Vec128<Neon>, lo: Vec128<Neon>, hn: Vec128<Neon>, l: &Luts) -> Vec128<Neon> {
-    // Every PH_A and PH_B entry is under 32, so h is in range for the 32-entry ph_t.
-    let h = l.ph_a.shuffle_u8s(lo) ^ l.ph_b.shuffle_u8s(hn);
-    let ord = l.ph_t.shuffle_u8s(h);
+fn punct_kinds(v: Vec128<Neon>, lo: Vec128<Neon>, hn: Vec128<Neon>, l: &Luts) -> Vec128<Neon> {
+    // Every `PUNCT_HASH_LO` and `PUNCT_HASH_HI` entry is under 32,
+    // so `h` is in range for the 32-entry `l.punct_kinds`
+    let h = l.punct_lo.shuffle_u8s(lo) ^ l.punct_hi.shuffle_u8s(hn);
+    let ord = l.punct_kinds.shuffle_u8s(h);
     let ctl = v.lt_i8(0x20);
     ord.blend(tk!(Invalid), ctl)
 }
@@ -156,8 +158,10 @@ fn punct1(v: Vec128<Neon>, lo: Vec128<Neon>, hn: Vec128<Neon>, l: &Luts) -> Vec1
 #[cpu_version(Neon)]
 #[inline(always)]
 fn mm64(a: Vec128<Neon>, b: Vec128<Neon>, c: Vec128<Neon>, d: Vec128<Neon>) -> u64 {
-    const BITS: [u8; 16] = [1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128];
-    let m = Vec128::read_unaligned(&BITS, a.cpu());
+    const BITS: VecData128 =
+        VecData128::from_bytes([1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128]);
+
+    let m = BITS.read(a.cpu());
     let ab = (a & m).pairwise_add_u8(b & m);
     let cd = (c & m).pairwise_add_u8(d & m);
     let s = ab.pairwise_add_u8(cd);
