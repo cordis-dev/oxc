@@ -25,6 +25,70 @@ A whitespace-only `<pre>` or `<textarea>` keeps its content.
 Prettier drops a lone whitespace-only text in `pre` (as in every element) and collapses one in `textarea` to a single space,
 which changes what `pre` renders and what `textarea` submits.
 
+## comment-only-element-edges
+
+- Why: semantics (an element of comments only and no whitespace matches `:empty`)
+- Pin: `tests/fixtures/html/comment-only-element-edges.html`
+
+```html
+<!-- input -->
+<div id="app"><!-- the client renders the app here, replacing this placeholder comment --></div>
+
+<!-- ours -->
+<div id="app"
+  ><!-- the client renders the app here, replacing this placeholder comment --></div
+>
+
+<!-- prettier -->
+<div id="app">
+  <!-- the client renders the app here, replacing this placeholder comment -->
+</div>
+```
+
+An element holding only comments and no whitespace gets no line breaks at its edges, as under `htmlWhitespaceSensitivity: strict` (`ignore` aside).
+`:empty` skips comments but not whitespace: Prettier's line breaks stop it matching (`#app:empty::before` showing a loading state).
+An element with whitespace in it formats as in Prettier, even where dropping that whitespace makes it match `:empty` (`<div> <!-- c --> </div>`, `<div> </div>`):
+the rule keeps an empty element as written, not whitespace. A `template` always matches `:empty` (its content is no child of it), so the rule skips it.
+It applies in every dialect, one template one layout, though Vue's and (by default) Angular's and Svelte's compilers drop that whitespace themselves.
+
+## cj-whitespace
+
+- Why: semantics (Firefox drops a line break between two Chinese / Japanese characters, which other browsers render as a space)
+- Pin: `tests/fixtures/html/cj-whitespace.html`
+
+```html
+<!-- input, printWidth 80 -->
+<div lang="zh-Hant-TW">
+  這個段落是那麼長，
+在一行寫不行。最好
+用三行寫。
+</div>
+<p>漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字</p>
+
+<!-- ours -->
+<div lang="zh-Hant-TW">
+  這個段落是那麼長，
+  在一行寫不行。最好
+  用三行寫。
+</div>
+<p>
+  漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字
+</p>
+
+<!-- prettier -->
+<div lang="zh-Hant-TW">這個段落是那麼長， 在一行寫不行。最好 用三行寫。</div>
+<p>
+  漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字 漢字
+  漢字 漢字 漢字 漢字 漢字
+</p>
+```
+
+In a text, whitespace between two Chinese / Japanese characters (letters or CJK punctuation) keeps its kind:
+a line break stays one, and a space never becomes one.
+Firefox 159 drops such a line break and Chrome 138 renders a space (CSS Text 3 leaves it to the browser), so either change renders differently in one of them.
+Next to one only (Latin, Korean, an element's edge), every browser renders a line break as a space, and the text wraps as usual.
+Markdown keeps it the same way (`oxc_formatter_markdown`'s DIVERGENCES.md#cj-line-break).
+
 ## doctype-case
 
 - Why: uniform-rule (same construct, same output: the doctype of a `.html` file, which Prettier lowercases)
@@ -833,7 +897,7 @@ Where the render layer ignores the gap (next to a block), and at text edges, the
 
 ## interpolation-element-as-text
 
-- Why: uniform-rule (same construct, same output: an inline element holding text; prettier/prettier#20134)
+- Why: uniform-rule (same construct, same output: an inline element holding text; prettier/prettier#20134, prettier/prettier#9913, prettier/prettier#14315)
 - Pin: `tests/fixtures/vue/interpolation-element-as-text.vue`
 
 ```vue
@@ -845,6 +909,7 @@ Where the render layer ignores the gap (next to a block), and at text edges, the
   <template #replacement>
     <span v-else><code>{{ replacement.id }}</code></span>
   </template>
+  <div><p>{{ a }}</p></div>
 </template>
 
 <!-- ours -->
@@ -856,6 +921,7 @@ Where the render layer ignores the gap (next to a block), and at text edges, the
   <template #replacement>
     <span v-else><code>{{ replacement.id }}</code></span>
   </template>
+  <div><p>{{ a }}</p></div>
 </template>
 
 <!-- prettier -->
@@ -869,13 +935,18 @@ Where the render layer ignores the gap (next to a block), and at text edges, the
       ><code>{{ replacement.id }}</code></span
     >
   </template>
+  <div>
+    <p>{{ a }}</p>
+  </div>
 </template>
 ```
 
 An inline element holding only `{{ }}` lays out with what is around it as one holding text (`<b>phoneInput</b>`), its `>` included:
-where the line fits, its closing `>` stays with the text right after it, and the line breaks in the text;
-and it puts no element holding it on lines of its own, as nested markup does.
-Counted as markup, it would break an inline parent where only a borrowed `>` can (`<span v-else` then `><code>` on the next line), as Prettier `main` still does.
+where the line fits, its closing `>` stays with the text right after it, and the line breaks in the text.
+An element holding text and `{{ }}` only, whatever its display, puts no element holding it on lines of its own,
+as one holding text does (`<div><p>a</p></div>`), not as nested markup does.
+Counted as markup, it would break an inline parent where only a borrowed `>` can (`<span v-else` then `><code>` on the next line), as Prettier `main` still does,
+and a block parent onto lines of its own (`<p>{{ a }}</p>` on its own line), as Prettier does, and not for `<p>a</p>`.
 Inside it, `{{ }}` hugs the tags and breaks within, as Prettier does: a word cannot.
 Prettier does both for `{{ }}`, not for text.
 Prettier `main` keeps the `>` with what follows an element holding only `{{ }}` after a space (prettier/prettier#20134), and not one holding text:

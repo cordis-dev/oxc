@@ -418,6 +418,7 @@ impl<'a> Fixer<'a> {
                 .with_options(ParseOptions {
                     parse_regular_expression: true,
                     allow_return_outside_function: true,
+                    enable_ident_hashes: false,
                     ..ParseOptions::default()
                 })
                 .parse();

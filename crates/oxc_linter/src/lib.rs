@@ -70,7 +70,7 @@ mod fork_fixes;
 pub use crate::config::{normalize_rule_name, plugins::normalize_plugin_name};
 pub use crate::disable_directives::{
     DirectivePrefix, DisableDirectives, DisableRuleComment, RuleCommentRule, RuleCommentType,
-    create_unused_directives_diagnostics,
+    create_unused_directives_messages,
 };
 pub use crate::{
     config::{
@@ -98,7 +98,7 @@ pub use crate::{
     service::{LintService, LintServiceOptions, OsFileSystem, RuntimeFileSystem},
     suppression::{OxlintSuppressionFileAction, SuppressionManager},
     timing::{RuleTimingRecord, RuleTimingSource, RuleTimingStore},
-    tsgolint::TsGoLintState,
+    tsgolint::{TsGoLintRun, TsGoLintState},
     utils::{read_to_arena_str, read_to_string},
 };
 use crate::{
@@ -502,7 +502,7 @@ impl Linter {
         {
             ctx_host.rewind_sub_hosts();
             loop {
-                ctx_host.report_unused_directives(severity.into());
+                ctx_host.report_unused_directives(severity);
 
                 if !ctx_host.next_sub_host() {
                     break;
