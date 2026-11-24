@@ -48,9 +48,11 @@ pub fn fix(fcx: &FixCtx) -> Vec<RuleFix> {
                 .properties
                 .iter()
                 .map(|prop| match prop {
-                    ObjectPropertyKind::ObjectProperty(p) => {
-                        Member { span: p.span, computed: p.computed, name: member_name(&p.key) }
-                    }
+                    ObjectPropertyKind::ObjectProperty(p) => Member {
+                        span: p.span,
+                        computed: p.key.is_computed(),
+                        name: member_name(&p.key),
+                    },
                     ObjectPropertyKind::SpreadProperty(p) => {
                         Member { span: p.span, computed: true, name: None }
                     }
@@ -62,12 +64,16 @@ pub fn fix(fcx: &FixCtx) -> Vec<RuleFix> {
             body.body
                 .iter()
                 .map(|element| match element {
-                    ClassElement::MethodDefinition(m) => {
-                        Member { span: m.span, computed: m.computed, name: member_name(&m.key) }
-                    }
-                    ClassElement::PropertyDefinition(p) => {
-                        Member { span: p.span, computed: p.computed, name: member_name(&p.key) }
-                    }
+                    ClassElement::MethodDefinition(m) => Member {
+                        span: m.span,
+                        computed: m.key.is_computed(),
+                        name: member_name(&m.key),
+                    },
+                    ClassElement::PropertyDefinition(p) => Member {
+                        span: p.span,
+                        computed: p.key.is_computed(),
+                        name: member_name(&p.key),
+                    },
                     other => Member { span: other.span(), computed: true, name: None },
                 })
                 .collect::<Vec<_>>(),

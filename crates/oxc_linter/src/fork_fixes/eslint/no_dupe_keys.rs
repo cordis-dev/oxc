@@ -30,7 +30,7 @@ pub fn fix(fcx: &FixCtx) -> Vec<RuleFix> {
     };
     let ObjectPropertyKind::ObjectProperty(prop) = &object.properties[index] else { return vec![] };
     if prop.kind != oxc_ast::ast::PropertyKind::Init
-        || prop.computed
+        || prop.key.is_computed()
         || !is_side_effect_free(&prop.value)
     {
         return vec![];
