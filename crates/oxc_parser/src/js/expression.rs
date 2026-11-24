@@ -7,11 +7,8 @@ use oxc_data_structures::buffered_vec::BufferedVec;
 #[cfg(feature = "regular_expression")]
 use oxc_regular_expression::ast::Pattern;
 use oxc_span::{GetSpan, Span};
-use oxc_str::{Ident, Str};
-use oxc_syntax::{
-    number::{BigintBase, NumberBase},
-    precedence::Precedence,
-};
+use oxc_str::{Ident, JSStr, Str};
+use oxc_syntax::precedence::Precedence;
 
 use super::{
     grammar::CoverGrammar,
@@ -477,43 +474,21 @@ impl<'a, C: Config> ParserImpl<'a, C> {
             self.set_fatal_error(diagnostics::invalid_number(err, span));
             0.0 // Dummy value
         });
-        let base = match kind {
-            Kind::Decimal => NumberBase::Decimal,
-            Kind::Float => NumberBase::Float,
-            Kind::Binary => NumberBase::Binary,
-            Kind::Octal => NumberBase::Octal,
-            Kind::Hex => NumberBase::Hex,
-            Kind::PositiveExponential | Kind::NegativeExponential => {
-                if value.fract() == 0.0 {
-                    NumberBase::Decimal
-                } else {
-                    NumberBase::Float
-                }
-            }
-            _ => return self.unexpected(),
-        };
         self.bump_any();
-        NumericLiteral::boxed(span, value, Some(Str::from(src)), base, self)
+        NumericLiteral::boxed(span, value, Some(Str::from(src)), self)
     }
 
     pub(crate) fn parse_literal_bigint(&mut self) -> ArenaBox<'a, BigIntLiteral<'a>> {
         let token = self.cur_token();
         let kind = token.kind();
         let has_separator = token.has_separator();
-        let (base, number_kind) = match kind {
-            Kind::DecimalBigInt => (BigintBase::Decimal, Kind::Decimal),
-            Kind::BinaryBigInt => (BigintBase::Binary, Kind::Binary),
-            Kind::OctalBigInt => (BigintBase::Octal, Kind::Octal),
-            Kind::HexBigInt => (BigintBase::Hex, Kind::Hex),
-            _ => return self.unexpected(),
-        };
         let span = token.span();
         let raw = self.cur_src();
         let src = raw.strip_suffix('n').unwrap();
-        let value = parse_big_int(src, number_kind, has_separator, self.allocator());
+        let value = parse_big_int(src, kind, has_separator, self.allocator());
 
         self.bump_any();
-        BigIntLiteral::boxed(span, value, Some(Str::from(raw)), base, self)
+        BigIntLiteral::boxed(span, value, Some(Str::from(raw)), self)
     }
 
     pub(crate) fn parse_literal_regexp(&mut self) -> ArenaBox<'a, RegExpLiteral<'a>> {
@@ -587,11 +562,17 @@ impl<'a, C: Config> ParserImpl<'a, C> {
     #[inline]
     pub(crate) fn parse_known_literal_string(&mut self) -> StringLiteral<'a> {
         debug_assert!(self.at(Kind::Str));
-        let span = self.cur_token().span();
-        let raw = Str::from(self.cur_src());
-        let value = self.cur_js_string();
+        let token = self.cur_token();
+        let span = token.span();
+        let raw = self.cur_src();
+        // Most strings have no escapes. Their value is the source text between the quotes.
+        let value = if token.escaped() {
+            self.cur_js_string()
+        } else {
+            JSStr::from(&raw[1..raw.len() - 1])
+        };
         self.bump_any();
-        StringLiteral::new(span, value, Some(raw), self)
+        StringLiteral::new(span, value, Some(Str::from(raw)), self)
     }
 
     /// Section [Array Expression](https://tc39.es/ecma262/#prod-ArrayLiteral)
@@ -1798,6 +1779,34 @@ impl<'a, C: Config> ParserImpl<'a, C> {
                             None => None,
                         }
                     }
+                    // `<div />`, `<T,>(x) => {}`
+                    Kind::LAngle if self.source_type.is_jsx() => {
+                        // In a JSX file, `<` can only start JSX.
+                        // Checking here skips the checkpoint which TSX needs.
+                        let (expression, is_arrow) = if self.is_ts {
+                            self.parse_jsx_expression_or_generic_arrow_function(
+                                allow_return_type_in_arrow_function,
+                            )
+                        } else {
+                            (self.parse_jsx_expression(), false)
+                        };
+                        if !is_arrow {
+                            // A JSX element is a complete `UpdateExpression`.
+                            break 'parse_lhs if kind_to_precedence(self.cur_kind()).is_none() {
+                                expression
+                            } else {
+                                self.parse_binary_expression_rest(
+                                    start,
+                                    expression,
+                                    /* lhs_parenthesized */ false,
+                                    Precedence::Comma,
+                                )
+                            };
+                        }
+                        Some(expression)
+                    }
+                    // `<T>(x) => {}` in TS. JSX and TSX files take the branch above.
+                    // In JS, `<` here is a syntax error, so it's not worth checking `is_ts` first.
                     Kind::LAngle => self.try_parse_generic_arrow_function_expression(
                         allow_return_type_in_arrow_function,
                     ),

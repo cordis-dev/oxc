@@ -187,10 +187,11 @@ fn should_preserve_content(t: &Tree<'_>, id: NodeId) -> bool {
                 // `<!--[if lt IE 9]><html><![endif]-->`: an unclosed element inside
                 || item.last_child.is_some_and(|last| t.is_unclosed(last))
         }
-        // `<pre>` with markup inside, a Vue block that is no markup
+        // `<pre>` with markup inside, a Vue block that is no markup, Angular's `i18n`
         _ => {
             (item.pre_like && t.children(id).any(|child| !t.is_text_content(child)))
                 || t.is_non_html_sfc_block(id)
+                || (item.first_child.is_some() && t.keeps_angular_content(id))
         }
     }
 }
@@ -222,13 +223,15 @@ fn force_break_children(t: &Tree<'_>, id: NodeId) -> bool {
 
 /// Besides `force_break_children`:
 /// the content of `body`, `script`, `style`, nested markup, or a lone child on its own lines.
-/// `{{ }}` is no markup there, as text (DIVERGENCES.md#interpolation-element-as-text).
+/// `{{ }}` is no markup there, as text (DIVERGENCES.md#interpolation-element-as-text),
+/// nor an ICU expression's cases, printed as written with it.
 fn force_break_content(t: &Tree<'_>, id: NodeId) -> bool {
     let item = &t[id];
     if t.element(id).is_some()
         && (item.script_like
             || t.tag(id) == "body"
             || t.children(id)
+                .filter(|&child| !matches!(t.kind(child), NodeKind::Icu(_)))
                 .any(|child| t.children(child).any(|grandchild| !t.is_text_content(grandchild))))
     {
         return true;

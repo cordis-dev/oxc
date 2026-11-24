@@ -1,6 +1,6 @@
 use std::str;
 
-use oxc_simd::{Cpu, cpu_multiversion, cpu_version};
+use oxc_simd::{BASELINE, Cpu, cpu_multiversion, cpu_version};
 use oxc_syntax::identifier::is_identifier_start;
 
 use crate::error::DiagCode;
@@ -113,9 +113,22 @@ fn parse_number(src: &[u8], s: usize, e: usize, cpu: impl Cpu) -> f64 {
         };
         if radix != 0 {
             i = s + 2;
+        } else if d.is_ascii_digit() && src[s + 1..e].iter().all(|&c| matches!(c, b'0'..=b'7')) {
+            // Legacy octal: 070 is 56, while an 8 or 9 keeps the run decimal (08, 0779, 08.5).
+            radix = 8;
+            i = s + 1;
         }
     }
     if radix != 0 {
+        // Up to 16 hex, 21 octal or 64 binary bytes always fit in the u64 below.
+        let fast_len = match radix {
+            16 => 16,
+            8 => 21,
+            _ => 64,
+        };
+        if e - i > fast_len {
+            return parse_radix_slow(&src[i..e], radix.trailing_zeros());
+        }
         let mut v: u64 = 0;
         while i < e {
             let c = src[i];
@@ -135,6 +148,7 @@ fn parse_number(src: &[u8], s: usize, e: usize, cpu: impl Cpu) -> f64 {
     }
 
     let mut flt = false;
+    let mut sep = false;
     let mut dl = 0usize;
     let mut v: u64 = 0;
     for k in s..e {
@@ -144,25 +158,76 @@ fn parse_number(src: &[u8], s: usize, e: usize, cpu: impl Cpu) -> f64 {
         } else if c.is_ascii_digit() {
             dl += 1;
             v = v.wrapping_mul(10).wrapping_add((c - b'0') as u64);
+        } else if c == b'_' {
+            sep = true;
         }
     }
     if !flt && dl <= 19 {
         return v as f64;
     }
 
-    let mut buf = [0u8; 512];
-    let mut bl = 0usize;
-    let mut k = s;
-    while k < e && bl < buf.len() - 1 {
-        let c = src[k];
-        k += 1;
-        if c == b'_' || c == b'n' {
+    // A BigInt above 19 digits lands here too, and is parsed without its `n`.
+    let text = &src[s..e];
+    let text = text.strip_suffix(b"n").unwrap_or(text);
+    if sep { parse_decimal_separated(text) } else { parse_decimal(text) }
+}
+
+/// Decimal text without separators, rounded to nearest, ties to even.
+#[cpu_version(Generic)]
+fn parse_decimal(text: &[u8]) -> f64 {
+    str::from_utf8(text).ok().and_then(|st| st.parse::<f64>().ok()).unwrap_or(0.0)
+}
+
+/// Decimal text with separators, copied without them: on the stack, or the heap past 64 bytes.
+#[cpu_version(Generic)]
+#[cold]
+#[inline(never)]
+fn parse_decimal_separated(text: &[u8]) -> f64 {
+    let mut stack = [0u8; 64];
+    let mut heap = Vec::new();
+    let buf: &mut [u8] = if text.len() <= stack.len() {
+        &mut stack
+    } else {
+        heap.resize(text.len(), 0);
+        &mut heap
+    };
+    let mut len = 0;
+    for &c in text {
+        if c != b'_' {
+            buf[len] = c;
+            len += 1;
+        }
+    }
+    parse_decimal(&buf[..len])
+}
+
+/// Hex, octal or binary digits after the prefix, any length, rounded to nearest, ties to even.
+#[cpu_version(Generic)]
+#[cold]
+#[inline(never)]
+fn parse_radix_slow(digits: &[u8], bits: u32) -> f64 {
+    let cpu = BASELINE;
+    let mut significand = 0u64;
+    let mut exponent = 0u32;
+    let mut sticky = 0u32;
+    for &c in digits {
+        if c == b'_' {
             continue;
         }
-        buf[bl] = c;
-        bl += 1;
+        let Some(d) = hex_digit(c, cpu) else { break };
+        if significand < 1 << 54 {
+            significand = (significand << bits) | u64::from(d);
+        } else {
+            exponent += bits;
+            if exponent > 1023 {
+                return f64::INFINITY;
+            }
+            sticky |= u32::from(d);
+        }
     }
-    str::from_utf8(&buf[..bl]).ok().and_then(|st| st.parse::<f64>().ok()).unwrap_or(0.0)
+    // Bit 0 records any dropped nonzero digit; with 55+ bits kept it sits below the rounding bit.
+    significand |= u64::from(sticky != 0);
+    (significand as f64) * f64::from_bits(u64::from(exponent + 1023) << 52)
 }
 
 /// First error in the number src[s..e], or Ok when unsure, so no valid number is ever flagged.

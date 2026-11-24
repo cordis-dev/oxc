@@ -210,7 +210,8 @@ impl<'a> PeepholeOptimizations {
     }
 
     /// For variable declarations:
-    /// * merge with the previous variable declarator if their kinds are the same
+    /// * merge retained declarators into an immediately preceding declaration of the same
+    ///   kind when `join_vars` is enabled or at least one declarator is removed
     /// * remove the variable declarator if it is unused
     /// * keep the initializer if it has side effects
     fn handle_variable_declaration(
@@ -231,23 +232,31 @@ impl<'a> PeepholeOptimizations {
             ctx,
         );
 
-        // If `join_vars` is off, but there are unused declarators ... just join them to make our code simpler.
-        if !ctx.options().join_vars
-            && var_decl
-                .declarations
-                .iter()
-                .all(|d| !Self::should_remove_unused_declarator(d, var_decl.kind, ctx))
+        let kind = var_decl.kind;
+        if var_decl
+            .declarations
+            .iter()
+            .all(|d| !Self::should_remove_unused_declarator(d, kind, ctx))
         {
-            result.push(Statement::VariableDeclaration(var_decl));
+            if ctx.options().join_vars
+                && let Some(Statement::VariableDeclaration(prev_var_decl)) = result.last_mut()
+                && kind == prev_var_decl.kind
+            {
+                prev_var_decl.declarations.append(&mut var_decl.declarations);
+                ctx.notice_change();
+            } else {
+                result.push(Statement::VariableDeclaration(var_decl));
+            }
             return;
         }
 
+        // If `join_vars` is off, but there are unused declarators ... just join them to make our code simpler.
         if let Some(Statement::VariableDeclaration(prev_var_decl)) = result.last()
-            && var_decl.kind == prev_var_decl.kind
+            && kind == prev_var_decl.kind
         {
             ctx.notice_change();
         }
-        let VariableDeclaration { span, kind, declarations, declare, .. } = var_decl.unbox();
+        let VariableDeclaration { span, declarations, declare, .. } = var_decl.unbox();
         for mut decl in declarations {
             if Self::should_remove_unused_declarator(&decl, kind, ctx) {
                 // `init` is `mut` because `remove_unused_expression` rewrites
@@ -597,7 +606,7 @@ impl<'a> PeepholeOptimizations {
             return false;
         }
 
-        case.consequent.is_empty() || !FindNestedBreak::has_unlabelled_break_in_switch_case(case)
+        !FindNestedBreak::has_unlabelled_break(&case.consequent)
     }
 
     fn handle_switch_statement(
@@ -722,7 +731,7 @@ impl<'a> PeepholeOptimizations {
             };
             if can_merge_with_alternate {
                 // Don't do this transformation if the branch condition could
-                // potentially access symbols declared later on on this scope below.
+                // potentially access symbols declared later on in this scope below.
                 // If so, inverting the branch condition and nesting statements after
                 // this in a block would break that access which is a behavior change.
                 //
@@ -1383,6 +1392,12 @@ impl<'a> PeepholeOptimizations {
             if ctx.scoping().symbol_flags(prev_decl_id.symbol_id()).is_catch_variable() {
                 return true;
             }
+            // A `var` in a block is bound in the enclosing var scope, where a direct eval
+            // can read it even when the current block has no eval.
+            let binding_scope_id = ctx.scoping().symbol_scope_id(prev_decl_id.symbol_id());
+            if ctx.scoping().scope_flags(binding_scope_id).contains_direct_eval() {
+                return true;
+            }
             if ctx.is_expression_whose_name_needs_to_be_kept(prev_decl_init) {
                 return true;
             }
@@ -1732,7 +1747,8 @@ impl<'a> PeepholeOptimizations {
             }
             Expression::CallExpression(call_expr) => {
                 let keep_indirect = call_expr.callee.is_specific_id(search_for)
-                    && Self::passes_this_when_called(replacement);
+                    && (Self::passes_this_when_called(replacement)
+                        || (!call_expr.optional && replacement.is_specific_id("eval")));
                 if let Some(changed) = Self::substitute_single_use_symbol_in_expression(
                     &mut call_expr.callee,
                     search_for,
@@ -1860,7 +1876,7 @@ impl<'a> PeepholeOptimizations {
                 for prop in &mut obj_expr.properties {
                     match prop {
                         ObjectPropertyKind::ObjectProperty(prop) => {
-                            if prop.computed {
+                            if prop.key.is_computed() {
                                 if let Some(changed) =
                                     Self::substitute_single_use_symbol_in_expression(
                                         prop.key.to_expression_mut(),
@@ -1885,7 +1901,6 @@ impl<'a> PeepholeOptimizations {
                             ) {
                                 if prop.shorthand && prop.key.is_specific_id("__proto__") {
                                     // { __proto__ } -> { ['__proto__']: value }
-                                    prop.computed = true;
                                     prop.key = PropertyKey::new_string_literal(
                                         prop.key.span(),
                                         "__proto__",
@@ -2057,14 +2072,16 @@ impl<'a> PeepholeOptimizations {
 }
 
 #[derive(Default)]
-struct FindNestedBreak {
+pub(super) struct FindNestedBreak {
     found_unlabelled_break: bool,
 }
 
 impl FindNestedBreak {
-    fn has_unlabelled_break_in_switch_case(node: &SwitchCase) -> bool {
+    pub(super) fn has_unlabelled_break(stmts: &[Statement]) -> bool {
         let mut visitor = Self::default();
-        visitor.visit_switch_case(node);
+        for stmt in stmts {
+            visitor.visit_statement(stmt);
+        }
         visitor.found_unlabelled_break
     }
 }

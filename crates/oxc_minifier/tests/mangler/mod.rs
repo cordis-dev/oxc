@@ -165,6 +165,13 @@ fn mangler() {
         "function _() { class Foo { foo() { var x } } }",
         "function _() { var Foo = class { foo() { var x } } }",
         "function _() { var foo; try {} catch (foo) { var foo = function() {} } }",
+        // A redeclaration, not the first declaration, sets the name.
+        "function _() { var foo; var foo = function() { var x } }",
+        "function _() { var foo = 1; var foo = () => { var x } }",
+        "function _() { var Foo; var Foo = class { foo() { var x } } }",
+        "function _(foo) { var foo = function() { var x } }",
+        "function _() { var foo; function foo() { var x } }",
+        "function _(foo) { function foo() { var x } }",
     ];
 
     let mut snapshot = String::new();
@@ -230,6 +237,15 @@ fn private_member_mangling() {
     insta::with_settings!({ prepend_module_to_snapshot => false, omit_expression => true }, {
         insta::assert_snapshot!("private_member_mangling", snapshot);
     });
+}
+
+#[test]
+fn private_member_mangling_debug() {
+    test(
+        "class C { #field = 1; get() { return this.#field; } }",
+        "class C { #slot_0 = 1; get() { return this.#slot_0; } }",
+        &MangleOptions { debug: true, ..MangleOptions::default() },
+    );
 }
 
 /// A named function expression whose name is shadowed by a same-named declaration in its
@@ -437,6 +453,42 @@ fn annex_b_block_scoped_function() {
     insta::with_settings!({ prepend_module_to_snapshot => false, omit_expression => true }, {
         insta::assert_snapshot!("annex_b_block_scoped_function", snapshot);
     });
+}
+
+/// Catch parameters are bound in the catch clause scope.
+/// <https://github.com/oxc-project/oxc/issues/29143>, <https://github.com/oxc-project/oxc/issues/24331>
+#[test]
+fn catch_parameter_scope() {
+    let options = MangleOptions::default();
+    // A catch binding must not take the name of an outer binding that its own default value or
+    // computed key reads.
+    test(
+        "function f(text) { const defaultCode = () => 'E_PARSE'; try { return JSON.parse(text) } catch ({ name, code = defaultCode() }) { return name + ':' + code } }",
+        "function f(e) { const t = () => 'E_PARSE'; try { return JSON.parse(e) } catch ({ name: e, code: n = t() }) { return e + ':' + n } }",
+        &options,
+    );
+    test(
+        "function _(a) { try { throw [] } catch ([x = a]) { return x } }",
+        "function _(e) { try { throw [] } catch ([t = e]) { return t } }",
+        &options,
+    );
+    test(
+        "function _() { var a = 1; try { throw ['FAIL', 'PASS'] } catch ({ [a]: b }) { let a = 0; return b } }",
+        "function _() { var e = 1; try { throw ['FAIL', 'PASS'] } catch ({ [e]: t }) { let e = 0; return t } }",
+        &options,
+    );
+    // A declaration directly in the catch body must not take an unused parameter's name
+    // (`catch (e) { let e }` is a SyntaxError), but a nested block may shadow it.
+    test(
+        "function _() { try { throw 0 } catch (e) { let x = 1; return x } }",
+        "function _() { try { throw 0 } catch (e) { let t = 1; return t } }",
+        &options,
+    );
+    test(
+        "function _() { try { throw 0 } catch (e) { { let x = 1; use(x) } } }",
+        "function _() { try { throw 0 } catch (e) { { let e = 1; use(e) } } }",
+        &options,
+    );
 }
 
 fn assert_valid_labels(source_text: &str, source_type: SourceType) {

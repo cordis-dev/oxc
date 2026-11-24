@@ -11,7 +11,11 @@ use crate::{
     modifiers::{ModifierKind, ModifierKinds, Modifiers},
 };
 
-use super::{super::js::FunctionKind, statement::CallOrConstructorSignature};
+use super::{
+    super::js::{FunctionKind, kind_to_precedence},
+    statement::CallOrConstructorSignature,
+    type_arguments::{TYPE_ARGUMENT_LOOKAHEAD_DEPTH, TypeArgumentFailure},
+};
 
 impl<'a, C: Config> ParserImpl<'a, C> {
     pub(crate) fn parse_ts_type(&mut self) -> TSType<'a> {
@@ -462,9 +466,14 @@ impl<'a, C: Config> ParserImpl<'a, C> {
             | Kind::Boolean
             | Kind::Undefined
             | Kind::Never
-            | Kind::Object
+            | Kind::Object => self.parse_keyword_type(),
             // Parse `null` as `TSNullKeyword` instead of null literal to align with typescript eslint.
-            | Kind::Null => self.parse_keyword_type(),
+            // Unlike the keywords above, it cannot begin a qualified name: `null.x`.
+            Kind::Null => {
+                let span = self.cur_token().span();
+                self.bump_any();
+                TSType::new_ts_null_keyword(span, self)
+            }
             // TODO: js doc types: `JSDocAllType`, `JSDocFunctionType`
             // Kind::StarEq => {
             // scanner.reScanAsteriskEqualsToken();
@@ -487,7 +496,11 @@ impl<'a, C: Config> ParserImpl<'a, C> {
                 let start = self.cur_start();
                 let literal = self.parse_template_literal(false);
                 let span = self.end_span(start);
-                TSType::new_ts_literal_type(span, TSLiteral::TemplateLiteral(self.alloc(literal)), self)
+                TSType::new_ts_literal_type(
+                    span,
+                    TSLiteral::TemplateLiteral(self.alloc(literal)),
+                    self,
+                )
             }
             Kind::Minus => {
                 if self.lexer.peek_token().kind().is_number() {
@@ -513,9 +526,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
                     TSType::TSThisType(this_type)
                 }
             }
-            Kind::Typeof => {
-                self.parse_type_query()
-            }
+            Kind::Typeof => self.parse_type_query(),
             Kind::LCurly => {
                 let opening_span = self.cur_token().span();
                 self.bump_any();
@@ -572,7 +583,6 @@ impl<'a, C: Config> ParserImpl<'a, C> {
             Kind::Symbol => TSType::new_ts_symbol_keyword(span, self),
             Kind::Undefined => TSType::new_ts_undefined_keyword(span, self),
             Kind::Unknown => TSType::new_ts_unknown_keyword(span, self),
-            Kind::Null => TSType::new_ts_null_keyword(span, self),
             _ => unreachable!(),
         }
     }
@@ -903,7 +913,20 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         left_name
     }
 
+    /// Parse `TypeArguments` if the cursor is at their `<`.
+    #[inline] // Most callers are not at `<`. Decide that without a call.
     pub(crate) fn try_parse_type_arguments(
+        &mut self,
+    ) -> Option<ArenaBox<'a, TSTypeParameterInstantiation<'a>>> {
+        // The tokens which `re_lex_ts_l_angle` accepts.
+        if matches!(self.cur_kind(), Kind::LAngle | Kind::ShiftLeft | Kind::ShiftLeftEq) {
+            self.try_parse_type_arguments_at_l_angle()
+        } else {
+            None
+        }
+    }
+
+    fn try_parse_type_arguments_at_l_angle(
         &mut self,
     ) -> Option<ArenaBox<'a, TSTypeParameterInstantiation<'a>>> {
         if self.re_lex_ts_l_angle() {
@@ -915,7 +938,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
                 Kind::RAngle,
                 Kind::Comma,
                 opening_span,
-                Self::parse_ts_type,
+                Self::parse_type_argument,
             );
             self.expect(Kind::RAngle);
             let span = self.end_span(start);
@@ -934,11 +957,10 @@ impl<'a, C: Config> ParserImpl<'a, C> {
     pub(crate) fn parse_type_arguments_of_type_reference(
         &mut self,
     ) -> Option<ArenaBox<'a, TSTypeParameterInstantiation<'a>>> {
+        // Type references attach `<...>` only when `<` is on the same line as the name.
+        // The contents of the list may span lines. The expression rule below is separate.
         if self.cur_token().is_on_new_line()
-            || !matches!(
-                self.cur_kind(),
-                Kind::LAngle | Kind::ShiftLeft | Kind::LtEq | Kind::ShiftLeftEq
-            )
+            || !matches!(self.cur_kind(), Kind::LAngle | Kind::ShiftLeft | Kind::ShiftLeftEq)
         {
             return None;
         }
@@ -946,6 +968,40 @@ impl<'a, C: Config> ParserImpl<'a, C> {
     }
 
     fn parse_type_arguments_of_type_reference_impl(
+        &mut self,
+    ) -> Option<ArenaBox<'a, TSTypeParameterInstantiation<'a>>> {
+        let depth = self.state.type_argument_depth;
+        if depth == 0 || self.fatal_error.is_some() {
+            // Committed type syntax must keep its normal diagnostics. Also do not cache
+            // a failure inherited from an earlier token as a failure of this type list.
+            return self.parse_type_arguments_of_type_reference_worker();
+        }
+        let start = self.cur_start();
+        let context = self.ctx;
+        if self.state.type_argument_lookahead.as_ref().is_some_and(|lookahead| {
+            lookahead.has_failed(start, context, TypeArgumentFailure::Type)
+        }) || (depth >= TYPE_ARGUMENT_LOOKAHEAD_DEPTH
+            && !self.speculative_type_arguments_can_close())
+        {
+            // We are still at an opening `<`, so expecting `>` marks this attempt fatal.
+            // It belongs to an enclosing speculative expression parse, which rewinds it;
+            // returning None alone would allow the enclosing type to appear successful.
+            self.expect(Kind::RAngle);
+            return None;
+        }
+        self.state.type_argument_depth = depth + 1;
+        let result = self.parse_type_arguments_of_type_reference_worker();
+        self.state.type_argument_depth = depth;
+        // Recoverable diagnostics (for example an empty list) do not reject speculation.
+        if self.fatal_error.is_some() {
+            self.record_type_argument_failure(start, context, TypeArgumentFailure::Type, depth);
+        }
+        result
+    }
+
+    #[expect(clippy::inline_always)]
+    #[inline(always)] // Avoid an extra call on the ordinary generic-type path.
+    fn parse_type_arguments_of_type_reference_worker(
         &mut self,
     ) -> Option<ArenaBox<'a, TSTypeParameterInstantiation<'a>>> {
         if self.re_lex_ts_l_angle() {
@@ -957,7 +1013,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
                 Kind::RAngle,
                 Kind::Comma,
                 opening_span,
-                Self::parse_ts_type,
+                Self::parse_type_argument,
             );
             self.expect(Kind::RAngle);
             let span = self.end_span(start);
@@ -969,20 +1025,27 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         None
     }
 
+    /// Parse one type in a `TypeArguments` list.
+    ///
+    /// TypeScript parses a type argument only from a token which can start a type. A type
+    /// reference otherwise accepts any identifier name, as in `let a: class`, but `A<class>`
+    /// is not a type-argument list.
+    fn parse_type_argument(&mut self) -> TSType<'a> {
+        if is_reserved_non_type_start(self.cur_kind()) {
+            return self.unexpected();
+        }
+        self.parse_ts_type()
+    }
+
     /// Speculatively parse a `<T, U>` type-argument list in an expression
-    /// position (e.g. `foo<T>(arg)` vs `foo < T`). Returns `None` and rewinds
-    /// any parser/lexer state when the upcoming tokens turn out not to be a
-    /// valid type-argument list.
+    /// position (e.g. `foo<T>(arg)` vs `foo < T`). Returns `None` if a cached failure
+    /// rules it out, or rewinds to the checkpoint when a fresh attempt fails.
     pub(crate) fn parse_type_arguments_in_expression(
         &mut self,
     ) -> Option<ArenaBox<'a, TSTypeParameterInstantiation<'a>>> {
         // A type-argument list can only open with `<`, or `<<` for nested generics like
         // `f<<T>() => U>()`. This mirrors TypeScript's `reScanLessThanToken`, which re-scans only
-        // `<`/`<<`. `<=`/`<<=` can never open one — splitting off the leading `<` leaves a `=`, and
-        // no type starts with `=` — so although `re_lex_ts_l_angle` would accept them (it is shared
-        // with type-context callers), speculating here can only fail and rewind to `None`. Bail
-        // before the checkpoint for any non-`<`-opening token (the common `a?.(`, `a?.b` paths),
-        // avoiding a checkpoint/rewind round-trip that returns `None` anyway.
+        // `<`/`<<`.
         if !matches!(self.cur_kind(), Kind::LAngle | Kind::ShiftLeft) {
             return None;
         }
@@ -992,6 +1055,39 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         if !self.can_start_type_arguments_in_expression() {
             return None;
         }
+        if self.state.type_argument_lookahead.as_ref().is_some_and(|lookahead| {
+            // Missing delimiters rule out both contexts. Actual parse failures must also
+            // match the grammar flags, and can include the expression-only follow rule.
+            lookahead.cannot_close(self.cur_start())
+                || lookahead.has_failed(self.cur_start(), self.ctx, TypeArgumentFailure::Expression)
+        }) {
+            return None;
+        }
+        let depth = self.state.type_argument_depth;
+        if depth >= TYPE_ARGUMENT_LOOKAHEAD_DEPTH && !self.speculative_type_arguments_can_close() {
+            return None;
+        }
+        let start = self.cur_start();
+        let context = self.ctx;
+        self.state.type_argument_depth = depth + 1;
+        let result = self.parse_type_arguments_in_expression_worker();
+        self.state.type_argument_depth = depth;
+        if result.is_none() {
+            self.record_type_argument_failure(
+                start,
+                context,
+                TypeArgumentFailure::Expression,
+                depth,
+            );
+        }
+        result
+    }
+
+    #[expect(clippy::inline_always)]
+    #[inline(always)] // Keep the existing grammar body inside the speculation wrapper.
+    fn parse_type_arguments_in_expression_worker(
+        &mut self,
+    ) -> Option<ArenaBox<'a, TSTypeParameterInstantiation<'a>>> {
         let checkpoint = self.checkpoint();
         let start = self.cur_start();
         if !self.re_lex_ts_l_angle() {
@@ -1001,9 +1097,15 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         let opening_span = self.cur_token().span();
         debug_assert!(self.at(Kind::LAngle));
         self.advance(Kind::LAngle);
-        let (params, _) =
-            self.parse_delimited_list(Kind::RAngle, Kind::Comma, opening_span, Self::parse_ts_type);
-        // `a < b> = c` is valid but `a < b >= c` is BinaryExpression
+        let (params, _) = self.parse_delimited_list(
+            Kind::RAngle,
+            Kind::Comma,
+            opening_span,
+            Self::parse_type_argument,
+        );
+        // A contiguous `>=` remains a relational operator: `a < b >= c`. A separated
+        // `> =` can end an instantiation before `=`; assignment validity is checked later.
+        // Re-lex before consuming `>` so whitespace between these spellings matters.
         if matches!(self.re_lex_right_angle(), Kind::GtEq) {
             self.rewind(checkpoint);
             return None;
@@ -1061,9 +1163,11 @@ impl<'a, C: Config> ParserImpl<'a, C> {
     ///
     /// plus the JSDoc postfix `!` and `?`, which the type parser accepts in order to report them.
     /// Any other token ends the list early: `a < b;`, `a < b.c)`, `a < 0 &&`, `a < this.b`.
+    /// A reserved word which cannot start a type rules out the list at once: `a < class {}`.
     ///
     /// The lexer is positioned after `first`. The checks mirror `parse_non_array_type`,
-    /// `parse_postfix_type_rest` and their callers, and must be kept in step with them.
+    /// `parse_postfix_type_rest`, `parse_type_argument` and their callers, and must be kept in
+    /// step with them.
     fn can_start_type_argument_after(&mut self, first: Kind) -> bool {
         let is_name = matches!(
             first,
@@ -1078,13 +1182,12 @@ impl<'a, C: Config> ParserImpl<'a, C> {
                 | Kind::Undefined
                 | Kind::Never
                 | Kind::Object
-                | Kind::Null
         );
         if !is_name
-            && !matches!(first, Kind::This | Kind::Str | Kind::True | Kind::False)
+            && !matches!(first, Kind::Null | Kind::This | Kind::Str | Kind::True | Kind::False)
             && !first.is_number()
         {
-            return true;
+            return !is_reserved_non_type_start(first);
         }
         let mut next = self.lexer.next_token().kind();
         while is_name && next == Kind::Dot {
@@ -1098,7 +1201,6 @@ impl<'a, C: Config> ParserImpl<'a, C> {
             | Kind::Comma
             | Kind::LAngle
             | Kind::ShiftLeft
-            | Kind::LtEq
             | Kind::ShiftLeftEq
             | Kind::LBrack
             | Kind::Bang
@@ -1143,9 +1245,18 @@ impl<'a, C: Config> ParserImpl<'a, C> {
 
     fn can_follow_type_arguments_in_expr(&mut self) -> bool {
         match self.cur_kind() {
+            // Prefer generic calls and tagged templates over relational expressions:
+            // `f<T>(x)`, ``f<T>`text` `` and ``f<T>`text${x}` ``.
             Kind::LParen | Kind::NoSubstitutionTemplate | Kind::TemplateHead => true,
+            // `<` cannot continue an instantiation here; `>` may belong to a shift.
+            // In `a < b > +c` / `a < b > -c`, preserve the unary operand of the comparison.
+            // These exclusions take precedence even when there is a line break.
             Kind::LAngle | Kind::RAngle | Kind::Plus | Kind::Minus => false,
             _ => {
+                // Instantiations need not be called: `const g = f<T>;` is valid. A line
+                // break, another binary operator, or a token that cannot start an operand
+                // favors that interpretation. A same-line operand as in `a < b > c`
+                // instead leaves `<` and `>` to the relational-expression parser.
                 self.cur_token().is_on_new_line()
                     || self.is_binary_operator()
                     || !self.is_start_of_expression()
@@ -1434,7 +1545,6 @@ impl<'a, C: Config> ParserImpl<'a, C> {
             value,
             false,
             false,
-            false,
             self,
         );
 
@@ -1476,7 +1586,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
 
             let prop_start = self.cur_start();
 
-            let (key, value, computed) = if self.at(Kind::LBrack) {
+            let (key, value) = if self.at(Kind::LBrack) {
                 let bracket_span = self.cur_token().span();
                 self.error(diagnostics::ts_import_type_options_invalid_key(bracket_span));
                 // Parse as computed to recover
@@ -1486,18 +1596,18 @@ impl<'a, C: Config> ParserImpl<'a, C> {
                 self.expect(Kind::Colon);
                 let value = self.parse_assignment_expression_or_higher();
                 let key = PropertyKey::new_string_literal(bracket_span, "", None, self);
-                (key, value, true)
+                (key, value)
             } else {
                 let key = if self.at(Kind::Str) {
                     let string_literal = self.parse_known_literal_string();
-                    PropertyKey::StringLiteral(self.alloc(string_literal))
+                    PropertyKey::StaticStringLiteral(self.alloc(string_literal))
                 } else {
                     let ident = self.parse_identifier_name();
                     PropertyKey::StaticIdentifier(self.alloc(ident))
                 };
                 self.expect(Kind::Colon);
                 let value = self.parse_assignment_expression_or_higher();
-                (key, value, false)
+                (key, value)
             };
 
             let property = ObjectPropertyKind::new_object_property(
@@ -1507,7 +1617,6 @@ impl<'a, C: Config> ParserImpl<'a, C> {
                 value,
                 false,
                 false,
-                computed,
                 self,
             );
             properties.push(property);
@@ -1629,7 +1738,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         start: u32,
         kind: TSMethodSignatureKind,
     ) -> TSSignature<'a> {
-        let (key, computed) = self.parse_property_name();
+        let key = self.parse_property_name();
         let (this_param, params) =
             self.parse_formal_parameters(FunctionKind::Declaration, FormalParameterKind::Signature);
         let return_type = self.parse_ts_return_type_annotation();
@@ -1671,7 +1780,6 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         TSSignature::new_ts_method_signature(
             self.end_span(start),
             key,
-            computed,
             /* optional */ false,
             kind,
             None,
@@ -1687,7 +1795,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         start: u32,
         modifiers: &Modifiers,
     ) -> TSSignature<'a> {
-        let (key, computed) = self.parse_property_name();
+        let key = self.parse_property_name();
         let optional = self.eat(Kind::Question);
 
         let kind = self.cur_kind();
@@ -1707,7 +1815,6 @@ impl<'a, C: Config> ParserImpl<'a, C> {
             TSSignature::new_ts_method_signature(
                 self.end_span(start),
                 key,
-                computed,
                 optional,
                 TSMethodSignatureKind::Method,
                 type_parameters,
@@ -1721,7 +1828,6 @@ impl<'a, C: Config> ParserImpl<'a, C> {
             self.parse_type_member_semicolon();
             TSSignature::new_ts_property_signature(
                 self.end_span(start),
-                computed,
                 optional,
                 modifiers.contains_readonly(),
                 key,
@@ -1867,7 +1973,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         if !self.ctx.has_in() && self.at(Kind::In) {
             return false;
         }
-        self.cur_kind().is_binary_operator()
+        kind_to_precedence(self.cur_kind()).is_some()
     }
 
     fn is_start_of_expression(&mut self) -> bool {
@@ -1879,7 +1985,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
             kind if kind.is_update_operator() => true,
             Kind::LAngle | Kind::Await | Kind::Yield | Kind::Private | Kind::At => true,
             _ if self.is_binary_operator() => true,
-            kind => kind.is_ts_identifier(self.ctx.has_yield(), self.ctx.has_await()),
+            kind => kind.is_identifier_reference(self.ctx.has_yield(), self.ctx.has_await()),
         }
     }
 
@@ -1900,7 +2006,28 @@ impl<'a, C: Config> ParserImpl<'a, C> {
             Kind::Import => {
                 matches!(self.lexer.peek_token().kind(), Kind::LParen | Kind::LAngle | Kind::Dot)
             }
-            _ => false,
+            kind => kind.is_identifier_reference(self.ctx.has_yield(), self.ctx.has_await()),
         }
     }
+}
+
+/// Whether `kind` is a reserved word which cannot start a type.
+///
+/// `await` and `yield` are excluded because outside their own contexts they are identifiers.
+const fn is_reserved_non_type_start(kind: Kind) -> bool {
+    kind.is_reserved_keyword()
+        && !matches!(
+            kind,
+            Kind::Await
+                | Kind::False
+                | Kind::Function
+                | Kind::Import
+                | Kind::New
+                | Kind::Null
+                | Kind::This
+                | Kind::True
+                | Kind::Typeof
+                | Kind::Void
+                | Kind::Yield
+        )
 }

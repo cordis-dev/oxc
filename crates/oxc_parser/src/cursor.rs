@@ -160,12 +160,18 @@ impl<'a, C: Config> ParserImpl<'a, C> {
             self.lexer.rewind(checkpoint);
             return false;
         }
+        self.advance_to(next);
+        true
+    }
+
+    /// Move to `next`, the token after the current one, which the lexer has already read.
+    #[inline]
+    pub(crate) fn advance_to(&mut self, next: Token) {
         if self.token.escaped() && self.token.kind().is_any_keyword() {
             self.report_escaped_keyword(self.token.span());
         }
         self.prev_token_end = self.token.end();
         self.token = next;
-        true
     }
 
     /// [Automatic Semicolon Insertion](https://tc39.es/ecma262/#sec-automatic-semicolon-insertion)
@@ -281,6 +287,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
     /// Tell lexer to continue reading jsx identifier if the lexer character position is at `-` for `<component-name>`.
     ///
     /// Returns `true` if was continued.
+    #[inline]
     pub(crate) fn continue_lex_jsx_identifier(&mut self) -> bool {
         if let Some(token) = self.lexer.continue_lex_jsx_identifier(self.token.start()) {
             self.token = token;
@@ -309,7 +316,7 @@ impl<'a, C: Config> ParserImpl<'a, C> {
             return false;
         }
         let kind = self.cur_kind();
-        if kind == Kind::ShiftLeft || kind == Kind::LtEq {
+        if kind == Kind::ShiftLeft {
             self.token = self.lexer.re_lex_as_typescript_l_angle(2);
             true
         } else if kind == Kind::ShiftLeftEq {
@@ -370,6 +377,13 @@ impl<'a, C: Config> ParserImpl<'a, C> {
         self.prev_token_end = prev_token_end;
         self.errors.truncate(errors_pos);
         self.state.cover_parenthesized.truncate(cover_parenthesized_len);
+    }
+
+    /// Rewind to `checkpoint`, keeping the comments and irregular whitespace lexed after it.
+    /// Only for when the source after `checkpoint` is not all lexed again.
+    pub(crate) fn rewind_keeping_trivia(&mut self, mut checkpoint: ParserCheckpoint<'a>) {
+        self.lexer.keep_trivia(&mut checkpoint.lexer);
+        self.rewind(checkpoint);
     }
 
     pub(crate) fn lookahead<U>(&mut self, predicate: impl Fn(&mut ParserImpl<'a, C>) -> U) -> U {
